@@ -1,0 +1,404 @@
+{
+  "slide_recipe": {
+
+    "metadata": {
+      "version": "2.0",
+      "description": "Slide generator template aligned to actual pptxgenjs output structure. Each slide_type maps directly to a rendering block in generate_slides.js. Supply new content in the 'slides' array and regenerate.",
+      "template": "Netcompany CVI — dark teal / coral / gold palette",
+      "footer_text": "Solon Tax Product Roadmap 2026 | SteerCo",
+      "presentation_title": "Solon Tax Product Roadmap 2026 – Feature Catalog",
+      "author": "Nikolaj",
+      "next_steerco": "2026-04-29"
+    },
+
+    "design_tokens": {
+      "note": "Do not change these unless rebranding. They are consumed directly by generate_slides.js.",
+      "colors": {
+        "darkTeal":  "123836",
+        "deepGreen": "0A2422",
+        "medTeal":   "1B5E52",
+        "lightTeal": "73AA87",
+        "coral":     "FF6359",
+        "gold":      "FFD282",
+        "slate":     "718886",
+        "bgGrey":    "D0D7D7",
+        "white":     "FFFFFF",
+        "nearBlack": "141E1E",
+        "textGrey":  "4A5C5A",
+        "lightBg":   "EEF3F2"
+      },
+      "fonts": {
+        "heading": "Calibri",
+        "body":    "Calibri"
+      }
+    },
+
+    "slide_types": {
+      "note": "Reference guide — each type name corresponds to a renderer in generate_slides.js.",
+      "cover":             "Slide 1. Full-bleed dark teal. Fields: title, subtitle, audience_line, author.",
+      "agenda":            "Slide 2. 2×3 grid of numbered group cards. Fields: header_title, header_subtitle, groups[].",
+      "group_summary":     "Slide 3+. KPI row + left text + centre donut + right table. One per initiative group.",
+      "initiative_detail": "Slides 4-5+. KPI row + left text + centre bar chart + right donut + PI planning boxes + footer bar. One per major initiative.",
+      "initiative_cards":  "Slide 7+. Up to 3 side-by-side cards for smaller initiatives. Fields: header_title, header_subtitle, initiatives[].",
+      "next_steps":        "Last slide. Dark teal closer. Fields: title, subtitle, decisions[]."
+    },
+
+    "slides": [
+
+      {
+        "slide_type": "cover",
+        "title":        "Solon Tax Product Roadmap 2026",
+        "subtitle":     "Feature Catalog for SteerCo",
+        "audience_line":"Executive Steering Committee | 29 April 2026",
+        "author":       "Prepared by: Nikolaj"
+      },
+
+      {
+        "slide_type": "agenda",
+        "header_title":    "Agenda",
+        "header_subtitle": "Solon Tax Product Roadmap 2026 — SteerCo Session",
+        "groups": [
+          {
+            "num":   "01",
+            "title": "Core Revenue Management Capabilities",
+            "sub":   "Registration · Taxpayer Accounting · Billing · Exemptions · Penalty & Interest · Tax Accounts"
+          },
+          {
+            "num":   "02",
+            "title": "Core Supporting Capabilities",
+            "sub":   "Supporting functions enabling the tax administration platform"
+          },
+          {
+            "num":   "03",
+            "title": "Non-Functional Requirement Coverage",
+            "sub":   "Performance, security, reliability and compliance standards"
+          },
+          {
+            "num":   "04",
+            "title": "Reference Implementations",
+            "sub":   "Baseline modules and reusable implementation patterns"
+          },
+          {
+            "num":   "05",
+            "title": "Core Self Service Capabilities",
+            "sub":   "Taxpayer-facing portal and self-service functionality"
+          },
+          {
+            "num":   "06",
+            "title": "Core Data Hub Capabilities",
+            "sub":   "Data integration, analytics and reporting infrastructure"
+          }
+        ]
+      },
+
+      {
+        "slide_type": "group_summary",
+        "header_title":    "Core Revenue Management Capabilities",
+        "header_subtitle": "Group Summary | Roadmap Initiative Overview",
+        "kpis": [
+          { "value": "~23,200", "label": "Total Estimated Effort",  "unit": "Hours" },
+          { "value": "6",       "label": "Roadmap Initiatives",     "unit": "Count" },
+          { "value": "15",      "label": "Features in Scope",       "unit": "Count" },
+          { "value": "PI28",    "label": "Primary PI Window",       "unit": "Program Increment" }
+        ],
+        "business_scope": "Covers the foundational tax administration functions enabling tax authorities to manage the full lifecycle of taxpayer obligations — from registration and filing through billing, assessment, accounting, and penalty management.",
+        "market_needs_and_benefits": [
+          "End-to-end taxpayer lifecycle management reduces administrative burden and manual errors",
+          "Automated penalty and interest calculations improve collection rates and reduce revenue leakage",
+          "Modular capability design allows onboarding of new tax types with minimal reconfiguration",
+          "Streamlined registration and billing processes reduce case handling time for tax officers",
+          "Supports regulatory compliance including audit trails and operational reporting"
+        ],
+        "status_donut": {
+          "title": "Status Distribution",
+          "segments": [
+            { "label": "To Do",       "value": 85, "color": "FF6359" },
+            { "label": "In Progress", "value": 10, "color": "FFD282" },
+            { "label": "Done",        "value": 5,  "color": "73AA87" }
+          ]
+        },
+        "initiative_table": {
+          "title": "Roadmap Initiatives at a Glance",
+          "rows": [
+            { "initiative": "Registration",               "effort_h": "11,866", "features": "6", "pi_window": "PI27-29", "priority": "P1"  },
+            { "initiative": "Taxpayer Accounting",        "effort_h": "8,064",  "features": "4", "pi_window": "PI28-29", "priority": "P1"  },
+            { "initiative": "Billing & Assessments",      "effort_h": "2,880",  "features": "3", "pi_window": "PI28-29", "priority": "P1-2"},
+            { "initiative": "Exemptions",                 "effort_h": "390",    "features": "1", "pi_window": "PI28",    "priority": "P2"  },
+            { "initiative": "Penalty & Interest",         "effort_h": "TBD",    "features": "1", "pi_window": "PI28-29", "priority": "P2"  },
+            { "initiative": "Tax Accounts",               "effort_h": "TBD",    "features": "1", "pi_window": "PI28-29", "priority": "P1"  }
+          ]
+        }
+      },
+
+      {
+        "slide_type": "initiative_detail",
+        "header_title":    "Registration",
+        "header_subtitle": "Core Revenue Management Capabilities | Initiative Detail",
+        "kpis": [
+          { "value": "~11,900",   "label": "Total Estimated Effort", "unit": "Hours" },
+          { "value": "6",         "label": "Features in Scope",      "unit": "Count" },
+          { "value": "P1",        "label": "Primary Priority",       "unit": "Must Have" },
+          { "value": "PI27–PI29", "label": "Planned PI Window",      "unit": "Program Increments" }
+        ],
+        "business_scope": "Enables tax authorities to manage the complete registration lifecycle — including party creation, identifier management, historical data tracking, and organisational hierarchy. Supports natural persons and legal entities with full audit traceability.",
+        "key_investment_benefits": [
+          "Faster taxpayer onboarding reduces overhead and improves service delivery",
+          "Flexible party model supports VAT, CIT, and PAYE with full audit traceability",
+          "Structured identifiers and validation rules improve data quality across tax types"
+        ],
+        "effort_bar_chart": {
+          "title": "Estimated Effort by Feature Area",
+          "features": [
+            { "name": "Party Identifiers",        "hours": 3200 },
+            { "name": "Org. Hierarchy View",      "hours": 2800 },
+            { "name": "Search Enhancements",      "hours": 2100 },
+            { "name": "Data Area Enhancements",   "hours": 1900 },
+            { "name": "Historical Data View",     "hours": 1100 },
+            { "name": "Additional Name Elems",    "hours": 766  }
+          ]
+        },
+        "priority_donut": {
+          "title": "Priority Distribution",
+          "segments": [
+            { "label": "P1 – Must Have",     "value": 70, "color": "123836" },
+            { "label": "P2 – Should Have",   "value": 20, "color": "1B5E52" },
+            { "label": "P3 – Nice to Have",  "value": 10, "color": "73AA87" }
+          ]
+        },
+        "stakeholder_chart": {
+          "title": "Stakeholder Split",
+          "segments": [
+            { "label": "Greek Project (GRC)", "value": 80, "color": "123836" },
+            { "label": "Go-To-Market (GTM)",  "value": 10, "color": "FF6359" },
+            { "label": "Other",               "value": 10, "color": "718886" }
+          ]
+        },
+        "pi_planning": {
+          "title": "PI Planning",
+          "bands": [
+            { "pi": "PI27", "color": "darkTeal", "note": "Party Identifiers · Historical Data View · Additional Name Elements (3 features)" },
+            { "pi": "PI28", "color": "medTeal",  "note": "Data Area Enhancements · Search Enhancements (2 features) — confirm capacity now" },
+            { "pi": "PI29", "color": "slate",    "note": "Organisational Hierarchy View — GRC team alignment required before scoping" }
+          ]
+        }
+      },
+
+      {
+        "slide_type": "initiative_detail",
+        "header_title":    "Taxpayer Accounting",
+        "header_subtitle": "Core Revenue Management Capabilities | Initiative Detail",
+        "kpis": [
+          { "value": "~8,064",    "label": "Total Estimated Effort", "unit": "Hours" },
+          { "value": "4",         "label": "Features in Scope",      "unit": "Count" },
+          { "value": "P1",        "label": "Primary Priority",       "unit": "Must Have" },
+          { "value": "PI28–PI29", "label": "Planned PI Window",      "unit": "Program Increments" }
+        ],
+        "business_scope": "Provides tax authorities with a unified financial ledger for each taxpayer, recording all transactions including payments, credits, adjustments, and write-offs. Ensures accurate account balances and supports reconciliation across all tax types.",
+        "key_investment_benefits": [
+          "Real-time balance visibility reduces disputes and improves taxpayer trust",
+          "Automated reconciliation eliminates manual posting errors",
+          "Single ledger supports multi-tax-type accounting for all periods"
+        ],
+        "effort_bar_chart": {
+          "title": "Estimated Effort by Feature Area",
+          "features": [
+            { "name": "General Ledger Core",      "hours": 2800 },
+            { "name": "Transaction Processing",   "hours": 2400 },
+            { "name": "Account Reconciliation",   "hours": 1664 },
+            { "name": "Balance Management",       "hours": 1200 }
+          ]
+        },
+        "priority_donut": {
+          "title": "Priority Distribution",
+          "segments": [
+            { "label": "P1 – Must Have",   "value": 75, "color": "123836" },
+            { "label": "P2 – Should Have", "value": 25, "color": "1B5E52" }
+          ]
+        },
+        "stakeholder_chart": null,
+        "talking_points": [
+          "Second-largest investment — foundational to revenue assurance",
+          "PI28 delivery critical — capacity must be confirmed now",
+          "All P1/P2 — no descoping without revenue risk"
+        ],
+        "pi_planning": {
+          "title": "PI Planning",
+          "bands": [
+            { "pi": "PI27", "color": "bgGrey",  "note": "No features" },
+            { "pi": "PI28", "color": "darkTeal","note": "General Ledger Core · Transaction Processing" },
+            { "pi": "PI29", "color": "medTeal", "note": "Account Reconciliation · Balance Management" }
+          ]
+        },
+        "steerco_footer": "Second-largest investment — foundational to revenue assurance   ·   PI28 delivery must be confirmed   ·   All features P1/P2 — no descoping without revenue risk"
+      },
+
+      {
+        "slide_type": "initiative_detail",
+        "header_title":    "Billing, Assessments & Installments",
+        "header_subtitle": "Core Revenue Management Capabilities | Initiative Detail",
+        "kpis": [
+          { "value": "~2,880",    "label": "Total Estimated Effort", "unit": "Hours" },
+          { "value": "3",         "label": "Features in Scope",      "unit": "Count" },
+          { "value": "P1–P2",     "label": "Primary Priority",       "unit": "Must/Should Have" },
+          { "value": "PI28–PI29", "label": "Planned PI Window",      "unit": "Program Increments" }
+        ],
+        "business_scope": "Manages the generation, issuance, and tracking of tax bills and formal assessments, alongside configurable installment plan management. Enables revenue authorities to systematically collect outstanding liabilities while offering structured repayment arrangements to taxpayers.",
+        "key_investment_benefits": [
+          "Automated billing reduces manual officer workload and accelerates revenue collection cycles",
+          "Structured installment plans increase voluntary compliance and recovery rates",
+          "Formal assessment workflows create enforceable legal liability records",
+          "Reduces revenue leakage by ensuring all liabilities are captured and tracked"
+        ],
+        "feature_table": {
+          "title": "Feature Breakdown & PI Planning",
+          "rows": [
+            { "feature": "Bill Generation & Issuance",       "effort_h": "1,280", "priority": "P1", "pi28": true,  "pi29": false },
+            { "feature": "Formal Assessment Management",     "effort_h": "1,040", "priority": "P1", "pi28": true,  "pi29": false },
+            { "feature": "Installment Plan Configuration",   "effort_h": "560",   "priority": "P2", "pi28": false, "pi29": true  }
+          ]
+        },
+        "priority_donut": {
+          "title": "Priority Distribution",
+          "segments": [
+            { "label": "P1 – Must Have",   "value": 67, "color": "123836" },
+            { "label": "P2 – Should Have", "value": 33, "color": "73AA87" }
+          ]
+        },
+        "talking_points": [
+          "Billing and assessments are prerequisites for collections — sequence with Registration PI delivery",
+          "Installment plan scope is small and can provide quick win value in PI29",
+          "No features currently started — PI28 kickoff planning required immediately"
+        ],
+        "steerco_footer": "Prerequisite for collections — sequence with Registration   ·   Installment plans = quick win in PI29   ·   No work started — PI28 kickoff required now"
+      },
+
+      {
+        "slide_type": "initiative_cards",
+        "header_title":    "Remaining Initiatives — Core Revenue Management",
+        "header_subtitle": "Exemptions | Penalty & Interest | Tax Accounts",
+        "initiatives": [
+          {
+            "title":    "Exemptions",
+            "effort":   "~390H",
+            "features": "1",
+            "priority": "P2",
+            "pi":       "PI28",
+            "scope":    "Manages the application, approval, and recording of tax exemptions for qualifying taxpayers or transactions. Ensures audit-traceable decisions and supports statutory compliance for exemption schemes.",
+            "benefits": [
+              "Reduces manual exemption handling and processing backlogs",
+              "Audit-ready exemption records reduce compliance risk",
+              "Configurable exemption rules support multiple tax types"
+            ],
+            "steerco_note": "Small scope — good candidate for early delivery to demonstrate value to GRC stakeholders in PI28."
+          },
+          {
+            "title":    "Penalty & Interest",
+            "effort":   "TBD",
+            "features": "1",
+            "priority": "P2",
+            "pi":       "PI28–PI29",
+            "scope":    "Automates the calculation and application of statutory penalties and interest charges on overdue tax liabilities. Ensures accurate and consistent enforcement of late payment rules across all tax types.",
+            "benefits": [
+              "Automated calculations eliminate manual errors and officer inconsistency",
+              "Increases voluntary compliance by ensuring consistent enforcement",
+              "Supports configurable penalty schedules per tax type and jurisdiction"
+            ],
+            "steerco_note": "Effort not yet estimated — scope clarification required before PI28 planning can be confirmed."
+          },
+          {
+            "title":    "Tax Accounts",
+            "effort":   "TBD",
+            "features": "1",
+            "priority": "P1",
+            "pi":       "PI28–PI29",
+            "scope":    "Provides a structured account management layer for individual tax obligations, enabling authorities to track, manage, and report on each taxpayer's account position across multiple tax types and periods.",
+            "benefits": [
+              "Unified account view simplifies officer case management and reduces error rates",
+              "Supports multi-period and multi-tax-type account tracking in a single view",
+              "Foundation for advanced debt management and compliance analytics"
+            ],
+            "steerco_note": "P1 priority but effort TBD — requires immediate scoping to avoid PI28 planning risk."
+          }
+        ]
+      },
+
+      {
+        "slide_type": "next_steps",
+        "title":    "Next Steps & Decision Points",
+        "subtitle": "Solon Tax Product Roadmap 2026 | SteerCo Session — 29 April 2026",
+        "decisions": [
+          {
+            "num":    "01",
+            "action": "Confirm PI28 Capacity",
+            "detail": "Validate delivery team capacity for Registration, Taxpayer Accounting, and Billing features planned in PI28. Flag any resource constraints to product leadership."
+          },
+          {
+            "num":    "02",
+            "action": "Estimate Penalty & Interest + Tax Accounts",
+            "detail": "Both initiatives are P1/P2 with TBD effort estimates. Scope clarification sessions must be scheduled before PI28 planning begins."
+          },
+          {
+            "num":    "03",
+            "action": "Approve PI29 Scope for Registration",
+            "detail": "Organisational Hierarchy View feature requires SteerCo alignment on priority and GRC team availability for PI29 delivery confirmation."
+          },
+          {
+            "num":    "04",
+            "action": "Advance Exemptions as Quick Win",
+            "detail": "Small scope, P2 initiative with clear value. Recommend advancing delivery to PI28 to demonstrate early value to Greek Project stakeholders."
+          }
+        ]
+      }
+
+    ],
+
+    "instructions_for_ai": {
+      "overview": "To generate a new deck, update the 'slides' array with new content and run generate_slides.js. The renderer reads each slide object by its slide_type and maps fields directly to pptxgenjs calls. Do not change field names — they are consumed by name.",
+      "slide_type_field_map": {
+        "cover": {
+          "required": ["title", "subtitle", "audience_line", "author"],
+          "notes": "Full-bleed dark teal cover. No header bar."
+        },
+        "agenda": {
+          "required": ["header_title", "header_subtitle", "groups"],
+          "groups_fields": ["num", "title", "sub"],
+          "notes": "Exactly 6 groups renders as 2×3 grid. Fewer groups leaves empty cells."
+        },
+        "group_summary": {
+          "required": ["header_title", "header_subtitle", "kpis", "business_scope", "market_needs_and_benefits", "status_donut", "initiative_table"],
+          "kpi_fields": ["value", "label", "unit"],
+          "status_donut_fields": ["title", "segments[label, value, color]"],
+          "initiative_table_fields": ["title", "rows[initiative, effort_h, features, pi_window, priority]"],
+          "notes": "Exactly 4 KPI cards. Max 5 bullet points in market_needs_and_benefits. Max 6 rows in initiative_table."
+        },
+        "initiative_detail": {
+          "required": ["header_title", "header_subtitle", "kpis", "business_scope", "key_investment_benefits", "effort_bar_chart", "priority_donut", "pi_planning"],
+          "optional": ["stakeholder_chart", "talking_points", "feature_table", "steerco_footer"],
+          "kpi_fields": ["value", "label", "unit"],
+          "effort_bar_chart_fields": ["title", "features[name, hours]"],
+          "pi_planning_fields": ["title", "bands[pi, color, note]"],
+          "notes": "Exactly 4 KPI cards. Max 3 bullets in key_investment_benefits. Max 6 features in bar chart. Exactly 3 PI bands (PI27/PI28/PI29). Use feature_table instead of effort_bar_chart for small initiatives (≤4 features with effort breakdown needed). stakeholder_chart is optional — set to null to omit. steerco_footer is a single string rendered in the bottom banner."
+        },
+        "initiative_cards": {
+          "required": ["header_title", "header_subtitle", "initiatives"],
+          "initiative_fields": ["title", "effort", "features", "priority", "pi", "scope", "benefits", "steerco_note"],
+          "notes": "Exactly 3 initiatives per slide renders as equal-width cards. Max 3 bullets in benefits. steerco_note is italic text in a highlighted box at the bottom of each card."
+        },
+        "next_steps": {
+          "required": ["title", "subtitle", "decisions"],
+          "decision_fields": ["num", "action", "detail"],
+          "notes": "Dark teal full-bleed closer slide. Exactly 4 decision rows fit cleanly. num is a 2-digit string (01, 02...). action is bold, detail is smaller body text below."
+        }
+      },
+      "adding_new_groups": "To cover a new initiative group, add one group_summary slide followed by one initiative_detail slide per major initiative, then one initiative_cards slide for any remaining smaller initiatives in that group.",
+      "ordering": "Slide order in the 'slides' array is the rendered order. Always start with cover, then agenda, then groups in priority order.",
+      "forbidden_content": [
+        "Jira IRM IDs",
+        "Technical implementation details",
+        "Microservice references",
+        "Code snippets or API references"
+      ]
+    }
+
+  }
+}
