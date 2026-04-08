@@ -165,21 +165,8 @@ async function buildPresentation() {
         x: leftX, y: contentY + 1.52, w: colW, h: 1.55, fontSize: 9, color: NC.textGrey, wrap: true
       });
 
-      // Status Donut
-      const chartX = 3.95, chartY = 2.3;
-      s.addText(sData.status_donut?.title || "Status Distribution", { x: chartX, y: chartY, w: 2.7, h: 0.28, fontSize: 10, bold: true, color: NC.coral });
-      s.addChart(pres.charts.DOUGHNUT, [{
-        name: "Status",
-        labels: (sData.status_donut?.segments || []).map(seg => seg.label),
-        values: (sData.status_donut?.segments || []).map(seg => seg.value)
-      }], {
-        x: chartX, y: chartY + 0.3, w: 2.7, h: 1.7,
-        chartColors: (sData.status_donut?.segments || []).map(seg => seg.color || "FF6359"),
-        holeSize: 55, showLegend: true, legendPos: "b", showPercent: true
-      });
-
       // Initiative Table
-      const tX = 6.75, tY = 2.3;
+      const tX = 3.95, tY = 2.3;
       s.addText(sData.initiative_table?.title || "Roadmap Initiatives at a Glance", { x: tX, y: tY, w: 3, h: 0.28, fontSize: 10, bold: true, color: NC.coral });
 
       const rows = sData.initiative_table?.rows || [];
@@ -264,44 +251,6 @@ async function buildPresentation() {
         s.addShape(pres.shapes.RECTANGLE, { x: 0, y: 5.05, w: 0.08, h: 0.38, fill: { color: NC.gold } });
         s.addText(sData.steerco_footer, { x: 0.15, y: 5.05, w: 9.7, h: 0.38, fontSize: 7.5, color: NC.bgGrey, valign: "middle" });
       }
-    }
-
-    else if (type === "initiative_cards") {
-      const s = pres.addSlide();
-      s.background = { color: "F4F6F6" };
-      addSlideHeader(s, pres, sData.header_title, sData.header_subtitle);
-      addFooter(s, pres, ++pageNum);
-
-      (sData.initiatives || []).forEach((init, col) => {
-        const x = 0.2 + col * 3.27, y = 1.12, w = 3.1;
-        s.addShape(pres.shapes.RECTANGLE, { x, y, w, h: 4.22, fill: { color: NC.white }, line: { color: NC.bgGrey }, shadow: mkShadow() });
-        s.addShape(pres.shapes.RECTANGLE, { x, y, w, h: 0.06, fill: { color: NC.coral } });
-
-        s.addText(init.title, { x: x+0.12, y: y+0.1, w: w-0.24, h: 0.35, fontSize: 13, bold: true, color: NC.darkTeal });
-
-        // Mini KPIs (simplified)
-        const mkpis = [
-          {v: init.effort, l: "Effort"}, {v: init.features, l: "Features"},
-          {v: init.priority, l: "Priority"}, {v: init.pi, l: "PI"}
-        ];
-        mkpis.forEach((mk, mi) => {
-          const kx = x + 0.07 + mi * 0.76;
-          s.addShape(pres.shapes.RECTANGLE, { x: kx, y: y+0.5, w: 0.7, h: 0.6, fill: { color: NC.darkTeal } });
-          s.addText(mk.v, { x: kx, y: y+0.5, w: 0.7, h: 0.37, fontSize: 7.5, bold: true, color: NC.white, align: "center", valign: "bottom" });
-          s.addText(mk.l, { x: kx, y: y+0.87, w: 0.7, h: 0.22, fontSize: 6.5, color: NC.gold, align: "center" });
-        });
-
-        s.addText("Scope", { x: x+0.12, y: y+1.18, w: w-0.24, h: 0.22, fontSize: 9, bold: true, color: NC.coral });
-        s.addText(init.scope, { x: x+0.12, y: y+1.4, w: w-0.24, h: 0.9, fontSize: 8.5, color: NC.nearBlack, wrap: true });
-
-        s.addText("Benefits", { x: x+0.12, y: y+2.35, w: w-0.24, h: 0.22, fontSize: 9, bold: true, color: NC.coral });
-        s.addText((init.benefits || []).map(b => ({ text: b, options: { bullet: true } })), {
-          x: x+0.12, y: y+2.58, w: w-0.24, h: 0.9, fontSize: 8, color: NC.textGrey, wrap: true
-        });
-
-        s.addShape(pres.shapes.RECTANGLE, { x: x+0.12, y: y+3.54, w: w-0.24, h: 0.58, fill: { color: NC.lightBg } });
-        s.addText(init.steerco_note || "", { x: x+0.18, y: y+3.57, w: w-0.36, h: 0.52, fontSize: 8, color: NC.darkTeal, italic: true, wrap: true });
-      });
     }
 
     else if (type === "next_steps") {

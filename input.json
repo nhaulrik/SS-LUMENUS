@@ -37,9 +37,8 @@
       "note": "Reference guide — each type name corresponds to a renderer in generate_slides.js.",
       "cover":             "Slide 1. Full-bleed dark teal. Fields: title, subtitle, audience_line, author.",
       "agenda":            "Slide 2. 2×3 grid of numbered group cards. Fields: header_title, header_subtitle, groups[].",
-      "group_summary":     "Slide 3+. KPI row + left text + centre donut + right table. One per initiative group.",
+      "group_summary":     "Slide 3+. KPI row + left text + right table. One per initiative group.",
       "initiative_detail": "Slides 4-5+. KPI row + left text + centre bar chart + right donut + PI planning boxes + footer bar. One per major initiative.",
-      "initiative_cards":  "Slide 7+. Up to 3 side-by-side cards for smaller initiatives. Fields: header_title, header_subtitle, initiatives[].",
       "next_steps":        "Last slide. Dark teal closer. Fields: title, subtitle, decisions[]."
     },
 
@@ -109,14 +108,6 @@
           "Streamlined registration and billing processes reduce case handling time for tax officers",
           "Supports regulatory compliance including audit trails and operational reporting"
         ],
-        "status_donut": {
-          "title": "Status Distribution",
-          "segments": [
-            { "label": "To Do",       "value": 85, "color": "FF6359" },
-            { "label": "In Progress", "value": 10, "color": "FFD282" },
-            { "label": "Done",        "value": 5,  "color": "73AA87" }
-          ]
-        },
         "initiative_table": {
           "title": "Roadmap Initiatives at a Glance",
           "rows": [
@@ -273,56 +264,6 @@
       },
 
       {
-        "slide_type": "initiative_cards",
-        "header_title":    "Remaining Initiatives — Core Revenue Management",
-        "header_subtitle": "Exemptions | Penalty & Interest | Tax Accounts",
-        "initiatives": [
-          {
-            "title":    "Exemptions",
-            "effort":   "~390H",
-            "features": "1",
-            "priority": "P2",
-            "pi":       "PI28",
-            "scope":    "Manages the application, approval, and recording of tax exemptions for qualifying taxpayers or transactions. Ensures audit-traceable decisions and supports statutory compliance for exemption schemes.",
-            "benefits": [
-              "Reduces manual exemption handling and processing backlogs",
-              "Audit-ready exemption records reduce compliance risk",
-              "Configurable exemption rules support multiple tax types"
-            ],
-            "steerco_note": "Small scope — good candidate for early delivery to demonstrate value to GRC stakeholders in PI28."
-          },
-          {
-            "title":    "Penalty & Interest",
-            "effort":   "TBD",
-            "features": "1",
-            "priority": "P2",
-            "pi":       "PI28–PI29",
-            "scope":    "Automates the calculation and application of statutory penalties and interest charges on overdue tax liabilities. Ensures accurate and consistent enforcement of late payment rules across all tax types.",
-            "benefits": [
-              "Automated calculations eliminate manual errors and officer inconsistency",
-              "Increases voluntary compliance by ensuring consistent enforcement",
-              "Supports configurable penalty schedules per tax type and jurisdiction"
-            ],
-            "steerco_note": "Effort not yet estimated — scope clarification required before PI28 planning can be confirmed."
-          },
-          {
-            "title":    "Tax Accounts",
-            "effort":   "TBD",
-            "features": "1",
-            "priority": "P1",
-            "pi":       "PI28–PI29",
-            "scope":    "Provides a structured account management layer for individual tax obligations, enabling authorities to track, manage, and report on each taxpayer's account position across multiple tax types and periods.",
-            "benefits": [
-              "Unified account view simplifies officer case management and reduces error rates",
-              "Supports multi-period and multi-tax-type account tracking in a single view",
-              "Foundation for advanced debt management and compliance analytics"
-            ],
-            "steerco_note": "P1 priority but effort TBD — requires immediate scoping to avoid PI28 planning risk."
-          }
-        ]
-      },
-
-      {
         "slide_type": "next_steps",
         "title":    "Next Steps & Decision Points",
         "subtitle": "Solon Tax Product Roadmap 2026 | SteerCo Session — 29 April 2026",
@@ -350,55 +291,7 @@
         ]
       }
 
-    ],
-
-    "instructions_for_ai": {
-      "overview": "To generate a new deck, update the 'slides' array with new content and run generate_slides.js. The renderer reads each slide object by its slide_type and maps fields directly to pptxgenjs calls. Do not change field names — they are consumed by name.",
-      "slide_type_field_map": {
-        "cover": {
-          "required": ["title", "subtitle", "audience_line", "author"],
-          "notes": "Full-bleed dark teal cover. No header bar."
-        },
-        "agenda": {
-          "required": ["header_title", "header_subtitle", "groups"],
-          "groups_fields": ["num", "title", "sub"],
-          "notes": "Exactly 6 groups renders as 2×3 grid. Fewer groups leaves empty cells."
-        },
-        "group_summary": {
-          "required": ["header_title", "header_subtitle", "kpis", "business_scope", "market_needs_and_benefits", "status_donut", "initiative_table"],
-          "kpi_fields": ["value", "label", "unit"],
-          "status_donut_fields": ["title", "segments[label, value, color]"],
-          "initiative_table_fields": ["title", "rows[initiative, effort_h, features, pi_window, priority]"],
-          "notes": "Exactly 4 KPI cards. Max 5 bullet points in market_needs_and_benefits. Max 6 rows in initiative_table."
-        },
-        "initiative_detail": {
-          "required": ["header_title", "header_subtitle", "kpis", "business_scope", "key_investment_benefits", "effort_bar_chart", "priority_donut", "pi_planning"],
-          "optional": ["stakeholder_chart", "talking_points", "feature_table", "steerco_footer"],
-          "kpi_fields": ["value", "label", "unit"],
-          "effort_bar_chart_fields": ["title", "features[name, hours]"],
-          "pi_planning_fields": ["title", "bands[pi, color, note]"],
-          "notes": "Exactly 4 KPI cards. Max 3 bullets in key_investment_benefits. Max 6 features in bar chart. Exactly 3 PI bands (PI27/PI28/PI29). Use feature_table instead of effort_bar_chart for small initiatives (≤4 features with effort breakdown needed). stakeholder_chart is optional — set to null to omit. steerco_footer is a single string rendered in the bottom banner."
-        },
-        "initiative_cards": {
-          "required": ["header_title", "header_subtitle", "initiatives"],
-          "initiative_fields": ["title", "effort", "features", "priority", "pi", "scope", "benefits", "steerco_note"],
-          "notes": "Exactly 3 initiatives per slide renders as equal-width cards. Max 3 bullets in benefits. steerco_note is italic text in a highlighted box at the bottom of each card."
-        },
-        "next_steps": {
-          "required": ["title", "subtitle", "decisions"],
-          "decision_fields": ["num", "action", "detail"],
-          "notes": "Dark teal full-bleed closer slide. Exactly 4 decision rows fit cleanly. num is a 2-digit string (01, 02...). action is bold, detail is smaller body text below."
-        }
-      },
-      "adding_new_groups": "To cover a new initiative group, add one group_summary slide followed by one initiative_detail slide per major initiative, then one initiative_cards slide for any remaining smaller initiatives in that group.",
-      "ordering": "Slide order in the 'slides' array is the rendered order. Always start with cover, then agenda, then groups in priority order.",
-      "forbidden_content": [
-        "Jira IRM IDs",
-        "Technical implementation details",
-        "Microservice references",
-        "Code snippets or API references"
-      ]
-    }
+    ]
 
   }
 }
