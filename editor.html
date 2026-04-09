@@ -1,3 +1,5 @@
+    }
+      }
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,10 +12,15 @@
   <div class="app-shell">
     <header>
       <h1>Solon Template Editor</h1>
-      <p>Edit your PowerPoint theme tokens and save them directly to <code>theme.json</code>.</p>
+      <p>Use this UI to adjust theme tokens and slide templates visually. Changes save directly to <code>theme.json</code> and <code>slide_templates.json</code>.</p>
     </header>
 
-    <section class="panel">
+    <div class="tabs">
+      <button id="tab-theme" class="active">Theme</button>
+      <button id="tab-templates">Slide templates</button>
+    </div>
+
+    <section id="theme-panel" class="panel active">
       <h2>Theme preview</h2>
       <div class="preview-row">
         <div class="preview-card">
@@ -25,27 +32,63 @@
           <div class="preview-box body-sample">Sample paragraph text</div>
         </div>
       </div>
+
+      <div class="panel-grid">
+        <section class="panel-sub">
+          <h3>Color palette</h3>
+          <div id="colors" class="grid"></div>
+        </section>
+        <section class="panel-sub">
+          <h3>Fonts</h3>
+          <div id="fonts" class="grid"></div>
+        </section>
+      </div>
+
+      <section class="panel-sub">
+        <h3>Raw theme JSON</h3>
+        <textarea id="theme-json-editor" rows="14"></textarea>
+      </section>
+
+      <div class="actions">
+        <button id="load-theme-btn" type="button">Reload theme</button>
+        <button id="save-theme-btn" type="button" class="primary">Save theme</button>
+      </div>
     </section>
 
-    <section class="panel">
-      <h2>Color palette</h2>
-      <div id="colors" class="grid"></div>
-    </section>
+    <section id="templates-panel" class="panel">
+      <div class="panel-grid templates-shell">
+        <aside class="template-sidebar">
+          <div class="template-sidebar-header">
+            <h2>Slide templates</h2>
+            <button id="add-template-btn" type="button">Add template</button>
+          </div>
+          <div id="template-list" class="template-list"></div>
+        </aside>
 
-    <section class="panel">
-      <h2>Fonts</h2>
-      <div id="fonts" class="grid"></div>
-    </section>
+        <div class="template-main">
+          <div class="template-main-header">
+            <h2>Template details</h2>
+            <div class="template-actions">
+              <button id="remove-template-btn" type="button">Remove template</button>
+              <button id="save-templates-btn" type="button" class="primary">Save templates</button>
+            </div>
+          </div>
 
-    <section class="panel">
-      <h2>Raw theme JSON</h2>
-      <textarea id="json-editor" rows="16"></textarea>
-    </section>
+          <div id="template-preview" class="template-preview empty">
+            <p>Select a slide template to see a visual preview of its components.</p>
+          </div>
 
-    <div class="actions">
-      <button id="load-btn" type="button">Reload theme</button>
-      <button id="save-btn" type="button" class="primary">Save theme</button>
-    </div>
+          <div id="template-details" class="template-details empty">
+            <p>Select a slide type to edit its template.</p>
+          </div>
+        </div>
+      </div>
+
+      <section class="panel-sub">
+        <h3>Raw slide_templates.json</h3>
+        <textarea id="template-json-editor" rows="18"></textarea>
+      </section>
+    </section>
 
     <div id="status" class="status"></div>
   </div>
@@ -58,15 +101,28 @@
     function checkOrigin() {
       if (isFileProtocol()) {
         setStatus('Please run the editor using the local server and open http://localhost:3000 instead of loading editor.html directly.', false);
-        document.getElementById('load-btn').disabled = true;
-        document.getElementById('save-btn').disabled = true;
+        disableAllButtons(true);
         return false;
       }
       return true;
     }
 
+    function disableAllButtons(disabled) {
+      [...document.querySelectorAll('button')].forEach(btn => btn.disabled = disabled);
+    }
+
     const themeUrl = '/api/theme';
+    const templatesUrl = '/api/templates';
     let themeData = null;
+    let templatesData = null;
+    let selectedTemplateKey = null;
+    let selectedComponentIndex = null;
+
+    function setStatus(message, success) {
+      const status = document.getElementById('status');
+      status.textContent = message;
+      status.className = `status ${success ? 'success' : 'error'}`;
+    }
 
     function createField(labelText, input) {
       const wrapper = document.createElement('div');
@@ -75,6 +131,12 @@
       label.textContent = labelText;
       wrapper.append(label, input);
       return wrapper;
+    }
+
+    function createInput(type = 'text') {
+      const input = document.createElement('input');
+      input.type = type;
+      return input;
     }
 
     function buildColorInputs(colors) {
@@ -94,8 +156,7 @@
       const container = document.getElementById('fonts');
       container.innerHTML = '';
       Object.entries(fonts).forEach(([key, value]) => {
-        const input = document.createElement('input');
-        input.type = 'text';
+        const input = createInput('text');
         input.value = value;
         input.dataset.key = key;
         input.addEventListener('input', () => updateThemeValue('fonts', key, input.value));
@@ -106,19 +167,19 @@
     function updateThemeColor(key, value) {
       if (!themeData) return;
       themeData.colors[key] = value.replace('#', '').toUpperCase();
-      updateJsonEditor();
-      refreshPreview();
+      refreshThemeEditor();
     }
 
     function updateThemeValue(group, key, value) {
       if (!themeData) return;
       themeData[group][key] = value;
-      updateJsonEditor();
+      refreshThemeEditor();
     }
 
-    function updateJsonEditor() {
-      const editor = document.getElementById('json-editor');
+    function refreshThemeEditor() {
+      const editor = document.getElementById('theme-json-editor');
       editor.value = JSON.stringify(themeData, null, 2);
+      refreshPreview();
     }
 
     function refreshPreview() {
@@ -140,8 +201,7 @@
         themeData = await response.json();
         buildColorInputs(themeData.colors || {});
         buildFontInputs(themeData.fonts || {});
-        updateJsonEditor();
-        refreshPreview();
+        refreshThemeEditor();
         setStatus('Theme loaded successfully.', true);
       } catch (err) {
         setStatus(`Error loading theme: ${err.message}`, false);
@@ -150,7 +210,7 @@
 
     async function saveTheme() {
       try {
-        const json = document.getElementById('json-editor').value;
+        const json = document.getElementById('theme-json-editor').value;
         const parsed = JSON.parse(json);
         const response = await fetch(themeUrl, {
           method: 'POST',
@@ -168,25 +228,336 @@
       }
     }
 
-    function setStatus(message, success) {
-      const status = document.getElementById('status');
-      status.textContent = message;
-      status.className = `status ${success ? 'success' : 'error'}`;
+    async function loadTemplates() {
+      if (!checkOrigin()) return;
+      setStatus('Loading templates...', false);
+      try {
+        const response = await fetch(templatesUrl);
+        if (!response.ok) throw new Error(response.statusText);
+        templatesData = await response.json();
+        document.getElementById('template-json-editor').value = JSON.stringify(templatesData, null, 2);
+        selectedTemplateKey = null;
+        selectedComponentIndex = null;
+        renderTemplateList();
+        renderTemplateDetails();
+        setStatus('Templates loaded successfully.', true);
+      } catch (err) {
+        setStatus(`Error loading templates: ${err.message}`, false);
+      }
     }
 
-    document.getElementById('load-btn').addEventListener('click', loadTheme);
-    document.getElementById('save-btn').addEventListener('click', saveTheme);
-
-    document.getElementById('json-editor').addEventListener('input', () => {
+    async function saveTemplates() {
       try {
-        const parsed = JSON.parse(document.getElementById('json-editor').value);
-        themeData = parsed;
+        const json = document.getElementById('template-json-editor').value;
+        const parsed = JSON.parse(json);
+        const response = await fetch(templatesUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(parsed, null, 2)
+        });
+        if (!response.ok) throw new Error(await response.text());
+        templatesData = parsed;
+        renderTemplateList();
+        renderTemplateDetails();
+        setStatus('Templates saved to slide_templates.json.', true);
       } catch (err) {
-        // Ignore invalid JSON until save
+        setStatus(`Error saving templates: ${err.message}`, false);
       }
-    });
+    }
+
+    function renderTemplateList() {
+      const list = document.getElementById('template-list');
+      list.innerHTML = '';
+      if (!templatesData || !templatesData.templates) return;
+      Object.keys(templatesData.templates).forEach(key => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = selectedTemplateKey === key ? 'template-item active' : 'template-item';
+        button.textContent = key;
+        button.addEventListener('click', () => selectTemplate(key));
+        list.appendChild(button);
+      });
+    }
+
+    function selectTemplate(key) {
+      selectedTemplateKey = key;
+      selectedComponentIndex = null;
+      renderTemplateList();
+      renderTemplateDetails();
+    }
+
+    function renderTemplateDetails() {
+      const container = document.getElementById('template-details');
+      container.innerHTML = '';
+      container.classList.remove('empty');
+      if (!selectedTemplateKey || !templatesData?.templates?.[selectedTemplateKey]) {
+        renderTemplatePreview(null);
+        container.classList.add('empty');
+        container.innerHTML = '<p>Select a slide type to edit its template.</p>';
+        return;
+      }
+      const template = templatesData.templates[selectedTemplateKey];
+      const titleInput = createInput('text');
+      titleInput.value = selectedTemplateKey;
+      titleInput.addEventListener('input', () => updateTemplateKey(titleInput.value));
+      container.appendChild(createField('Slide type', titleInput));
+
+      const backgroundInput = createInput('text');
+      backgroundInput.value = template.background || '';
+      backgroundInput.addEventListener('input', () => updateTemplateValue('background', backgroundInput.value));
+      container.appendChild(createField('Background color / token', backgroundInput));
+
+      const footerCheckbox = document.createElement('input');
+      footerCheckbox.type = 'checkbox';
+      footerCheckbox.checked = template.footer || false;
+      footerCheckbox.addEventListener('change', () => updateTemplateValue('footer', footerCheckbox.checked));
+      container.appendChild(createField('Footer enabled', footerCheckbox));
+
+      const addComponentBtn = document.createElement('button');
+      addComponentBtn.type = 'button';
+      addComponentBtn.textContent = 'Add component';
+      addComponentBtn.addEventListener('click', () => addComponent());
+      container.appendChild(addComponentBtn);
+
+      const componentSection = document.createElement('div');
+      componentSection.className = 'component-section';
+      const compHeader = document.createElement('h3');
+      compHeader.textContent = 'Components';
+      componentSection.appendChild(compHeader);
+      const componentList = document.createElement('div');
+      componentList.id = 'component-list';
+      componentList.className = 'template-component-list';
+      (template.components || []).forEach((component, index) => {
+        const row = document.createElement('div');
+        row.className = selectedComponentIndex === index ? 'component-item active' : 'component-item';
+        row.textContent = `${index + 1}. ${component.type || 'unknown'}`;
+        row.addEventListener('click', () => selectComponent(index));
+        componentList.appendChild(row);
+      });
+      componentSection.appendChild(componentList);
+      container.appendChild(componentSection);
+
+      renderTemplatePreview(template);
+
+      container.appendChild(renderComponentEditor());
+    }
+
+    function renderTemplatePreview(template) {
+      const preview = document.getElementById('template-preview');
+      preview.classList.remove('empty');
+      preview.innerHTML = '';
+      if (!template) {
+        preview.classList.add('empty');
+        preview.innerHTML = '<p>Select a slide template to see a visual preview of its components.</p>';
+        return;
+      }
+
+      const header = document.createElement('div');
+      header.className = 'preview-header';
+      header.textContent = `Preview: ${selectedTemplateKey}`;
+      preview.appendChild(header);
+
+      const stage = document.createElement('div');
+      stage.className = 'preview-stage';
+      template.components?.forEach((component, index) => {
+        const box = document.createElement('div');
+        box.className = selectedComponentIndex === index ? 'preview-box active' : 'preview-box';
+        const left = Math.max(0, Math.min(100, (component.x ?? 0) * 10));
+        const top = Math.max(0, Math.min(100, (component.y ?? 0) * 10));
+        const width = Math.max(5, Math.min(100, (component.w ?? 1) * 10));
+        const height = Math.max(5, Math.min(100, (component.h ?? 1) * 10));
+        box.style.left = `${left}%`;
+        box.style.top = `${top}%`;
+        box.style.width = `${width}%`;
+        box.style.height = `${height}%`;
+        box.textContent = formatComponentLabel(component, index);
+        box.title = JSON.stringify(component, null, 2);
+        box.addEventListener('click', () => selectComponent(index));
+        stage.appendChild(box);
+      });
+      preview.appendChild(stage);
+    }
+
+    function formatComponentLabel(component, index) {
+      const label = component.type || 'component';
+      const bind = component.bind ? `:${component.bind}` : '';
+      return `${index + 1}. ${label}${bind}`;
+    }
+
+    function updateTemplateKey(newKey) {
+      if (!selectedTemplateKey || !templatesData?.templates) return;
+      const normalized = newKey.trim();
+      if (!normalized || normalized === selectedTemplateKey) return;
+      templatesData.templates[normalized] = templatesData.templates[selectedTemplateKey];
+      delete templatesData.templates[selectedTemplateKey];
+      selectedTemplateKey = normalized;
+      document.getElementById('template-json-editor').value = JSON.stringify(templatesData, null, 2);
+      renderTemplateList();
+      renderTemplateDetails();
+    }
+
+    function updateTemplateValue(key, value) {
+      if (!selectedTemplateKey || !templatesData?.templates) return;
+      templatesData.templates[selectedTemplateKey][key] = value;
+      document.getElementById('template-json-editor').value = JSON.stringify(templatesData, null, 2);
+    }
+
+    function addComponent() {
+      if (!selectedTemplateKey || !templatesData?.templates) return;
+      const template = templatesData.templates[selectedTemplateKey];
+      template.components = template.components || [];
+      template.components.push({ type: 'text', bind: '', x: 0.25, y: 0.25, w: 3.0, h: 0.6, fontSize: 10, color: 'nearBlack' });
+      selectedComponentIndex = template.components.length - 1;
+      document.getElementById('template-json-editor').value = JSON.stringify(templatesData, null, 2);
+      renderTemplateDetails();
+    }
+
+    function removeTemplate() {
+      if (!selectedTemplateKey || !templatesData?.templates) return;
+      delete templatesData.templates[selectedTemplateKey];
+      selectedTemplateKey = null;
+      selectedComponentIndex = null;
+      document.getElementById('template-json-editor').value = JSON.stringify(templatesData, null, 2);
+      renderTemplateList();
+      renderTemplateDetails();
+    }
+
+    function addTemplate() {
+      const baseKey = 'new_template';
+      let key = baseKey;
+      let index = 1;
+      while (templatesData.templates[key]) {
+        key = `${baseKey}_${index++}`;
+      }
+      templatesData.templates[key] = { background: 'F4F6F6', footer: true, components: [] };
+      selectedTemplateKey = key;
+      selectedComponentIndex = null;
+      document.getElementById('template-json-editor').value = JSON.stringify(templatesData, null, 2);
+      renderTemplateList();
+      renderTemplateDetails();
+    }
+
+    function selectComponent(index) {
+      selectedComponentIndex = index;
+      renderTemplateDetails();
+    }
+
+    function renderComponentEditor() {
+      const editor = document.createElement('div');
+      editor.className = 'component-editor';
+      if (!selectedTemplateKey || selectedComponentIndex === null || !templatesData?.templates?.[selectedTemplateKey]) {
+        editor.innerHTML = '<p>Select a component to edit its properties.</p>';
+        return editor;
+      }
+      const template = templatesData.templates[selectedTemplateKey];
+      const component = template.components[selectedComponentIndex];
+      if (!component) {
+        editor.innerHTML = '<p>Select a component to edit its properties.</p>';
+        return editor;
+      }
+
+      const header = document.createElement('div');
+      header.className = 'component-editor-header';
+      const heading = document.createElement('h3');
+      heading.textContent = `Component ${selectedComponentIndex + 1}`;
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.textContent = 'Delete component';
+      deleteBtn.addEventListener('click', () => deleteComponent(selectedComponentIndex));
+      header.appendChild(heading);
+      header.appendChild(deleteBtn);
+      editor.appendChild(header);
+
+      Object.keys(component).forEach(key => {
+        const value = component[key];
+        if (typeof value === 'boolean') {
+          const input = document.createElement('input');
+          input.type = 'checkbox';
+          input.checked = value;
+          input.addEventListener('change', () => updateComponentValue(key, input.checked));
+          editor.appendChild(createField(key, input));
+          return;
+        }
+        if (typeof value === 'number') {
+          const input = createInput('number');
+          input.value = value;
+          input.addEventListener('input', () => updateComponentValue(key, Number(input.value)));
+          editor.appendChild(createField(key, input));
+          return;
+        }
+        if (typeof value === 'string') {
+          const input = createInput('text');
+          input.value = value;
+          input.addEventListener('input', () => updateComponentValue(key, input.value));
+          editor.appendChild(createField(key, input));
+          return;
+        }
+        const input = document.createElement('textarea');
+        input.rows = 4;
+        input.value = JSON.stringify(value, null, 2);
+        input.addEventListener('blur', () => {
+          try {
+            updateComponentValue(key, JSON.parse(input.value));
+            input.classList.remove('invalid');
+          } catch (err) {
+            input.classList.add('invalid');
+          }
+        });
+        editor.appendChild(createField(key, input));
+      });
+
+      return editor;
+    }
+
+    function updateComponentValue(key, value) {
+      if (!selectedTemplateKey || selectedComponentIndex === null) return;
+      const template = templatesData.templates[selectedTemplateKey];
+      template.components[selectedComponentIndex][key] = value;
+      document.getElementById('template-json-editor').value = JSON.stringify(templatesData, null, 2);
+      renderTemplateDetails();
+    }
+
+    function deleteComponent(index) {
+      if (!selectedTemplateKey || selectedComponentIndex === null) return;
+      const template = templatesData.templates[selectedTemplateKey];
+      template.components.splice(index, 1);
+      selectedComponentIndex = null;
+      document.getElementById('template-json-editor').value = JSON.stringify(templatesData, null, 2);
+      renderTemplateDetails();
+    }
+
+    function syncTemplateJson() {
+      try {
+        const parsed = JSON.parse(document.getElementById('template-json-editor').value);
+        templatesData = parsed;
+        selectedTemplateKey = null;
+        selectedComponentIndex = null;
+        renderTemplateList();
+        renderTemplateDetails();
+        setStatus('Template JSON synced.', true);
+      } catch (err) {
+        setStatus('Invalid JSON in templates editor.', false);
+      }
+    }
+
+    function switchTab(tab) {
+      document.getElementById('tab-theme').classList.toggle('active', tab === 'theme');
+      document.getElementById('tab-templates').classList.toggle('active', tab === 'templates');
+      document.getElementById('theme-panel').classList.toggle('active', tab === 'theme');
+      document.getElementById('templates-panel').classList.toggle('active', tab === 'templates');
+    }
+
+    document.getElementById('tab-theme').addEventListener('click', () => switchTab('theme'));
+    document.getElementById('tab-templates').addEventListener('click', () => switchTab('templates'));
+    document.getElementById('load-theme-btn').addEventListener('click', loadTheme);
+    document.getElementById('save-theme-btn').addEventListener('click', saveTheme);
+    document.getElementById('save-templates-btn').addEventListener('click', saveTemplates);
+    document.getElementById('add-template-btn').addEventListener('click', addTemplate);
+    document.getElementById('remove-template-btn').addEventListener('click', removeTemplate);
+    document.getElementById('template-json-editor').addEventListener('change', syncTemplateJson);
 
     loadTheme();
+    loadTemplates();
   </script>
 </body>
 </html>

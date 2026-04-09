@@ -6,7 +6,7 @@ const path = require("path");
 const INPUT_JSON = "input.json";
 const TEMPLATE_JSON = "slide_templates.json";
 const THEME_JSON = "theme.json";
-const OUTPUT_PPTX = "Solon_Roadmap_SteerCo_2026.pptx";
+const OUTPUT_PREFIX = "Solon_Roadmap_SteerCo_2026";
 
 // Brand colors and theme tokens
 const NC = {
@@ -373,9 +373,11 @@ async function buildPresentation() {
     }
   }
 
-  await pres.writeFile({ fileName: OUTPUT_PPTX });
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const outputFile = `${OUTPUT_PREFIX}_${timestamp}.pptx`;
+  await pres.writeFile({ fileName: outputFile });
   console.log(`✅ Presentation successfully generated!`);
-  console.log(`📁 File saved as: ${OUTPUT_PPTX}`);
+  console.log(`📁 File saved as: ${outputFile}`);
 }
 
 buildPresentation().catch(err => {

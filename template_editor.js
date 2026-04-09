@@ -6,6 +6,7 @@ const url = require('url');
 const PORT = process.env.PORT || 3000;
 const ROOT = process.cwd();
 const THEME_FILE = path.join(ROOT, 'theme.json');
+const TEMPLATE_FILE = path.join(ROOT, 'slide_templates.json');
 
 function sendJSON(res, data, status = 200) {
   const payload = JSON.stringify(data, null, 2);
@@ -81,6 +82,50 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (pathname === '/api/templates') {
+    if (req.method === 'GET') {
+      fs.readFile(TEMPLATE_FILE, 'utf8', (err, data) => {
+        if (err) {
+          res.writeHead(500);
+          res.end(JSON.stringify({ error: 'Failed to read slide_templates.json' }));
+          return;
+        }
+        try {
+          const template = JSON.parse(data);
+          sendJSON(res, template);
+        } catch (err) {
+          res.writeHead(500);
+          res.end(JSON.stringify({ error: 'Invalid JSON in slide_templates.json' }));
+        }
+      });
+      return;
+    }
+    if (req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => { body += chunk; });
+      req.on('end', () => {
+        try {
+          const template = JSON.parse(body);
+          fs.writeFile(TEMPLATE_FILE, JSON.stringify(template, null, 2), 'utf8', err => {
+            if (err) {
+              res.writeHead(500);
+              res.end(JSON.stringify({ error: 'Failed to save slide_templates.json' }));
+              return;
+            }
+            sendJSON(res, { ok: true });
+          });
+        } catch (err) {
+          res.writeHead(400);
+          res.end(JSON.stringify({ error: 'Invalid JSON payload' }));
+        }
+      });
+      return;
+    }
+    res.writeHead(405);
+    res.end(JSON.stringify({ error: 'Method not allowed' }));
+    return;
+  }
+
   let filePath = pathname === '/' ? '/editor.html' : pathname;
   const ext = path.extname(filePath).toLowerCase();
   const safe = safePath(filePath);
@@ -107,5 +152,5 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, () => {
   console.log(`Template editor is running at http://localhost:${PORT}`);
-  console.log('Open that URL in your browser to edit theme.json.');
+  console.log('Open that URL in your browser to edit theme.json and slide_templates.json.');
 });
