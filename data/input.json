@@ -31,15 +31,14 @@
         "heading": "Calibri",
         "body":    "Calibri"
       }
-    },
-
+    }
+    ,
     "slide_types": {
       "note": "Reference guide — each type name corresponds to a renderer in generate_slides.js.",
       "cover":             "Slide 1. Full-bleed dark teal. Fields: title, subtitle, audience_line, author.",
       "agenda":            "Slide 2. 2×3 grid of numbered group cards. Fields: header_title, header_subtitle, groups[].",
       "group_summary":     "Slide 3+. KPI row + left text + right table. One per initiative group.",
-      "initiative_detail": "Slides 4-5+. KPI row + left text + centre bar chart + right donut + PI planning boxes + footer bar. One per major initiative.",
-      "next_steps":        "Last slide. Dark teal closer. Fields: title, subtitle, decisions[]."
+      "initiative_detail": "Slides 4-5+. KPI row + left text + centre bar chart + right donut + PI planning boxes + footer bar. One per major initiative."
     },
 
     "slides": [
@@ -267,34 +266,6 @@
           "No features currently started — PI28 kickoff planning required immediately"
         ],
         "steerco_footer": "Prerequisite for collections — sequence with Registration   ·   Installment plans = quick win in PI29   ·   No work started — PI28 kickoff required now"
-      },
-
-      {
-        "slide_type": "next_steps",
-        "title":    "Next Steps & Decision Points",
-        "subtitle": "Solon Tax Product Roadmap 2026 | SteerCo Session — 29 April 2026",
-        "decisions": [
-          {
-            "num":    "01",
-            "action": "Confirm PI28 Capacity",
-            "detail": "Validate delivery team capacity for Registration, Taxpayer Accounting, and Billing features planned in PI28. Flag any resource constraints to product leadership."
-          },
-          {
-            "num":    "02",
-            "action": "Estimate Penalty & Interest + Tax Accounts",
-            "detail": "Both initiatives are P1/P2 with TBD effort estimates. Scope clarification sessions must be scheduled before PI28 planning begins."
-          },
-          {
-            "num":    "03",
-            "action": "Approve PI29 Scope for Registration",
-            "detail": "Organisational Hierarchy View feature requires SteerCo alignment on priority and GRC team availability for PI29 delivery confirmation."
-          },
-          {
-            "num":    "04",
-            "action": "Advance Exemptions as Quick Win",
-            "detail": "Small scope, P2 initiative with clear value. Recommend advancing delivery to PI28 to demonstrate early value to Greek Project stakeholders."
-          }
-        ]
       }
 
     ]
