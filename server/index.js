@@ -66,53 +66,134 @@ function parseSlides(zip) {
 function extractSlideElements(xml, slideIndex) {
   const slide = {
     index: slideIndex,
-    elements: []
+    elements: [],
+    background: '#ffffff'
   };
 
-  // Match all text elements (a:t tags) with their shapes
-  const shapeMatches = xml.match(/<p:sp>([\s\S]*?)<\/p:sp>/g) || [];
+  // Get background color
+  const bgMatch = xml.match(/<p:bg>([\s\S]*?)<\/p:bg>/);
+  if (bgMatch) {
+    const srgbMatch = bgMatch[1].match(/<a:srgbClr val="([^"]+)"/);
+    if (srgbMatch) {
+      slide.background = '#' + srgbMatch[1];
+    } else {
+      const prstMatch = bgMatch[1].match(/<a:prstClr val="(\w+)"/);
+      if (prstMatch) slide.background = getPresetColor(prstMatch[1]);
+    }
+  }
+
+  // Match all shapes - also include spTree children
+  const spTreeMatch = xml.match(/<p:spTree>([\s\S]*?)<\/p:spTree>/);
+  const shapesToCheck = spTreeMatch ? spTreeMatch[1] : xml;
+  const shapeMatches = shapesToCheck.match(/<p:sp>([\s\S]*?)<\/p:sp>/g) || [];
   
   for (let i = 0; i < shapeMatches.length; i++) {
     const shapeXml = shapeMatches[i];
     const textMatches = shapeXml.match(/<a:t>([^<]*)<\/a:t>/g);
     
-    if (textMatches && textMatches.length > 0) {
-      const textContent = textMatches.map(t => t.replace(/<[^>]+>/g, '')).join(' ');
-      
-      // Get shape position for potential rendering
-      let bounds = { x: 0, y: 0, w: 100, h: 50 };
-      const xfrmMatch = shapeXml.match(/<p:xfrm>([\s\S]*?)<\/p:xfrm>/);
-      if (xfrmMatch) {
-        const offMatch = xfrmMatch[0].match(/<a:off x="(\d+)" y="(\d+)"/);
-        const extMatch = xfrmMatch[0].match(/<a:ext cx="(\d+)" cy="(\d+)"/);
-        if (offMatch && extMatch) {
-          bounds = {
-            x: Math.round(parseInt(offMatch[1]) / 10000),
-            y: Math.round(parseInt(offMatch[2]) / 10000),
-            w: Math.round(parseInt(extMatch[1]) / 10000),
-            h: Math.round(parseInt(extMatch[2]) / 10000)
-          };
-        }
+    if (!textMatches || textMatches.length === 0) continue;
+    
+    const textContent = textMatches.map(t => t.replace(/<[^>]+>/g, '')).join(' ');
+    if (!textContent.trim()) continue;
+    
+    // Get shape position - look in multiple places
+    let bounds = { x: 0.5, y: 0.5, w: 2, h: 0.5 };
+    
+    // Try p:xfrm first
+    let xfrmContent = '';
+    const xfrmMatch = shapeXml.match(/<p:xfrm>([\s\S]*?)<\/p:xfrm>/);
+    if (xfrmMatch) xfrmContent = xfrmMatch[1];
+    
+    // Try a:xfrm inside spPr
+    if (!xfrmContent) {
+      const spPrMatch = shapeXml.match(/<p:spPr>([\s\S]*?)<\/p:spPr>/);
+      if (spPrMatch) {
+        const axfrmMatch = spPrMatch[1].match(/<a:xfrm>([\s\S]*?)<\/a:xfrm>/);
+        if (axfrmMatch) xfrmContent = axfrmMatch[1];
       }
-
-      // Get shape name
-      let shapeName = `element_${slide.elements.length}`;
-      const cNvPrMatch = shapeXml.match(/<p:cNvPr id="\d+" name="([^"]+)"/);
-      if (cNvPrMatch) {
-        shapeName = cNvPrMatch[1];
-      }
-
-      slide.elements.push({
-        id: `slide${slideIndex}-elem${i}`,
-        shapeName,
-        text: textContent,
-        bounds,
-        index: i
-      });
     }
+    
+    if (xfrmContent) {
+      const offMatch = xfrmContent.match(/<a:off\s+x="(\d+)"\s+y="(\d+)"/);
+      const extMatch = xfrmContent.match(/<a:ext\s+cx="(\d+)"\s+cy="(\d+)"/);
+      
+      if (offMatch && extMatch) {
+        bounds = {
+          x: parseInt(offMatch[1]) / 914400,
+          y: parseInt(offMatch[2]) / 914400,
+          w: Math.max(0.1, parseInt(extMatch[1]) / 914400),
+          h: Math.max(0.1, parseInt(extMatch[2]) / 914400)
+        };
+      }
+    }
+
+    // Get shape name
+    let shapeName = `text_${i}`;
+    const cNvPrMatch = shapeXml.match(/<p:cNvPr\s+id="\d+"\s+name="([^"]+)"/);
+    if (cNvPrMatch) shapeName = cNvPrMatch[1];
+
+    // Get fill color
+    let fill = null;
+    const spPrMatch = shapeXml.match(/<p:spPr>([\s\S]*?)<\/p:spPr>/);
+    if (spPrMatch) {
+      const srgbMatch = spPrMatch[1].match(/<a:srgbClr\s+val="([^"]+)"/);
+      if (srgbMatch) fill = '#' + srgbMatch[1];
+    }
+
+    // Get text formatting
+    let fontSize = 14;
+    let fontBold = false;
+    let fontColor = '#333333';
+    let textAlign = 'left';
+
+    const txPrMatch = shapeXml.match(/<p:txBody>([\s\S]*?)<\/p:txBody>/);
+    if (txPrMatch) {
+      const rPrMatch = txPrMatch[1].match(/<a:rPr([^>]*)>/);
+      if (rPrMatch) {
+        const sizeMatch = rPrMatch[1].match(/sz="(\d+)"/);
+        if (sizeMatch) fontSize = parseInt(sizeMatch[1]) / 100;
+        
+        if (rPrMatch[1].includes('b="1"') || rPrMatch[1].includes('b="true"')) fontBold = true;
+        
+        const colorMatch = rPrMatch[1].match(/<a:srgbClr\s+val="([^"]+)"/);
+        if (colorMatch) fontColor = '#' + colorMatch[1];
+      }
+
+      const alignMatch = txPrMatch[1].match(/<a:pPr[^>]*algn="(\w+)"/);
+      if (alignMatch) textAlign = alignMatch[1];
+    }
+
+    slide.elements.push({
+      id: `slide${slideIndex}-elem${i}`,
+      shapeName,
+      text: textContent,
+      bounds,
+      fill,
+      fontSize,
+      fontBold,
+      fontColor,
+      textAlign
+    });
   }
 
   return slide;
+}
+
+function getPresetColor(name) {
+  const colors = {
+    white: '#FFFFFF',
+    black: '#000000',
+    red: '#FF0000',
+    green: '#00FF00',
+    blue: '#0000FF',
+    yellow: '#FFFF00',
+    cyan: '#00FFFF',
+    magenta: '#FF00FF',
+    gray: '#808080',
+    darkGray: '#404040',
+    lightGray: '#C0C0C0'
+  };
+  return colors[name] || '#FFFFFF';
 }
 
 // Generate recipe prompt (UC-04)
@@ -279,12 +360,16 @@ app.post('/api/generate-pptx', (req, res) => {
       return { entry, content: entry.getData().toString('utf8') };
     });
     
-    // For preview, return the modified slide data
-    const previewData = generatedSlides.map(gs => ({
-      slideNumber: gs.slideIndex,
-      recordIndex: gs.recordIndex,
-      content: gs.content
-    }));
+    // For preview, return the modified slide data with element positions
+    const previewData = generatedSlides.map(gs => {
+      const elements = extractSlideElements(gs.content, gs.slideIndex);
+      return {
+        slideNumber: gs.slideIndex,
+        recordIndex: gs.recordIndex,
+        content: gs.content,
+        elements: elements.elements
+      };
+    });
     
     // For download, create the file
     outputSlides.forEach(({ entry, content }) => {

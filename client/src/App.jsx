@@ -1,4 +1,51 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+
+const EMU_PER_PIXEL = 914400 / 96
+const SLIDE_WIDTH = 960
+const SLIDE_HEIGHT = 540
+
+function SlidePreview({ slide }) {
+  const { elements } = slide
+  
+  if (!elements || elements.length === 0) {
+    return <div className="preview-empty">No elements</div>
+  }
+
+  return (
+    <div className="slide-preview-canvas">
+      {elements.map((el, idx) => {
+        const x = (el.bounds.x / EMU_PER_PIXEL) / (SLIDE_WIDTH / 10)
+        const y = (el.bounds.y / EMU_PER_PIXEL) / (SLIDE_HEIGHT / 10)
+        const w = (el.bounds.w / EMU_PER_PIXEL) / (SLIDE_WIDTH / 10)
+        const h = (el.bounds.h / EMU_PER_PIXEL) / (SLIDE_HEIGHT / 10)
+        
+        const style = {
+          position: 'absolute',
+          left: `${x * 10}%`,
+          top: `${y * 10}%`,
+          width: `${w * 10}%`,
+          height: `${h * 10}%`,
+          background: el.isPlaceholder ? '#73AA8740' : '#0C2220',
+          border: el.isPlaceholder ? '1px dashed #73AA87' : '1px solid #143A34',
+          borderRadius: '2px',
+          padding: '2px',
+          fontSize: `${Math.min(10, h * 10 * 0.3)}px`,
+          color: el.textColor || '#fff',
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          wordBreak: 'break-word'
+        }
+        
+        return (
+          <div key={idx} style={style} title={el.shapeName}>
+            {el.text}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 function App() {
   const [step, setStep] = useState('upload')
@@ -12,6 +59,20 @@ function App() {
   const [jsonInput, setJsonInput] = useState('')
   const [validation, setValidation] = useState(null)
   const [previewData, setPreviewData] = useState([])
+  const [animDir, setAnimDir] = useState('forward')
+
+  const navigateTo = (newStep) => {
+    if (newStep === 'upload' || 
+        (newStep === 'tag' && templateFile) ||
+        (newStep === 'recipe' && tags.length > 0) ||
+        (newStep === 'json' && recipe) ||
+        (newStep === 'preview' && jsonInput && validation?.valid)) {
+      const curr = stepOrder.indexOf(step)
+      const next = stepOrder.indexOf(newStep)
+      setAnimDir(next > curr ? 'forward' : 'backward')
+      setStep(newStep)
+    }
+  }
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0] || e.dataTransfer?.files?.[0]
@@ -36,7 +97,7 @@ function App() {
       if (result.ok) {
         setTemplateFile(result)
         setSlides(result.slides)
-        setStep('tag')
+        navigateTo('tag')
       } else {
         alert(result.error || 'Failed to upload')
       }
@@ -76,7 +137,7 @@ function App() {
     const result = await response.json()
     if (result.ok) {
       setRecipe(result.recipe)
-      setStep('recipe')
+      navigateTo('recipe')
     }
   }
 
@@ -109,7 +170,7 @@ function App() {
       const result = await response.json()
       if (result.ok) {
         setPreviewData(result.previewData)
-        setStep('preview')
+        navigateTo('preview')
       } else {
         alert(result.error)
       }
@@ -142,6 +203,45 @@ function App() {
     }
   }
 
+  const stepOrder = ['upload', 'tag', 'recipe', 'json', 'preview']
+  const stepLabels = {
+    upload: 'Upload',
+    tag: 'Tag Elements',
+    recipe: 'Recipe',
+    json: 'Paste JSON',
+    preview: 'Preview'
+  }
+
+  const Breadcrumbs = () => (
+    <div className="breadcrumbs">
+      {stepOrder.map((s, idx) => {
+        const isActive = step === s
+        const currIdx = stepOrder.indexOf(step)
+        const isCompleted = currIdx > idx
+        const canNavigate = (s === 'upload') || 
+          (s === 'tag' && templateFile) ||
+          (s === 'recipe' && templateFile && tags.length > 0) ||
+          (s === 'json' && templateFile && tags.length > 0 && recipe) ||
+          (s === 'preview' && templateFile && tags.length > 0 && recipe && jsonInput && validation?.valid)
+        
+        return (
+          <div key={s} style={{ display: 'flex', alignItems: 'center' }}>
+            <div 
+              className={`breadcrumb-item ${isActive ? 'active' : isCompleted ? 'completed' : ''} ${canNavigate ? 'clickable' : ''}`}
+              onClick={() => canNavigate && navigateTo(s)}
+            >
+              <span className="breadcrumb-number">{idx + 1}</span>
+              <span>{stepLabels[s]}</span>
+            </div>
+            {idx < stepOrder.length - 1 && <span className="breadcrumb-divider">›</span>}
+          </div>
+        )
+      })}
+    </div>
+  )
+
+  const stepAnimClass = animDir === 'forward' ? 'step-content step-content-enter-right' : 'step-content step-content-enter-left'
+
   if (step === 'upload') {
     return (
       <div className="app">
@@ -149,22 +249,33 @@ function App() {
           <h1>Solon Slide Studio</h1>
           <p>Upload a PPTX, tag elements, generate recipe, create presentation</p>
         </header>
+        <Breadcrumbs />
         
-        <div 
-          className="upload-zone"
-          onClick={() => document.getElementById('file-input').click()}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => { e.preventDefault(); handleFileUpload(e) }}
-        >
-          <input 
-            type="file" 
-            id="file-input" 
-            accept=".pptx" 
-            style={{ display: 'none' }}
-            onChange={handleFileUpload}
-          />
-          <p>Drop your PPTX here</p>
-          <p>or click to browse</p>
+        <div className={`step-content ${stepAnimClass}`}>
+          <div 
+            className="upload-zone"
+            onClick={() => document.getElementById('file-input').click()}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => { e.preventDefault(); handleFileUpload(e) }}
+          >
+            <input 
+              type="file" 
+              id="file-input" 
+              accept=".pptx" 
+              style={{ display: 'none' }}
+              onChange={handleFileUpload}
+            />
+            <p>Drop your PPTX here</p>
+            <p>or click to browse</p>
+          </div>
+          
+          {templateFile && (
+            <div className="actions" style={{ marginTop: 20 }}>
+              <button className="btn btn-primary" onClick={() => navigateTo('tag')}>
+                Continue
+              </button>
+            </div>
+          )}
         </div>
       </div>
     )
@@ -180,8 +291,10 @@ function App() {
           <h1>Tag Elements</h1>
           <p>Click on text elements to tag them as placeholders</p>
         </header>
+        <Breadcrumbs />
         
-        <div className="main-layout">
+        <div className={`step-content ${stepAnimClass}`}>
+          <div className="main-layout">
           <div className="sidebar">
             <div className="panel-section">
               <h3>Slides</h3>
@@ -238,26 +351,41 @@ function App() {
             <div className="panel-section">
               <h3>Slide {currentSlide.index}</h3>
               <div className="slide-preview">
-                <div className="slide-preview-inner">
+                <div 
+                  className="slide-preview-inner"
+                  style={{ backgroundColor: currentSlide.background || '#ffffff' }}
+                >
                   {currentSlide.elements.length === 0 ? (
                     <div className="no-elements">No text elements found in this slide</div>
                   ) : (
                     currentSlide.elements.map((elem, idx) => {
                       const isTagged = taggedElementIds.includes(elem.id)
-                      const scale = 0.25
+                      
+                      // Convert inches to percentage (PPTX is 10in x 5.625in)
+                      const left = Math.max(0, Math.min(95, (elem.bounds.x / 10) * 100))
+                      const top = Math.max(0, Math.min(95, (elem.bounds.y / 5.625) * 100))
+                      const width = Math.max(5, Math.min(50, (elem.bounds.w / 10) * 100))
+                      const height = Math.max(3, Math.min(30, (elem.bounds.h / 5.625) * 100))
+                      
                       return (
                         <div
                           key={idx}
                           className={`slide-element ${isTagged ? 'tagged' : ''}`}
                           style={{
-                            left: `${elem.bounds.x * scale + 20}px`,
-                            top: `${elem.bounds.y * scale + 10}px`,
-                            width: `${Math.max(elem.bounds.w * scale, 100)}px`,
+                            left: `${left}%`,
+                            top: `${top}%`,
+                            width: `${width}%`,
+                            height: `${height}%`,
+                            fontSize: `${Math.max(8, elem.fontSize * 0.7)}px`,
+                            fontWeight: elem.fontBold ? 'bold' : 'normal',
+                            color: isTagged ? '#C14A31' : (elem.fontColor || '#333333'),
+                            textAlign: elem.textAlign || 'left',
+                            justifyContent: elem.textAlign === 'center' ? 'center' : elem.textAlign === 'right' ? 'flex-end' : 'flex-start',
                           }}
                           onClick={() => handleElementClick(elem)}
                           title={elem.text}
                         >
-                          {isTagged ? `{{${tags.find(t => t.elementId === elem.id).key}}}` : elem.text.substring(0, 40)}
+                          {isTagged ? `{{${tags.find(t => t.elementId === elem.id).key}}}` : elem.text.substring(0, 60)}
                         </div>
                       )
                     })
@@ -318,6 +446,7 @@ function App() {
             </div>
           </div>
         )}
+        </div>
       </div>
     )
   }
@@ -329,9 +458,11 @@ function App() {
           <h1>Recipe</h1>
           <p>Copy this prompt and paste it into an online AI (Claude, ChatGPT)</p>
         </header>
+        <Breadcrumbs />
         
-        <div className="panel-section">
-          <div className="recipe-area">{recipe}</div>
+        <div className={`step-content ${stepAnimClass}`}>
+          <div className="panel-section">
+            <div className="recipe-area">{recipe}</div>
           
           <div className="actions">
             <button className="btn btn-secondary" onClick={() => {
@@ -340,10 +471,11 @@ function App() {
             }}>
               Copy Recipe
             </button>
-            <button className="btn btn-primary" onClick={() => setStep('json')}>
+            <button className="btn btn-primary" onClick={() => navigateTo('json')}>
               Next: Paste JSON
             </button>
           </div>
+        </div>
         </div>
       </div>
     )
@@ -356,9 +488,11 @@ function App() {
           <h1>Paste JSON</h1>
           <p>Paste the JSON response from the AI</p>
         </header>
+        <Breadcrumbs />
         
-        <div className="panel-section">
-          <textarea 
+        <div className={`step-content ${stepAnimClass}`}>
+          <div className="panel-section">
+            <textarea 
             className="json-input"
             value={jsonInput}
             onChange={(e) => setJsonInput(e.target.value)}
@@ -396,6 +530,7 @@ function App() {
             </div>
           )}
         </div>
+        </div>
       </div>
     )
   }
@@ -407,8 +542,10 @@ function App() {
           <h1>Preview</h1>
           <p>Review your generated slides before downloading</p>
         </header>
+        <Breadcrumbs />
         
-        <div className="panel-section">
+        <div className={`step-content ${stepAnimClass}`}>
+          <div className="panel-section">
           <div className="preview-grid">
             {previewData.map((slide, idx) => (
               <div key={idx} className="preview-card">
@@ -417,14 +554,14 @@ function App() {
                   {slide.recordIndex ? ` (Item ${slide.recordIndex})` : ''}
                 </div>
                 <div className="preview-card-body">
-                  Preview content here
+                  <SlidePreview slide={slide} />
                 </div>
               </div>
             ))}
           </div>
           
           <div className="actions">
-            <button className="btn btn-secondary" onClick={() => setStep('json')}>
+            <button className="btn btn-secondary" onClick={() => navigateTo('json')}>
               Back to Edit
             </button>
             <button className="btn btn-primary" onClick={downloadPptx}>
@@ -432,10 +569,11 @@ function App() {
             </button>
           </div>
         </div>
+        </div>
       </div>
     )
   }
-  
+
   return null
 }
 
