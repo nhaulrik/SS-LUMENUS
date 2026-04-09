@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node src/template_editor.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "edit-template": "node src/template_editor.js",
     "preview-slides": "node src/template_editor.js",
