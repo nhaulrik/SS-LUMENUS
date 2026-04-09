@@ -86,7 +86,15 @@ function App() {
   
   // Tags state
   const [tags, setTags] = useState([])
-  const [recordSlideIndex, setRecordSlideIndex] = useState(null)
+  const [recordSlideIndex, setRecordSlideIndex] = useState([])
+
+  const toggleRecordSlide = (slideIndex) => {
+    setRecordSlideIndex(prev => 
+      prev.includes(slideIndex) 
+        ? prev.filter(i => i !== slideIndex)
+        : [...prev, slideIndex]
+    )
+  }
   const [tagModal, setTagModal] = useState(null)
   
   // Generation state
@@ -193,7 +201,7 @@ function App() {
     const response = await fetch('/api/generate-recipe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tags, recordSlideIndex })
+      body: JSON.stringify({ tags, recordSlideIndex: recordSlideIndex[0] || null })
     })
     
     const result = await response.json()
@@ -208,7 +216,7 @@ function App() {
     const response = await fetch('/api/validate-json', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonString: jsonInput, tags, recordSlideIndex })
+      body: JSON.stringify({ jsonString: jsonInput, tags, recordSlideIndex: recordSlideIndex[0] || null })
     })
     
     const result = await response.json()
@@ -257,7 +265,7 @@ function App() {
           templatePath: templateFile.filePath,
           tags,
           jsonData,
-          recordSlideIndex
+          recordSlideIndex: recordSlideIndex[0] || null
         })
       })
       
@@ -357,39 +365,36 @@ function App() {
         <Breadcrumbs />
         
         <div className={`step-content ${stepAnimClass}`}>
-          <div className="main-layout">
-            {/* Left sidebar - slides and tags */}
-            <div className="sidebar">
-              <div className="panel-section">
-                <h3>Slides</h3>
-                <div className="slide-strip">
-                  {slides.map((slide, idx) => (
-                    <div 
-                      key={idx}
-                      className={`slide-thumb ${selectedSlide === idx ? 'active' : ''} ${recordSlideIndex === slide.index ? 'record' : ''}`}
-                      onClick={() => setSelectedSlide(idx)}
-                    >
-                      {slide.index}
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="record-toggle">
-                  <input 
-                    type="checkbox" 
-                    id="record-toggle"
-                    checked={recordSlideIndex === currentSlide.index}
-                    onChange={(e) => setRecordSlideIndex(e.target.checked ? currentSlide.index : null)}
-                  />
-                  <label htmlFor="record-toggle">Repeat per data item</label>
-                </div>
+          {/* Slide Carousel */}
+          <div className="tag-slides">
+            {slides.map((slide, idx) => (
+              <div 
+                key={idx}
+                className={`tag-slide-btn ${selectedSlide === idx ? 'active' : ''} ${recordSlideIndex.includes(slide.index) ? 'record' : ''}`}
+                onClick={() => setSelectedSlide(idx)}
+              >
+                <span className="tag-slide-num">{slide.index}</span>
+                <span className="tag-slide-preview">
+                  <SlidePreview slide={slide} size="small" />
+                </span>
+                <span 
+                  className={`tag-slide-badge ${recordSlideIndex.includes(slide.index) ? 'active' : ''}`} 
+                  title={recordSlideIndex.includes(slide.index) ? 'Click to remove repeatable' : 'Click to mark as repeatable'}
+                  onClick={(e) => { e.stopPropagation(); toggleRecordSlide(slide.index) }}
+                >⟳</span>
               </div>
-              
+            ))}
+          </div>
+          
+          {/* Main layout */}
+          <div className="main-layout">
+            {/* Left sidebar */}
+            <div className="sidebar">
               <div className="panel-section">
                 <h3>Tagged Fields ({tags.length})</h3>
                 <div className="tagged-list">
                   {tags.length === 0 ? (
-                    <p style={{ color: '#718886', fontSize: 12 }}>No fields tagged yet</p>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No fields tagged yet. Click elements on the slide to tag them.</p>
                   ) : (
                     tags.map(t => (
                       <div key={t.elementId} className="tagged-item">
@@ -411,10 +416,20 @@ function App() {
               </div>
             </div>
             
-            {/* Center workspace - slide preview */}
+            {/* Center - Large slide preview */}
             <div className="workspace">
               <div className="panel-section">
-                <h3>Slide {currentSlide.index}</h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-md)' }}>
+                  <h3>Slide {currentSlide.index}</h3>
+                  <label className="tag-repeatable">
+                    <input 
+                      type="checkbox" 
+                      checked={recordSlideIndex.includes(currentSlide.index)}
+                      onChange={(e) => toggleRecordSlide(currentSlide.index)}
+                    />
+                    <span>Repeatable</span>
+                  </label>
+                </div>
                 <div className="slide-preview">
                   <div 
                     className="slide-preview-inner"
@@ -460,20 +475,6 @@ function App() {
                 <p className="help-text">
                   Click an element to tag it. Click again to remove the tag. Tagged elements appear in coral.
                 </p>
-              </div>
-            </div>
-            
-            {/* Right sidebar - instructions */}
-            <div className="sidebar">
-              <div className="panel-section">
-                <h3>Instructions</h3>
-                <ol style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: '#B6D9C9', lineHeight: 1.8 }}>
-                  <li>Click text elements to create placeholders</li>
-                  <li>Give each placeholder a key name</li>
-                  <li>Optionally add an AI hint for better results</li>
-                  <li>Mark one slide as "repeatable" if you have data rows</li>
-                  <li>Generate the recipe when done</li>
-                </ol>
               </div>
             </div>
           </div>
