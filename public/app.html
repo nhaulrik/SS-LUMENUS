@@ -7,118 +7,135 @@
   <link rel="stylesheet" href="editor.css" />
   <style>
     body { background: #071913; color: #E4F7EE; margin: 0; font-family: Inter, Calibri, sans-serif; }
-    .app-shell { max-width: 1400px; margin: 0 auto; padding: 24px; }
+    .app-shell { max-width: 1600px; margin: 0 auto; padding: 24px; }
     header { margin-bottom: 24px; }
     header h1 { margin: 0 0 8px; font-size: 2rem; }
     header p { margin: 0; color: #B6D9C9; max-width: 820px; }
-    .grid-2 { display: grid; grid-template-columns: 360px 420px; gap: 20px; margin-bottom: 20px; }
-    .panel { background: #0C2220; border: 1px solid #143A34; border-radius: 14px; padding: 18px; box-shadow: 0 18px 40px rgba(0,0,0,.2); }
-    .panel h2 { margin-top: 0; font-size: 1.05rem; }
-    .panel-small { padding: 14px; font-size: 0.95rem; color: #B6D9C9; }
-    .template-list { display: grid; gap: 10px; max-height: 520px; overflow-y: auto; margin-top: 12px; }
-    .template-item { width: 100%; text-align: left; padding: 12px 14px; border: 1px solid #144C43; border-radius: 10px; background: #0A2B28; color: #E4F7EE; cursor: pointer; transition: border-color .16s, transform .16s; }
-    .template-item.active { border-color: #FF6359; transform: translateX(2px); }
-    .template-item:hover { border-color: #73AA87; }
-    textarea { width: 100%; min-height: 360px; background: #071913; border: 1px solid #144C43; border-radius: 12px; color: #E4F7EE; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 13px; padding: 14px; resize: vertical; }
-    .controls { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
-    .controls > * { flex: 1 1 auto; min-width: 160px; }
-    .controls button, .controls select { width: 100%; min-height: 44px; border: none; border-radius: 10px; background: #1A4D44; color: #E4F7EE; font-size: 13px; cursor: pointer; }
-    .controls button.primary { background: #FF6359; }
-    .controls button.secondary { background: #1B5E52; }
-    .status { border-radius: 10px; padding: 12px 14px; margin-top: 8px; font-size: 0.98rem; }
-    .status.success { background: rgba(115, 170, 135, 0.16); color: #A2E7C0; border: 1px solid #4F7B6B; }
-    .status.error { background: rgba(255, 99, 89, 0.12); color: #FFB0A3; border: 1px solid #C14A31; }
-    .status.warning { background: rgba(255, 187, 85, 0.12); color: #FFD79A; border: 1px solid #B37C47; }
-    .preview-layout { display: flex; justify-content: center; gap: 20px; max-width: 1400px; margin: 0 auto; }
-    .preview-card { width: 860px; flex-shrink: 0; border: 1px solid #144C43; border-radius: 14px; background: #0B2822; padding: 16px; min-height: 440px; position: relative; }
-    .preview-sidebar { width: 280px; flex-shrink: 0; position: sticky; top: 24px; height: fit-content; }
-    .preview-left-sidebar { width: 280px; flex-shrink: 0; position: sticky; top: 24px; height: fit-content; }
-    .left-sidebar-section { background: #0C2220; border: 1px solid #143A34; border-radius: 14px; padding: 16px; }
-    .left-sidebar-section h3 { margin: 0 0 8px; font-size: 0.95rem; color: #E4F7EE; }
-    .left-sidebar-section .sidebar-hint { margin: 0 0 12px; font-size: 12px; color: #B6D9C9; line-height: 1.4; }
-    .json-data-textarea { width: 100%; min-height: 200px; background: #071913; border: 1px solid #144C43; border-radius: 10px; color: #E4F7EE; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 12px; padding: 10px; resize: vertical; margin-bottom: 10px; box-sizing: border-box; }
-    .sidebar-section { background: #0C2220; border: 1px solid #143A34; border-radius: 14px; padding: 16px; }
+    
+    .layout-main { display: flex; gap: 20px; align-items: flex-start; }
+    
+    .panel-left { width: 320px; flex-shrink: 0; position: sticky; top: 24px; height: fit-content; }
+    .panel-center { flex: 1; min-width: 0; }
+    .panel-right { width: 300px; flex-shrink: 0; position: sticky; top: 24px; height: fit-content; }
+    
+    .sidebar-section { background: #0C2220; border: 1px solid #143A34; border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+    .sidebar-section:last-child { margin-bottom: 0; }
     .sidebar-section h3 { margin: 0 0 12px; font-size: 0.95rem; color: #E4F7EE; }
     .sidebar-section select { width: 100%; min-height: 44px; border-radius: 10px; border: 1px solid #144C43; background: #0A2B28; color: #E4F7EE; padding: 0 12px; margin-bottom: 12px; font-size: 13px; }
     .sidebar-section select:disabled { opacity: 0.6; cursor: not-allowed; }
     .sidebar-section button { width: 100%; position: relative; z-index: 10; }
-    .preview-card canvas, .slide-canvas { border: 1px solid #144C43; border-radius: 12px; background: white; }
-    .slide-canvas { width: 100%; max-width: 760px; height: 540px; margin: 30px auto 0; position: relative; overflow: hidden; }
-    .canvas-label { position: absolute; top: 12px; left: 16px; right: 16px; color: #E4F7EE; font-weight: 700; font-size: 0.95rem; z-index: 1; }
-    .page-carousel { display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; margin-bottom: 8px; }
-    .page-carousel { flex-wrap: nowrap; scroll-snap-type: x mandatory; }
-    .carousel-item { min-width: 130px; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: #E4F7EE; cursor: pointer; transition: transform .16s, border-color .16s, background .16s; }
-    .carousel-item { scroll-snap-align: center; }
-    .carousel-item:hover { transform: translateY(-1px); border-color: #73AA87; }
-    .carousel-item.active { background: linear-gradient(135deg, rgba(255,99,89,0.18), rgba(115,170,135,0.2)); border-color: #FF6359; box-shadow: 0 10px 25px rgba(0,0,0,0.12); }
-    .carousel-item span { display: block; font-size: 0.85rem; margin-top: 6px; color: #B6D9C9; }
-    .field-mapping { margin-top: 14px; padding: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; }
-    .field-mapping table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .field-mapping th, .field-mapping td { padding: 8px 10px; border: 1px solid rgba(255,255,255,0.08); }
+    
+    .json-textarea { width: 100%; min-height: 300px; background: #071913; border: 1px solid #144C43; border-radius: 10px; color: #E4F7EE; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; padding: 10px; resize: vertical; margin-bottom: 10px; box-sizing: border-box; }
+    .json-hint { margin: 0 0 12px; font-size: 12px; color: #B6D9C9; line-height: 1.4; }
+    
+    .preview-card { border: 1px solid #144C43; border-radius: 14px; background: #0B2822; padding: 16px; }
+    .preview-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .preview-title { font-weight: 700; font-size: 1rem; color: #E4F7EE; }
+    .preview-badge { font-size: 11px; padding: 4px 8px; border-radius: 6px; background: rgba(115,170,135,0.2); color: #73AA87; }
+    .slide-canvas { width: 100%; max-width: 720px; height: 405px; margin: 0 auto; position: relative; overflow: hidden; border: 1px solid #144C43; border-radius: 8px; background: white; }
+    
+    .slide-carousel { display: flex; gap: 8px; overflow-x: auto; padding: 12px 0; margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.08); }
+    .carousel-item { min-width: 100px; padding: 8px 12px; border-radius: 8px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: #E4F7EE; cursor: pointer; transition: all .16s; flex-shrink: 0; }
+    .carousel-item:hover { border-color: #73AA87; }
+    .carousel-item.active { border-color: #FF6359; background: rgba(255,99,89,0.12); }
+    .carousel-item .slide-num { font-size: 10px; color: #B6D9C9; }
+    .carousel-item .slide-type { font-size: 12px; font-weight: 600; margin-top: 2px; }
+    
+    .template-info { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+    .template-info h4 { margin: 0 0 8px; font-size: 13px; color: #E4F7EE; }
+    .template-info p { margin: 0; font-size: 12px; color: #B6D9C9; line-height: 1.5; }
+    
+    .status { border-radius: 8px; padding: 10px 12px; margin-top: 12px; font-size: 13px; }
+    .status.success { background: rgba(115, 170, 135, 0.16); color: #A2E7C0; border: 1px solid #4F7B6B; }
+    .status.error { background: rgba(255, 99, 89, 0.12); color: #FFB0A3; border: 1px solid #C14A31; }
+    
+    .field-mapping { margin-top: 16px; padding: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; }
+    .field-mapping table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .field-mapping th, .field-mapping td { padding: 6px 8px; border: 1px solid rgba(255,255,255,0.08); }
     .field-mapping th { background: rgba(255,255,255,0.05); text-align: left; }
     .field-mapping td { color: #DCE4E0; }
-    .ai-prompt { margin-top: 14px; padding: 14px; background: rgba(115,170,135,0.08); border: 1px solid rgba(115,170,135,0.16); border-radius: 14px; color: #F8FFF8; font-size: 13px; line-height: 1.5; }
+    
     .slide-element { position: absolute; box-sizing: border-box; }
-    .slide-element table { width: 100%; border-collapse: collapse; font-size: 11px; color: #141E1E; }
-    .slide-element th, .slide-element td { border: 1px solid rgba(0,0,0,0.12); padding: 4px; }
-    .download-link { color: #FFD282; text-decoration: underline; }
-    @media (max-width: 1200px) { .grid-2 { grid-template-columns: 1fr; } .preview-layout { flex-direction: column; align-items: center; } .preview-card { width: 100%; max-width: 860px; order: 2; } .preview-sidebar { width: 100%; max-width: 860px; order: 3; position: static; } .preview-left-sidebar { width: 100%; max-width: 860px; order: 1; position: static; } .left-sidebar-section { position: static; } .sidebar-section { position: static; } }
+    .slide-element table { width: 100%; border-collapse: collapse; font-size: 10px; color: #141E1E; }
+    .slide-element th, .slide-element td { border: 1px solid rgba(0,0,0,0.12); padding: 3px; }
+    
+    .ai-prompt-section { margin-top: 16px; }
+    .ai-prompt-box { background: rgba(115,170,135,0.08); border: 1px solid rgba(115,170,135,0.16); border-radius: 10px; padding: 12px; }
+    .ai-prompt-box pre { white-space: pre-wrap; margin: 0; font-size: 11px; line-height: 1.5; color: #F8FFF8; }
+    
+    .controls-row { display: flex; gap: 8px; }
+    .controls-row button { flex: 1; }
+    
+    #generate-status { display: none; }
+    #generate-status.visible { display: block; }
+    
+    @media (max-width: 1200px) {
+      .layout-main { flex-direction: column; }
+      .panel-left, .panel-right { width: 100%; position: static; }
+    }
   </style>
 </head>
 <body>
   <div class="app-shell">
     <header>
       <h1>Solon Slide Studio</h1>
-      <p>Browse templates, paste slide JSON, validate content, preview a slide and generate PowerPoint directly from the browser.</p>
+      <p>Select a presentation template, preview slides with sample data, paste your JSON, and generate PowerPoint.</p>
     </header>
 
-    <div class="grid-2">
-      <section class="panel">
-        <h2>Slide templates</h2>
-        <div id="template-list" class="template-list"></div>
-        <div id="template-meta" class="panel-small"></div>
-      </section>
-
-      <section class="panel">
-        <h2>Input JSON</h2>
-        <div class="controls">
-          <button id="load-sample" class="secondary">Load sample data</button>
-          <button id="validate-btn" class="secondary">Validate JSON</button>
-          <button id="ai-prompt-btn" class="secondary">Generate AI prompt</button>
-          <button id="preview-btn" class="primary">Preview slide</button>
+    <div class="layout-main">
+      <aside class="panel-left">
+        <div class="sidebar-section">
+          <h3>JSON Data</h3>
+          <p class="json-hint">Paste your presentation data below. The JSON must match the template structure.</p>
+          <textarea id="json-input" class="json-textarea" spellcheck="false" placeholder='{"title": "...", "subtitle": "...", "initiative_groups": [...]}'></textarea>
+          <div class="controls-row">
+            <button id="load-sample-btn" class="secondary">Load Sample</button>
+            <button id="apply-json-btn" class="primary">Apply JSON</button>
+          </div>
+          <div id="input-status" class="status"></div>
         </div>
-        <textarea id="json-input" spellcheck="false"></textarea>
-        <div id="input-status" class="status success">Paste or load input JSON, then choose a template.</div>
-      </section>
-    </div>
-
-    <div class="preview-layout">
-      <aside class="preview-left-sidebar">
-        <div class="left-sidebar-section">
-          <h3>JSON Data Input</h3>
-          <p class="sidebar-hint">Paste your JSON data to preview slides with custom content.</p>
-          <textarea id="json-data-input" class="json-data-textarea" spellcheck="false" placeholder='{"slide_recipe": {"slides": [...]}}'></textarea>
-          <button id="apply-json-btn" class="primary">Apply JSON</button>
-          <div id="json-input-status" class="status success" style="margin-top: 10px; font-size: 12px;"></div>
+        
+        <div class="sidebar-section">
+          <h3>AI Prompt</h3>
+          <p class="json-hint">Copy this prompt to generate compatible JSON with an AI.</p>
+          <div id="ai-prompt" class="ai-prompt-box"></div>
+          <button id="copy-prompt-btn" class="secondary" style="margin-top: 10px;">Copy Prompt</button>
         </div>
       </aside>
 
-      <div class="preview-panels">
-        <section class="preview-card">
-          <div class="canvas-label">Slide preview</div>
+      <div class="panel-center">
+        <div class="preview-card">
+          <div class="preview-header">
+            <span class="preview-title" id="preview-title">Slide Preview</span>
+            <span class="preview-badge" id="preview-badge">Sample Data</span>
+          </div>
           <div class="slide-canvas" id="slide-canvas"></div>
-          <div id="page-carousel" class="page-carousel"></div>
+          <div id="slide-carousel" class="slide-carousel"></div>
           <div id="field-mapping" class="field-mapping"></div>
-          <div id="ai-prompt" class="ai-prompt"></div>
           <div id="generate-status" class="status"></div>
-        </section>
+        </div>
       </div>
 
-      <aside class="preview-sidebar">
+      <aside class="panel-right">
         <div class="sidebar-section">
-          <h3>Template sample</h3>
-          <select id="sample-select"></select>
-          <button id="generate-btn" class="primary">Generate PPTX</button>
+          <h3>Presentation Template</h3>
+          <select id="template-select">
+            <option value="">Select a template...</option>
+          </select>
+        </div>
+        
+        <div id="template-info" class="template-info" style="display: none;">
+          <h4 id="template-name"></h4>
+          <p id="template-description"></p>
+        </div>
+
+        <button id="generate-btn" class="primary" style="width: 100%;">Generate PPTX</button>
+        
+        <div class="field-mapping" style="margin-top: 16px;">
+          <h3 style="margin: 0 0 12px; font-size: 14px;">Slide Info</h3>
+          <div id="slide-info">
+            <p style="color: #B6D9C9; font-size: 12px; margin: 0;">Select a slide to see details.</p>
+          </div>
         </div>
       </aside>
     </div>
@@ -143,265 +160,399 @@
       fonts: { heading: 'Calibri', body: 'Calibri' }
     };
 
-    let templates = {};
-    let sampleInput = null;
-    let userInputData = null;
-    let allSlides = [];
-    let selectedTemplate = null;
-    let selectedSampleIndex = 0;
-    let selectedPageIndex = 0;
-    let isUserInputActive = false;
+    let presentations = {};
+    let selectedPresentation = null;
+    let currentSlides = [];
+    let selectedSlideIndex = 0;
+    let isUsingSampleData = true;
 
     document.addEventListener('DOMContentLoaded', init);
 
     function init() {
-      document.getElementById('load-sample').addEventListener('click', loadSampleData);
-      document.getElementById('validate-btn').addEventListener('click', validateInput);
-      document.getElementById('ai-prompt-btn').addEventListener('click', generateAIPrompt);
-      document.getElementById('preview-btn').addEventListener('click', handlePreview);
-      document.getElementById('generate-btn').addEventListener('click', generatePptx);
+      document.getElementById('template-select').addEventListener('change', onTemplateChange);
+      document.getElementById('load-sample-btn').addEventListener('click', loadSampleData);
       document.getElementById('apply-json-btn').addEventListener('click', applyUserJson);
-      document.getElementById('sample-select').addEventListener('change', event => {
-        selectedSampleIndex = Number(event.target.value);
-        const inputData = parseJsonInput();
-        if (inputData) {
-          const matchingSlides = allSlides.filter(slide => slide.slide_type === selectedTemplate);
-          const selectedSlide = matchingSlides[selectedSampleIndex];
-          if (selectedSlide) {
-            selectedPageIndex = allSlides.findIndex(slide => slide === selectedSlide);
-          }
-        }
-        showSelectedPage();
-      });
+      document.getElementById('generate-btn').addEventListener('click', generatePptx);
+      document.getElementById('copy-prompt-btn').addEventListener('click', copyAIPrompt);
       document.addEventListener('keydown', handleKeyboardNavigation);
       loadData();
     }
 
     async function loadData() {
-      setInputStatus('Loading templates and sample data...', 'success');
       try {
-        const [templatesRes, inputRes] = await Promise.all([
-          fetch('/api/templates'),
-          fetch('/api/input')
-        ]);
-        if (!templatesRes.ok) throw new Error('Failed to load templates');
-        if (!inputRes.ok) throw new Error('Failed to load input sample');
-        const templatesData = await templatesRes.json();
-        sampleInput = await inputRes.json();
-        allSlides = sampleInput.slide_recipe?.slides || sampleInput.slides || [];
-        templates = templatesData.templates || {};
-        document.getElementById('json-input').value = JSON.stringify(sampleInput, null, 2);
-        renderTemplateList();
-        selectFirstTemplate();
-        populatePageOptions();
-        populateSampleOptions();
-        setInputStatus('Sample data loaded. Edit JSON and preview slides.', 'success');
+        const response = await fetch('/api/templates');
+        if (!response.ok) throw new Error('Failed to load templates');
+        const data = await response.json();
+        presentations = data.presentations || {};
+        populateTemplateSelector();
+        setInputStatus('Select a presentation template to get started.', 'success');
       } catch (error) {
-        setInputStatus(`Failed to load data: ${error.message}`, 'error');
+        setInputStatus(`Error loading data: ${error.message}`, 'error');
       }
     }
 
+    function populateTemplateSelector() {
+      const select = document.getElementById('template-select');
+      select.innerHTML = '<option value="">Select a template...</option>';
+      Object.keys(presentations).forEach(key => {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = presentations[key].name || key;
+        select.appendChild(opt);
+      });
+    }
+
+    function onTemplateChange() {
+      const key = document.getElementById('template-select').value;
+      if (!key) {
+        selectedPresentation = null;
+        currentSlides = [];
+        document.getElementById('template-info').style.display = 'none';
+        clearPreview();
+        return;
+      }
+      selectPresentation(key);
+    }
+
+    function selectPresentation(key) {
+      selectedPresentation = presentations[key];
+      document.getElementById('template-name').textContent = selectedPresentation.name;
+      document.getElementById('template-description').textContent = selectedPresentation.description;
+      document.getElementById('template-info').style.display = 'block';
+      
+      loadSampleData();
+      updateAIPrompt();
+    }
+
     function loadSampleData() {
-      if (!sampleInput) return;
-      document.getElementById('json-input').value = JSON.stringify(sampleInput, null, 2);
-      setInputStatus('Sample JSON loaded. Validate and preview or generate.', 'success');
-      isUserInputActive = false;
-      userInputData = null;
-      document.getElementById('json-data-input').value = '';
-      document.getElementById('sample-select').disabled = false;
-      updateSampleSelectLabel('Sample data');
-      populateSampleOptions();
-      populatePageOptions();
-      renderSlidePreview();
+      if (!selectedPresentation) return;
+      
+      isUsingSampleData = true;
+      document.getElementById('preview-badge').textContent = 'Sample Data';
+      document.getElementById('json-input').value = JSON.stringify(selectedPresentation.sampleData, null, 2);
+      
+      generateSlidesFromData(selectedPresentation.sampleData);
+      setInputStatus('Sample data loaded. Modify the JSON or apply your own data.', 'success');
     }
 
     function applyUserJson() {
-      const jsonInput = document.getElementById('json-data-input').value.trim();
+      const jsonInput = document.getElementById('json-input').value.trim();
       if (!jsonInput) {
-        setJsonInputStatus('Please enter JSON data.', 'error');
+        setInputStatus('Please enter JSON data.', 'error');
         return;
       }
       try {
         const parsed = JSON.parse(jsonInput);
-        userInputData = parsed;
-        const slideArray = parsed.slide_recipe?.slides || parsed.slides || [];
-        let firstSlide = null;
-        if (Array.isArray(slideArray) && slideArray.length > 0) {
-          allSlides = slideArray;
-          firstSlide = slideArray[0];
-        } else if (parsed.slide_type) {
-          allSlides = [parsed];
-          firstSlide = parsed;
-          userInputData = { slide_recipe: { slides: [parsed] } };
-        } else {
-          allSlides = [];
-        }
-        // Auto-detect template from slide_type
-        if (firstSlide?.slide_type && templates[firstSlide.slide_type]) {
-          selectedTemplate = firstSlide.slide_type;
-          renderTemplateList();
-          renderTemplateMeta();
-        }
-        isUserInputActive = true;
-        selectedPageIndex = 0;
-        selectedSampleIndex = 0;
-        document.getElementById('sample-select').disabled = true;
-        updateSampleSelectLabel('User input');
-        populatePageOptions();
-        renderSlidePreview();
-        renderFieldMapping();
-        renderAIPrompt();
-        setJsonInputStatus('JSON applied successfully.', 'success');
+        isUsingSampleData = false;
+        document.getElementById('preview-badge').textContent = 'User Data';
+        generateSlidesFromData(parsed);
+        setInputStatus('JSON applied successfully.', 'success');
       } catch (err) {
-        setJsonInputStatus(`Invalid JSON: ${err.message}`, 'error');
+        setInputStatus(`Invalid JSON: ${err.message}`, 'error');
       }
     }
 
-    function updateSampleSelectLabel(label) {
-      const select = document.getElementById('sample-select');
-      const options = select.options;
-      if (options.length > 0) {
-        const firstOption = options[0];
-        firstOption.textContent = label + (options.length > 1 ? ` (${options.length - 1} slides)` : '');
+    function generateSlidesFromData(data) {
+      currentSlides = expandSlidesFromStructure(selectedPresentation, data);
+      selectedSlideIndex = 0;
+      renderSlideCarousel();
+      showSlide(0);
+    }
+
+    function expandSlidesFromStructure(presentation, data) {
+      const slides = [];
+      
+      function getDataAtPath(dataObj, path) {
+        if (!path) return dataObj;
+        const parts = path.split('.');
+        let current = dataObj;
+        for (const part of parts) {
+          if (current && typeof current === 'object') {
+            current = current[part];
+          } else {
+            return undefined;
+          }
+        }
+        return current;
       }
-    }
 
-    function setJsonInputStatus(message, type = 'success') {
-      const status = document.getElementById('json-input-status');
-      status.textContent = message;
-      status.className = `status ${type}`;
-    }
+      function processStructureItem(structureItem) {
+        const slideType = presentation.slideTypes[structureItem.type];
+        if (!slideType) return;
 
-    function renderTemplateList() {
-      const list = document.getElementById('template-list');
-      list.innerHTML = '';
-      Object.keys(templates).forEach(key => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'template-item' + (selectedTemplate === key ? ' active' : '');
-        button.textContent = key;
-        button.addEventListener('click', () => selectTemplate(key));
-        list.appendChild(button);
-      });
-    }
-
-    function selectFirstTemplate() {
-      const keys = Object.keys(templates);
-      if (keys.length === 0) return;
-      selectedTemplate = selectedTemplate || keys[0];
-      const firstMatch = allSlides.findIndex(slide => slide.slide_type === selectedTemplate);
-      if (firstMatch !== -1) selectedPageIndex = firstMatch;
-      renderTemplateList();
-      renderTemplateMeta();
-      renderSlidePreview();
-      renderFieldMapping();
-      renderAIPrompt();
-      populateSampleOptions();
-    }
-
-    function selectTemplate(key) {
-      selectedTemplate = key;
-      selectedSampleIndex = 0;
-      const firstMatch = allSlides.findIndex(slide => slide.slide_type === key);
-      if (firstMatch !== -1) selectedPageIndex = firstMatch;
-      renderTemplateList();
-      renderTemplateMeta();
-      renderSlidePreview();
-      populateSampleOptions();
-      populatePageOptions();
-    }
-
-    function renderTemplateMeta() {
-      const meta = document.getElementById('template-meta');
-      if (!selectedTemplate) {
-        meta.textContent = 'Select a template to inspect layout, inputs and validation requirements.';
-        return;
-      }
-      const template = templates[selectedTemplate];
-      const componentCount = (template.components || []).length;
-      meta.innerHTML = `Selected template: <strong>${selectedTemplate}</strong><br>${componentCount} components in layout.`;
-    }
-
-    function populateSampleOptions() {
-      const select = document.getElementById('sample-select');
-      select.innerHTML = '';
-      const input = parseJsonInput();
-      if (!input) return;
-      const slides = input.slide_recipe?.slides || input.slides || [];
-      const matching = slides.filter(slide => slide.slide_type === selectedTemplate);
-      if (!matching.length) {
-        select.innerHTML = '<option value="0">No matching slides</option>';
-        return;
-      }
-      matching.forEach((slide, idx) => {
-        const opt = document.createElement('option');
-        opt.value = idx;
-        opt.textContent = slide.title || slide.header_title || `${selectedTemplate} sample ${idx + 1}`;
-        select.appendChild(opt);
-      });
-      selectedSampleIndex = 0;
-      select.value = 0;
-    }
-
-    function populatePageOptions() {
-      if (!Array.isArray(allSlides) || allSlides.length === 0) {
-        selectedPageIndex = 0;
-        renderPageCarousel();
+        if (structureItem.dataPath === null) {
+          slides.push({
+            type: structureItem.type,
+            data: { ...data },
+            slideType: slideType
+          });
           return;
+        }
+
+        if (!structureItem.dataPath) return;
+
+        const items = getDataAtPath(data, structureItem.dataPath);
+        if (!Array.isArray(items)) return;
+
+        if (structureItem.children) {
+          items.forEach(item => {
+            const children = getDataAtPath(item, structureItem.children);
+            if (Array.isArray(children) && children.length > 0) {
+              children.forEach(child => {
+                slides.push({
+                  type: structureItem.type,
+                  data: { ...data, ...item, ...child },
+                  slideType: slideType
+                });
+              });
+            } else {
+              slides.push({
+                type: structureItem.type,
+                data: { ...data, ...item },
+                slideType: slideType
+              });
+            }
+          });
+        } else {
+          items.forEach(item => {
+            slides.push({
+              type: structureItem.type,
+              data: { ...data, ...item },
+              slideType: slideType
+            });
+          });
+        }
       }
-      if (selectedPageIndex < 0 || selectedPageIndex >= allSlides.length) {
-        selectedPageIndex = 0;
-      }
-      renderPageCarousel();
+
+      presentation.structure.forEach(item => processStructureItem(item));
+      return slides;
     }
 
-    function renderPageCarousel() {
-      const carousel = document.getElementById('page-carousel');
-      if (!carousel) return;
+    function renderSlideCarousel() {
+      const carousel = document.getElementById('slide-carousel');
       carousel.innerHTML = '';
-      if (!Array.isArray(allSlides) || allSlides.length === 0) {
-        carousel.textContent = 'No pages available';
-        return;
-      }
-      allSlides.forEach((slide, idx) => {
+      currentSlides.forEach((slide, idx) => {
         const item = document.createElement('button');
-        item.type = 'button';
-        item.className = 'carousel-item' + (idx === selectedPageIndex ? ' active' : '');
-        item.innerHTML = `<strong>Page ${idx + 1}</strong><span>${slide.title || slide.header_title || slide.subtitle || slide.slide_type}</span>`;
-        item.addEventListener('click', () => {
-          selectedPageIndex = idx;
-          showSelectedPage();
-        });
+        item.className = 'carousel-item' + (idx === selectedSlideIndex ? ' active' : '');
+        item.innerHTML = `<div class="slide-num">${idx + 1} / ${currentSlides.length}</div><div class="slide-type">${formatTypeName(slide.type)}</div>`;
+        item.addEventListener('click', () => showSlide(idx));
         carousel.appendChild(item);
       });
-      const activeNode = carousel.querySelector('.carousel-item.active');
-      if (activeNode) {
-        activeNode.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+    }
+
+    function formatTypeName(type) {
+      return type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    }
+
+    function showSlide(index) {
+      if (index < 0 || index >= currentSlides.length) return;
+      selectedSlideIndex = index;
+      
+      document.querySelectorAll('.carousel-item').forEach((item, idx) => {
+        item.classList.toggle('active', idx === index);
+      });
+      
+      const slide = currentSlides[index];
+      document.getElementById('preview-title').textContent = `Slide ${index + 1} of ${currentSlides.length}: ${formatTypeName(slide.type)}`;
+      
+      renderSlidePreview(slide);
+      renderSlideInfo(slide);
+      renderFieldMapping(slide);
+    }
+
+    function renderSlidePreview(slide) {
+      const canvas = document.getElementById('slide-canvas');
+      canvas.innerHTML = '';
+      const template = slide.slideType;
+      
+      canvas.style.backgroundColor = template.background ? 
+        (theme.colors[template.background] || template.background) : theme.colors.lightBg;
+      
+      template.components?.forEach(component => {
+        renderPreviewComponent(canvas, component, slide.data);
+      });
+      
+      if (template.footer) {
+        const footer = document.createElement('div');
+        footer.style.position = 'absolute';
+        footer.style.left = '0';
+        footer.style.bottom = '0';
+        footer.style.width = '100%';
+        footer.style.height = '6.8%';
+        footer.style.backgroundColor = theme.colors.darkTeal;
+        canvas.appendChild(footer);
       }
     }
 
-    function showSelectedPage() {
-      const slideData = allSlides[selectedPageIndex];
-      if (!slideData) return;
-      selectedTemplate = resolveTemplateType(slideData.slide_type);
-      renderTemplateList();
-      renderTemplateMeta();
-      populatePageOptions();
-      populateSampleOptions();
-      renderSlidePreview();
-      renderFieldMapping();
-      renderAIPrompt();
+    function renderPreviewComponent(canvas, component, data) {
+      if (component.type === 'header') {
+        const header = document.createElement('div');
+        header.className = 'slide-element';
+        header.style.position = 'absolute';
+        header.style.left = '0';
+        header.style.top = '0';
+        header.style.width = '100%';
+        header.style.height = '19.4%';
+        header.style.backgroundColor = theme.colors.darkTeal;
+        header.style.display = 'flex';
+        header.style.flexDirection = 'column';
+        header.style.padding = '8px 12px';
+        header.style.boxSizing = 'border-box';
+        
+        const title = document.createElement('div');
+        title.textContent = getField(data, component.bind?.title) || component.title || '';
+        title.style.fontSize = '18px';
+        title.style.fontWeight = 'bold';
+        title.style.color = theme.colors.white;
+        
+        const subtitle = document.createElement('div');
+        subtitle.textContent = getField(data, component.bind?.subtitle) || component.subtitle || '';
+        subtitle.style.fontSize = '10px';
+        subtitle.style.color = theme.colors.lightTeal;
+        subtitle.style.marginTop = '4px';
+        
+        header.appendChild(title);
+        header.appendChild(subtitle);
+        canvas.appendChild(header);
+        return;
+      }
+      
+      if (component.type === 'kpi_row') {
+        const items = getField(data, component.bind) || [];
+        items.forEach((item, idx) => {
+          const card = document.createElement('div');
+          card.className = 'slide-element';
+          const x = component.x + idx * ((component.cardWidth || 2.2) + (component.gap || 0.19));
+          card.style.left = `${(x / 10) * 100}%`;
+          card.style.top = `${(component.y / 5.625) * 100}%`;
+          card.style.width = `${((component.cardWidth || 2.2) / 10) * 100}%`;
+          card.style.height = `${((component.cardHeight || 1.0) / 5.625) * 100}%`;
+          card.style.backgroundColor = theme.colors.darkTeal;
+          card.style.border = `1px solid ${theme.colors.medTeal}`;
+          card.style.padding = '6px';
+          card.style.color = theme.colors.white;
+          card.style.fontSize = '9px';
+          card.style.boxSizing = 'border-box';
+          card.style.overflow = 'hidden';
+          const unit = item.unit ? `<div style="font-size:7px; color:${theme.colors.gold};">${item.unit}</div>` : '';
+          card.innerHTML = `<div style="font-weight:bold; font-size:12px; overflow:hidden; text-overflow:ellipsis;">${item.value || ''}</div>${unit}<div style="font-size:7px; color:${theme.colors.bgGrey}; margin-top:2px;">${item.label || ''}</div>`;
+          canvas.appendChild(card);
+        });
+        return;
+      }
+      
+      if (component.type === 'agenda_grid') {
+        const items = getField(data, component.bind) || [];
+        items.slice(0, 6).forEach((item, idx) => {
+          const cols = component.columns || 2;
+          const col = idx % cols;
+          const row = Math.floor(idx / cols);
+          const card = document.createElement('div');
+          card.className = 'slide-element';
+          card.style.left = `${((component.x || 0) + col * ((component.cardWidth || 4.7) + (component.horizontalGap || 0.6))) / 10 * 100}%`;
+          card.style.top = `${((component.y || 1.15) + row * (component.rowHeight || 1.35)) / 5.625 * 100}%`;
+          card.style.width = `${((component.cardWidth || 4.7) / 10) * 100}%`;
+          card.style.height = `${((component.cardHeight || 1.2) / 5.625) * 100}%`;
+          card.style.backgroundColor = theme.colors.white;
+          card.style.border = `1px solid ${theme.colors.medTeal}`;
+          card.style.padding = '6px';
+          card.style.color = theme.colors.nearBlack;
+          card.style.fontSize = '9px';
+          card.innerHTML = `<strong>${item.num || ''} ${item.title || ''}</strong><div style="font-size:8px; margin-top:4px;">${item.sub || ''}</div>`;
+          canvas.appendChild(card);
+        });
+        return;
+      }
+
+      const hasBox = typeof component.x === 'number' && typeof component.y === 'number' && typeof component.w === 'number' && typeof component.h === 'number';
+      if (!hasBox) return;
+
+      const el = document.createElement('div');
+      el.className = 'slide-element';
+      el.style.left = `${(component.x / 10) * 100}%`;
+      el.style.top = `${(component.y / 5.625) * 100}%`;
+      el.style.width = `${(component.w / 10) * 100}%`;
+      el.style.height = `${(component.h / 5.625) * 100}%`;
+
+      if (component.type === 'shape') {
+        el.style.backgroundColor = theme.colors[component.fill] || component.fill || 'transparent';
+        if (component.line) {
+          el.style.border = `1px solid ${theme.colors[component.line.color] || component.line.color || '#000'}`;
+        }
+      } else {
+        el.style.padding = '4px';
+        el.style.overflow = 'hidden';
+        el.style.whiteSpace = 'pre-wrap';
+        el.style.wordBreak = 'break-word';
+        el.style.color = theme.colors[component.color] || component.color || theme.colors.nearBlack;
+        el.style.fontSize = `${component.fontSize || 10}px`;
+        el.style.fontFamily = component.font || 'Calibri';
+        
+        if (component.type === 'text') {
+          const value = component.staticText !== undefined ? component.staticText : getField(data, component.bind);
+          el.textContent = value || '';
+        } else if (component.type === 'bullet_list') {
+          let list = getField(data, component.bind);
+          if (Array.isArray(list)) {
+            el.innerHTML = `<ul style="margin:0;padding-left:14px;color:${theme.colors.textGrey};font-size:${component.fontSize || 9}px;line-height:1.3;">${list.map(item => `<li>${typeof item === 'string' ? item : JSON.stringify(item)}</li>`).join('')}</ul>`;
+          } else if (list && typeof list === 'object' && list.rows) {
+            el.innerHTML = `<ul style="margin:0;padding-left:14px;color:${theme.colors.textGrey};font-size:${component.fontSize || 9}px;line-height:1.3;">${list.rows.map(item => `<li>${typeof item === 'string' ? item : JSON.stringify(item)}</li>`).join('')}</ul>`;
+          }
+        } else if (component.type === 'table') {
+          const tableData = getField(data, component.bind) || { rows: [] };
+          const rows = tableData.rows || [];
+          const columns = component.columns || [];
+          const header = columns.map(col => `<th style="background:${theme.colors.darkTeal};color:${theme.colors.white};padding:4px;font-size:${component.fontSize || 9}px;">${col.label}</th>`).join('');
+          const body = rows.map(row => `<tr>${columns.map(col => `<td style="padding:3px;font-size:${component.fontSize || 9}px;border:1px solid ${theme.colors.bgGrey};">${getField(row, col.key) ?? ''}</td>`).join('')}</tr>`).join('');
+          el.innerHTML = `<table style="border-collapse:collapse;width:100%;"><thead><tr>${header}</tr></thead><tbody>${body}</tbody></table>`;
+          el.style.padding = '0';
+          el.style.overflow = 'hidden';
+        } else {
+          el.textContent = component.type;
+        }
+      }
+      canvas.appendChild(el);
     }
 
-    function resolveTemplateType(slideType) {
-      if (!slideType) return slideType;
-      if (templates[slideType]) return slideType;
-      return Object.keys(templates).find(key => slideType === key || slideType.startsWith(`${key}_`) || key.startsWith(`${slideType}_`)) || slideType;
+    function getField(data, path) {
+      if (!path || !data) return undefined;
+      return path.split('.').reduce((obj, key) => (obj && obj[key] !== undefined ? obj[key] : undefined), data);
     }
 
-    function getSlideContent(slide) {
-      if (!slide) return {};
-      return slide.content || slide.fields || slide;
+    function renderSlideInfo(slide) {
+      const info = document.getElementById('slide-info');
+      info.innerHTML = `
+        <table>
+          <tr><td style="color:#B6D9C9; width:80px;">Type</td><td>${formatTypeName(slide.type)}</td></tr>
+          <tr><td style="color:#B6D9C9;">Title</td><td>${getField(slide.data, 'header_title') || getField(slide.data, 'title') || '-'}</td></tr>
+          <tr><td style="color:#B6D9C9;">ID</td><td>${slide.data.id || '-'}</td></tr>
+        </table>
+      `;
+    }
+
+    function renderFieldMapping(slide) {
+      const panel = document.getElementById('field-mapping');
+      panel.innerHTML = '';
+      
+      const bindings = getTemplateBindings(slide.slideType);
+      if (bindings.length === 0) {
+        panel.innerHTML = '<p style="color:#B6D9C9; font-size:12px;">No data bindings in this slide.</p>';
+        return;
+      }
+      
+      const table = document.createElement('table');
+      const header = document.createElement('tr');
+      header.innerHTML = '<th>Field</th><th>Value</th>';
+      table.appendChild(header);
+      
+      bindings.forEach(binding => {
+        const value = getField(slide.data, binding.path);
+        const row = document.createElement('tr');
+        row.innerHTML = `<td>${binding.label}</td><td>${value === undefined ? '[missing]' : (typeof value === 'object' ? JSON.stringify(value) : String(value))}</td>`;
+        table.appendChild(row);
+      });
+      
+      panel.appendChild(table);
     }
 
     function getTemplateBindings(template) {
@@ -417,414 +568,131 @@
           });
         }
       });
-      return Array.from(new Map(bindings.map(item => [item.path, item])).values());
+      return bindings;
     }
 
-    function renderFieldMapping() {
-      const panel = document.getElementById('field-mapping');
-      panel.innerHTML = '';
-      if (!selectedTemplate) {
-        panel.textContent = 'Select a template to see how content fields are mapped.';
-        return;
-      }
-      const template = templates[selectedTemplate];
-      const inputData = isUserInputActive ? userInputData : parseJsonInput();
-      const slideData = allSlides[selectedPageIndex] || getSelectedSlide(inputData);
-      const content = getSlideContent(slideData);
-      const bindings = getTemplateBindings(template);
-      if (!bindings.length) {
-        panel.textContent = 'This template has no data bindings defined.';
-        return;
-      }
-      const table = document.createElement('table');
-      const header = document.createElement('tr');
-      header.innerHTML = '<th>Template field</th><th>Mapped value</th>';
-      table.appendChild(header);
-      bindings.forEach(binding => {
-        const value = getField(content, binding.path);
-        const row = document.createElement('tr');
-        const labelCell = document.createElement('td');
-        labelCell.textContent = binding.label;
-        const valueCell = document.createElement('td');
-        valueCell.textContent = value === undefined ? '[missing]' : (typeof value === 'object' ? JSON.stringify(value) : String(value));
-        row.appendChild(labelCell);
-        row.appendChild(valueCell);
-        table.appendChild(row);
-      });
-      panel.appendChild(table);
-    }
-
-    function renderAIPrompt(promptText) {
-      const prompt = document.getElementById('ai-prompt');
-      prompt.innerHTML = '';
-      if (!selectedTemplate) {
-        prompt.textContent = 'Select a template to see the AI prompt schema.';
-        return;
-      }
-      const content = promptText || createAIPromptText();
-      const pre = document.createElement('pre');
-      pre.style.whiteSpace = 'pre-wrap';
-      pre.style.margin = '0';
-      pre.textContent = content;
-      prompt.appendChild(pre);
+    function updateAIPrompt() {
+      if (!selectedPresentation) return;
+      
+      const promptText = createAIPromptText();
+      document.getElementById('ai-prompt').innerHTML = `<pre>${promptText}</pre>`;
     }
 
     function createAIPromptText() {
-      if (!selectedTemplate) return '';
-      const inputData = isUserInputActive ? userInputData : parseJsonInput();
-      const template = templates[selectedTemplate];
-      const schema = inputData?.slide_recipe?.ai_schema?.templates?.[selectedTemplate];
-      const bindings = getTemplateBindings(template).map(b => b.path);
-      const slideData = allSlides[selectedPageIndex] || getSelectedSlide(inputData);
-      const content = getSlideContent(slideData);
-      const currentValues = bindings.map(path => {
-        const value = getField(content, path);
-        return `- ${path}: ${value === undefined ? '[missing]' : JSON.stringify(value)}`;
-      });
+      if (!selectedPresentation) return '';
+      
       const lines = [];
-      lines.push(schema?.description || `Generate a JSON object for the '${selectedTemplate}' slide template.`);
+      lines.push(`Generate JSON for the "${selectedPresentation.name}" presentation template.`);
       lines.push('');
-      lines.push('Use the following fields:');
-      if (schema?.fields) {
-        Object.entries(schema.fields).forEach(([field, desc]) => lines.push(`- ${field}: ${desc}`));
-      } else {
-        bindings.forEach(path => lines.push(`- ${path}`));
-      }
+      lines.push('Required JSON structure:');
+      lines.push(JSON.stringify(selectedPresentation.sampleData, null, 2).split('\n').slice(0, 30).join('\n'));
+      lines.push('...');
       lines.push('');
-      lines.push('Use these current example values when possible:');
-      currentValues.forEach(line => lines.push(line));
-      lines.push('');
-      lines.push('Return only valid JSON for the slide object.');
+      lines.push('Rules:');
+      lines.push('- initiative_groups is an array of groups');
+      lines.push('- Each group can have an "initiatives" array');
+      lines.push('- initiative IDs must be unique within a group');
+      lines.push('- Return only valid JSON, no explanations');
+      
       return lines.join('\n');
     }
 
-    async function generateAIPrompt() {
-      const promptText = createAIPromptText();
-      renderAIPrompt(promptText);
-      if (!promptText) {
-        setInputStatus('No template selected for AI prompt generation.', 'error');
-        return;
-      }
-      try {
-        await navigator.clipboard.writeText(promptText);
-        setInputStatus('AI prompt generated and copied to clipboard.', 'success');
-      } catch (err) {
-        setInputStatus('AI prompt generated. Copy to clipboard failed in this browser.', 'warning');
-      }
+    function copyAIPrompt() {
+      const prompt = document.getElementById('ai-prompt').textContent;
+      navigator.clipboard.writeText(prompt).then(() => {
+        setInputStatus('AI prompt copied to clipboard!', 'success');
+      }).catch(() => {
+        setInputStatus('Failed to copy prompt.', 'error');
+      });
     }
 
     function handleKeyboardNavigation(event) {
       if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
       const activeTag = document.activeElement?.tagName;
       if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(activeTag)) return;
-      if (!Array.isArray(allSlides) || !allSlides.length) return;
+      if (currentSlides.length === 0) return;
+      
       if (event.key === 'ArrowLeft') {
-        selectedPageIndex = Math.max(0, selectedPageIndex - 1);
+        showSlide(selectedSlideIndex - 1);
       } else {
-        selectedPageIndex = Math.min(allSlides.length - 1, selectedPageIndex + 1);
+        showSlide(selectedSlideIndex + 1);
       }
-      showSelectedPage();
-      event.preventDefault();
-    }
-
-    function parseJsonInput() {
-      const raw = document.getElementById('json-input').value.trim();
-      if (!raw) return null;
-      try {
-        return JSON.parse(raw);
-      } catch (err) {
-        setInputStatus(`JSON parse error: ${err.message}`, 'error');
-        return null;
-      }
-    }
-
-    async function validateInput() {
-      const inputData = parseJsonInput();
-      if (!inputData) return;
-      if (!selectedTemplate) {
-        setInputStatus('Select a template before validating.', 'error');
-        return;
-      }
-      try {
-        const response = await fetch('/api/validate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ inputData, selectedTemplate })
-        });
-        const result = await response.json();
-        if (!response.ok) throw new Error(result.error || 'Validation failed.');
-        const status = result.valid ? 'success' : 'error';
-        const messages = [...result.errors, ...result.warnings].map(msg => `• ${msg}`).join('\n');
-        setInputStatus(result.valid ? 'Validation passed.' : 'Validation found issues.', status, messages);
-        return result;
-      } catch (err) {
-        setInputStatus(err.message, 'error');
-      }
-    }
-
-    function getSlideCandidates(inputData) {
-      const slides = inputData.slide_recipe?.slides || inputData.slides || [];
-      return slides.filter(slide => slide.slide_type === selectedTemplate);
-    }
-
-    function getSelectedSlide(inputData) {
-      const candidates = getSlideCandidates(inputData);
-      return candidates[selectedSampleIndex] || candidates[0];
-    }
-
-    function handlePreview() {
-      const inputData = parseJsonInput();
-      if (!inputData) return;
-      if (!selectedTemplate) {
-        setInputStatus('Select a template to preview.', 'error');
-        return;
-      }
-      userInputData = null;
-      isUserInputActive = false;
-      allSlides = inputData.slide_recipe?.slides || inputData.slides || [];
-      document.getElementById('sample-select').disabled = false;
-      updateSampleSelectLabel('Sample');
-      const candidates = getSlideCandidates(inputData);
-      if (!candidates.length) {
-        setInputStatus(`No slides found for template '${selectedTemplate}'.`, 'error');
-        return;
-      }
-      if (selectedSampleIndex >= candidates.length) selectedSampleIndex = 0;
-      populateSampleOptions();
-      renderSlidePreview();
-      renderFieldMapping();
-      renderAIPrompt();
-      setInputStatus('Slide preview rendered. Use Generate to export PPTX.', 'success');
-    }
-
-    function clearCanvas() {
-      const canvas = document.getElementById('slide-canvas');
-      canvas.innerHTML = '';
-    }
-
-
-    function renderSlidePreview() {
-      const canvas = document.getElementById('slide-canvas');
-      canvas.innerHTML = '';
-      const inputData = isUserInputActive ? userInputData : parseJsonInput();
-      if (!inputData) return;
-      const slideData = allSlides[selectedPageIndex] || getSelectedSlide(inputData);
-      if (!slideData) return;
-      const template = templates[selectedTemplate] || templates[slideData.slide_type];
-      if (!template) return;
-      canvas.style.backgroundColor = template.background ? (theme.colors[template.background] || template.background) : theme.colors.lightBg;
-      template.components?.forEach(component => {
-        renderPreviewComponent(canvas, component, slideData);
-      });
-      if (template.footer) {
-        const footer = document.createElement('div');
-        footer.style.position = 'absolute';
-        footer.style.left = '0';
-        footer.style.bottom = '0';
-        footer.style.width = '100%';
-        footer.style.height = '6.8%';
-        footer.style.backgroundColor = theme.colors.darkTeal;
-        canvas.appendChild(footer);
-      }
-    }
-
-    function renderPreviewComponent(canvas, component, slideData) {
-      if (component.type === 'header') {
-        const header = document.createElement('div');
-        header.className = 'slide-element';
-        header.style.position = 'absolute';
-        header.style.left = '2.5%';
-        header.style.top = '3.5%';
-        header.style.width = '95%';
-        header.style.height = '12%';
-        header.style.padding = '8px';
-        header.style.backgroundColor = 'rgba(255,255,255,0.12)';
-        header.style.color = theme.colors.nearBlack;
-        header.style.fontSize = '12px';
-        header.style.fontWeight = '700';
-        header.style.display = 'flex';
-        header.style.flexDirection = 'column';
-        const title = document.createElement('div');
-        title.textContent = getField(slideData, component.bind?.title) || component.title || 'Header title';
-        const subtitle = document.createElement('div');
-        subtitle.textContent = getField(slideData, component.bind?.subtitle) || component.subtitle || 'Header subtitle';
-        subtitle.style.fontSize = '10px';
-        subtitle.style.marginTop = '4px';
-        header.appendChild(title);
-        header.appendChild(subtitle);
-        canvas.appendChild(header);
-        return;
-      }
-      if (component.type === 'kpi_row') {
-        const items = getField(slideData, component.bind) || [];
-        items.forEach((item, idx) => {
-          const card = document.createElement('div');
-          card.className = 'slide-element';
-          card.style.position = 'absolute';
-          card.style.left = `${((component.x || 0) + idx * ((component.cardWidth || 2.2) + (component.gap || 0.19))) / 10 * 100}%`;
-          card.style.top = `${(component.y || 1.1) / 5.625 * 100}%`;
-          card.style.width = `${((component.cardWidth || 2.2) / 10) * 100}%`;
-          card.style.height = `${((component.cardHeight || 1.05) / 5.625) * 100}%`;
-          card.style.backgroundColor = theme.colors.darkTeal;
-          card.style.border = `1px solid ${theme.colors.medTeal}`;
-          card.style.padding = '6px';
-          card.style.color = theme.colors.white;
-          card.style.fontSize = '10px';
-          card.innerHTML = `<div style="font-weight:700; font-size:13px;">${item.value || ''}</div><div style="margin-top:4px; font-size:9px;">${item.label || ''}</div>`;
-          canvas.appendChild(card);
-        });
-        return;
-      }
-      if (component.type === 'agenda_grid') {
-        const items = getField(slideData, component.bind) || [];
-        items.slice(0, 6).forEach((item, idx) => {
-          const cols = component.columns || 2;
-          const col = idx % cols;
-          const row = Math.floor(idx / cols);
-          const card = document.createElement('div');
-          card.className = 'slide-element';
-          card.style.position = 'absolute';
-          card.style.left = `${((component.x || 0) + col * ((component.cardWidth || 4.7) + (component.horizontalGap || 0.6))) / 10 * 100}%`;
-          card.style.top = `${((component.y || 1.15) + row * (component.rowHeight || 1.35)) / 5.625 * 100}%`;
-          card.style.width = `${((component.cardWidth || 4.7) / 10) * 100}%`;
-          card.style.height = `${((component.cardHeight || 1.2) / 5.625) * 100}%`;
-          card.style.backgroundColor = theme.colors.white;
-          card.style.border = `1px solid ${theme.colors.medTeal}`;
-          card.style.padding = '6px';
-          card.style.color = theme.colors.nearBlack;
-          card.style.fontSize = '10px';
-          card.innerHTML = `<strong>${item.num || ''} ${item.title || ''}</strong><div style="margin-top:4px; font-size:9px;">${item.sub || ''}</div>`;
-          canvas.appendChild(card);
-        });
-        return;
-      }
-      const hasBox = typeof component.x === 'number' && typeof component.y === 'number' && typeof component.w === 'number' && typeof component.h === 'number';
-      if (!hasBox) {
-        return;
-      }
-      const el = document.createElement('div');
-      el.className = 'slide-element';
-      el.style.position = 'absolute';
-      el.style.left = `${(component.x / 10) * 100}%`;
-      el.style.top = `${(component.y / 5.625) * 100}%`;
-      el.style.width = `${(component.w / 10) * 100}%`;
-      el.style.height = `${(component.h / 5.625) * 100}%`;
-      if (component.type === 'shape') {
-        el.style.backgroundColor = theme.colors[component.fill] || component.fill || 'transparent';
-        if (component.line) {
-          el.style.border = `1px solid ${theme.colors[component.line.color] || component.line.color || '#000'}`;
-        }
-      } else {
-        el.style.padding = '6px';
-        el.style.overflow = 'hidden';
-        el.style.whiteSpace = 'pre-wrap';
-        el.style.wordBreak = 'break-word';
-        el.style.color = theme.colors[component.color] || component.color || theme.colors.nearBlack;
-        el.style.fontSize = `${component.fontSize || 10}px`;
-        el.style.fontFamily = component.font || 'Calibri';
-        if (component.type === 'text') {
-          el.textContent = (component.staticText !== undefined && component.staticText !== null) ? component.staticText : (getField(slideData, component.bind) || '');
-        } else if (component.type === 'bullet_list') {
-          const list = getField(slideData, component.bind) || [];
-          el.innerHTML = list.map(item => `• ${item}`).join('<br>');
-        } else if (component.type === 'table') {
-          const tableData = getField(slideData, component.bind) || { rows: [] };
-          const rows = tableData.rows || [];
-          const header = component.columns?.map(col => `<th>${col.label}</th>`).join('') || '';
-          const body = rows.map(row => `<tr>${component.columns?.map(col => `<td>${getField(row, col.key) ?? ''}</td>`).join('')}</tr>`).join('');
-          el.innerHTML = `<table class="slide-table"><thead><tr>${header}</tr></thead><tbody>${body}</tbody></table>`;
-          el.style.padding = '0';
-        } else {
-          el.textContent = component.type;
-        }
-      }
-      canvas.appendChild(el);
     }
 
     async function generatePptx() {
-      const inputData = isUserInputActive ? userInputData : parseJsonInput();
-      if (!inputData) return;
-      if (!selectedTemplate) {
-        setGenerateStatus('You must select a template before generating.', 'error');
+      if (!selectedPresentation) {
+        setGenerateStatus('Please select a presentation template first.', 'error');
         return;
       }
-      setGenerateStatus('Generating PPTX…', 'success');
+      
+      const jsonInput = document.getElementById('json-input').value.trim();
+      if (!jsonInput) {
+        setGenerateStatus('Please load sample data or enter your JSON data.', 'error');
+        return;
+      }
+      
+      try {
+        JSON.parse(jsonInput);
+      } catch (err) {
+        setGenerateStatus(`Invalid JSON: ${err.message}`, 'error');
+        return;
+      }
+      
+      setGenerateStatus('Generating PPTX...', 'success');
+      
       try {
         const response = await fetch('/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ inputData, selectedTemplate })
+          body: JSON.stringify({
+            inputData: JSON.parse(jsonInput),
+            presentationKey: document.getElementById('template-select').value
+          })
         });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Generation failed');
+        }
+        
         const result = await response.json();
-        if (!response.ok) throw new Error(result.error || 'Generation failed');
-        setGenerateResult(result.downloadUrl, result.fileName || 'Download PPTX');
+        setGenerateStatus('Downloading...', 'success');
+        
+        const downloadResponse = await fetch(result.downloadUrl);
+        const blob = await downloadResponse.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = result.fileName;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        setTimeout(() => setGenerateStatus('', 'success'), 100);
       } catch (err) {
         setGenerateStatus(err.message, 'error');
       }
     }
 
-    function setInputStatus(message, type = 'success', details = '', extraNode = null) {
+    function setInputStatus(message, type = 'success') {
       const status = document.getElementById('input-status');
       status.textContent = message;
       status.className = `status ${type}`;
-      if (details) {
-        status.innerHTML = `${message}<br><small>${details}</small>`;
-      }
-      if (extraNode) {
-        status.appendChild(document.createTextNode(' '));
-        status.appendChild(extraNode);
-      }
     }
 
-    function setGenerateStatus(message, type = 'success', details = '', extraNode = null) {
+    function setGenerateStatus(message, type = 'success') {
       const status = document.getElementById('generate-status');
       status.textContent = message;
-      status.className = `status ${type}`;
-      if (details) {
-        status.innerHTML = `${message}<br><small>${details}</small>`;
-      }
-      if (extraNode) {
-        status.appendChild(document.createTextNode(' '));
-        status.appendChild(extraNode);
-      }
+      status.className = `status ${type} ${message ? 'visible' : ''}`;
     }
 
-    function setGenerateResult(downloadUrl, fileName) {
-      const status = document.getElementById('generate-status');
-      status.innerHTML = `<span style="display: flex; align-items: center; gap: 8px;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M20 6L9 17l-5-5"/>
-        </svg>
-        ${fileName} generated successfully!
-      </span>`;
-      status.className = 'status success';
-      fetch(downloadUrl)
-        .then(response => response.blob())
-        .then(blob => {
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = fileName;
-          document.body.appendChild(a);
-          a.click();
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(a);
-        })
-        .catch(err => {
-          console.error('Auto-download failed:', err);
-        });
-    }
-
-    function getField(data, path) {
-      if (!path || !data) return undefined;
-      const direct = path.split('.').reduce((obj, key) => (obj && obj[key] !== undefined ? obj[key] : undefined), data);
-      if (direct !== undefined) return direct;
-      const contentSource = data.content || data.fields;
-      if (contentSource) {
-        const nested = path.split('.').reduce((obj, key) => (obj && obj[key] !== undefined ? obj[key] : undefined), contentSource);
-        if (nested !== undefined) return nested;
-      }
-      return undefined;
+    function clearPreview() {
+      document.getElementById('slide-canvas').innerHTML = '';
+      document.getElementById('slide-carousel').innerHTML = '';
+      document.getElementById('field-mapping').innerHTML = '';
+      document.getElementById('slide-info').innerHTML = '<p style="color:#B6D9C9; font-size:12px;">Select a slide to see details.</p>';
+      document.getElementById('ai-prompt').innerHTML = '';
     }
   </script>
 </body>

@@ -1,483 +1,509 @@
 {
-  "templates": {
-    "cover": {
-      "background": "darkTeal",
-      "components": [
-        {
-          "type": "shape",
-          "shape": "RECTANGLE",
-          "x": 0,
-          "y": 0,
-          "w": 0.12,
-          "h": 5.625,
-          "fill": "coral"
-        },
-        {
-          "type": "shape",
-          "shape": "RECTANGLE",
-          "x": 0,
-          "y": 4.7,
-          "w": 10,
-          "h": 0.925,
-          "fill": "deepGreen"
-        },
-        {
-          "type": "text",
-          "bind": "title",
-          "x": 0.5,
-          "y": 1.2,
-          "w": 8.5,
-          "h": 0.85,
-          "fontSize": 36,
-          "bold": true,
-          "color": "white",
-          "font": "heading"
-        },
-        {
-          "type": "text",
-          "bind": "subtitle",
-          "x": 0.5,
-          "y": 2.05,
-          "w": 8,
-          "h": 0.55,
-          "fontSize": 22,
-          "color": "lightTeal"
-        },
-        {
-          "type": "text",
-          "bind": "audience_line",
-          "x": 0.5,
-          "y": 2.65,
-          "w": 8,
-          "h": 0.4,
-          "fontSize": 14,
-          "color": "bgGrey"
-        },
-        {
-          "type": "text",
-          "bind": "author",
-          "x": 0.5,
-          "y": 3.15,
-          "w": 8,
-          "h": 0.35,
-          "fontSize": 12,
-          "color": "slate"
-        },
-        {
-          "type": "text",
-          "staticText": "Netcompany",
-          "x": 7,
-          "y": 4.75,
-          "w": 2.8,
-          "h": 0.4,
-          "fontSize": 16,
-          "bold": true,
-          "color": "lightTeal",
-          "align": "right"
-        },
-        {
-          "type": "text",
-          "staticText": "netcompany.com",
-          "x": 7,
-          "y": 5.1,
-          "w": 2.8,
-          "h": 0.3,
-          "fontSize": 10,
-          "color": "slate",
-          "align": "right"
-        }
-      ]
-    },
-    "agenda": {
-      "background": "F4F6F6",
-      "footer": true,
-      "components": [
-        {
-          "type": "header",
-          "bind": {
-            "title": "header_title",
-            "subtitle": "header_subtitle"
-          }
-        },
-        {
-          "type": "agenda_grid",
-          "bind": "groups",
-          "columns": 2,
-          "cardWidth": 4.7,
-          "cardHeight": 1.2,
-          "rowHeight": 1.35,
-          "horizontalGap": 0.6,
-          "x": 0.25,
-          "y": 1.15
-        }
-      ]
-    },
-    "group_summary": {
-      "background": "F4F6F6",
-      "footer": true,
-      "components": [
-        {
-          "type": "header",
-          "bind": {
-            "title": "header_title",
-            "subtitle": "header_subtitle"
-          }
-        },
-        {
-          "type": "kpi_row",
-          "bind": "kpis",
-          "x": 0.25,
-          "y": 1.1,
-          "cardWidth": 2.2,
-          "cardHeight": 1.05,
-          "gap": 0.19
-        },
-        {
-          "type": "text",
-          "staticText": "Business Scope",
-          "x": 0.25,
-          "y": 2.3,
-          "w": 3.6,
-          "h": 0.28,
-          "fontSize": 10,
-          "bold": true,
-          "color": "coral"
-        },
-        {
-          "type": "text",
-          "bind": "business_scope",
-          "x": 0.25,
-          "y": 2.58,
-          "w": 3.6,
-          "h": 0.85,
-          "fontSize": 10,
-          "bold": false,
-          "color": "nearBlack",
-          "wrap": true
-        },
-        {
-          "type": "text",
-          "staticText": "Market Needs & Investment Benefits",
-          "x": 0.25,
-          "y": 3.5,
-          "w": 3.6,
-          "h": 0.28,
-          "fontSize": 10,
-          "bold": true,
-          "color": "coral"
-        },
-        {
-          "type": "bullet_list",
-          "bind": "market_needs_and_benefits",
-          "x": 0.25,
-          "y": 3.82,
-          "w": 3.6,
-          "h": 1.55,
-          "fontSize": 9,
-          "color": "textGrey"
-        },
-        {
-          "type": "table",
-          "bind": "initiative_table",
-          "x": 3.95,
-          "y": 2.3,
-          "w": 5.4,
-          "h": 2.61,
-          "fontSize": 9,
-          "colW": [
-            2.25,
-            1.116,
-            0.684,
-            0.756,
-            0.594
-          ],
-          "columns": [
+  "presentations": {
+    "solon-tax-roadmap-2026": {
+      "name": "Solon Tax Product Roadmap 2026",
+      "description": "Full roadmap presentation with cover, initiative groups and detailed initiative slides",
+      "slideTypes": {
+        "cover": {
+          "background": "darkTeal",
+          "components": [
             {
-              "key": "initiative",
-              "label": "Initiative",
-              "align": "left"
+              "type": "shape",
+              "shape": "RECTANGLE",
+              "x": 0,
+              "y": 0,
+              "w": 0.12,
+              "h": 5.625,
+              "fill": "coral"
             },
             {
-              "key": "effort_h",
-              "label": "Effort (H)",
-              "align": "center"
+              "type": "shape",
+              "shape": "RECTANGLE",
+              "x": 0,
+              "y": 4.7,
+              "w": 10,
+              "h": 0.925,
+              "fill": "deepGreen"
             },
             {
-              "key": "features",
-              "label": "Feats",
-              "align": "center"
+              "type": "text",
+              "bind": "title",
+              "x": 0.5,
+              "y": 1.2,
+              "w": 8.5,
+              "h": 0.85,
+              "fontSize": 36,
+              "bold": true,
+              "color": "white",
+              "font": "heading"
             },
             {
-              "key": "pi_window",
-              "label": "PI",
-              "align": "center"
+              "type": "text",
+              "bind": "subtitle",
+              "x": 0.5,
+              "y": 2.05,
+              "w": 8,
+              "h": 0.55,
+              "fontSize": 22,
+              "color": "lightTeal"
             },
             {
-              "key": "priority",
-              "label": "Prio",
-              "align": "center"
-            }
-          ]
-        }
-      ]
-    },
-    "initiative_detail": {
-      "background": "F4F6F6",
-      "footer": true,
-      "components": [
-        {
-          "type": "header",
-          "bind": {
-            "title": "header_title",
-            "subtitle": "header_subtitle"
-          }
-        },
-        {
-          "type": "kpi_row",
-          "bind": "kpis",
-          "x": 0.25,
-          "y": 1.1,
-          "cardWidth": 2.2,
-          "cardHeight": 1.0,
-          "gap": 0.19
-        },
-        {
-          "type": "text",
-          "staticText": "Business Scope",
-          "x": 0.25,
-          "y": 2.15,
-          "w": 3.0,
-          "h": 0.25,
-          "fontSize": 10,
-          "bold": true,
-          "color": "coral"
-        },
-        {
-          "type": "text",
-          "bind": "business_scope",
-          "x": 0.25,
-          "y": 2.42,
-          "w": 3.0,
-          "h": 0.75,
-          "fontSize": 9,
-          "color": "nearBlack",
-          "wrap": true
-        },
-        {
-          "type": "text",
-          "staticText": "Key Investment Benefits",
-          "x": 0.25,
-          "y": 3.27,
-          "w": 3.0,
-          "h": 0.22,
-          "fontSize": 10,
-          "bold": true,
-          "color": "coral"
-        },
-        {
-          "type": "bullet_list",
-          "bind": "key_investment_benefits",
-          "x": 0.25,
-          "y": 3.52,
-          "w": 3.0,
-          "h": 0.82,
-          "fontSize": 9,
-          "color": "textGrey"
-        },
-        {
-          "type": "bar_chart",
-          "bind": "effort_bar_chart",
-          "x": 3.4,
-          "y": 2.15,
-          "w": 3.3,
-          "h": 2.0,
-          "titleFontSize": 10,
-          "color": "medTeal"
-        },
-        {
-          "type": "donut_chart",
-          "bind": "priority_donut",
-          "x": 6.85,
-          "y": 2.15,
-          "w": 2.9,
-          "h": 1.0,
-          "titleFontSize": 10,
-          "legendPos": "r"
-        },
-        {
-          "type": "text",
-          "staticText": "Talking Points",
-          "x": 3.4,
-          "y": 4.3,
-          "w": 3.3,
-          "h": 0.25,
-          "fontSize": 10,
-          "bold": true,
-          "color": "coral"
-        },
-        {
-          "type": "bullet_list",
-          "bind": "talking_points",
-          "x": 3.4,
-          "y": 4.55,
-          "w": 3.3,
-          "h": 0.7,
-          "fontSize": 9,
-          "color": "textGrey"
-        },
-        {
-          "type": "pi_planning",
-          "bind": "pi_planning",
-          "x": 0.25,
-          "y": 4.25,
-          "w": 9.5,
-          "h": 0.72,
-          "bandWidth": 3.17,
-          "bandHeight": 0.72,
-          "noteFontSize": 8
-        },
-        {
-          "type": "footer_banner",
-          "bind": "steerco_footer",
-          "x": 0,
-          "y": 5.05,
-          "w": 10,
-          "h": 0.38,
-          "fill": "darkTeal",
-          "accentColor": "gold",
-          "textInset": 0.15
-        }
-      ]
-    },
-    "group_summary_pi": {
-      "background": "F4F6F6",
-      "footer": true,
-      "components": [
-        {
-          "type": "header",
-          "bind": {
-            "title": "header_title",
-            "subtitle": "header_subtitle"
-          }
-        },
-        {
-          "type": "kpi_row",
-          "bind": "kpis",
-          "x": 0.25,
-          "y": 1.1,
-          "cardWidth": 2.2,
-          "cardHeight": 1.05,
-          "gap": 0.19
-        },
-        {
-          "type": "text",
-          "staticText": "Business Scope",
-          "x": 0.25,
-          "y": 2.3,
-          "w": 3.6,
-          "h": 0.28,
-          "fontSize": 10,
-          "bold": true,
-          "color": "coral"
-        },
-        {
-          "type": "text",
-          "bind": "business_scope",
-          "x": 0.25,
-          "y": 2.58,
-          "w": 3.6,
-          "h": 0.75,
-          "fontSize": 10,
-          "bold": false,
-          "color": "nearBlack",
-          "wrap": true
-        },
-        {
-          "type": "text",
-          "staticText": "Market Needs & Investment Benefits",
-          "x": 0.25,
-          "y": 3.42,
-          "w": 3.6,
-          "h": 0.28,
-          "fontSize": 10,
-          "bold": true,
-          "color": "coral"
-        },
-        {
-          "type": "bullet_list",
-          "bind": "market_needs_and_benefits",
-          "x": 0.25,
-          "y": 3.72,
-          "w": 3.6,
-          "h": 1.1,
-          "fontSize": 9,
-          "color": "textGrey"
-        },
-        {
-          "type": "table",
-          "bind": "initiative_table",
-          "x": 3.95,
-          "y": 2.3,
-          "w": 5.4,
-          "h": 2.61,
-          "fontSize": 9,
-          "colW": [
-            2.25,
-            1.116,
-            0.684,
-            0.756,
-            0.594
-          ],
-          "columns": [
-            {
-              "key": "initiative",
-              "label": "Initiative",
-              "align": "left"
+              "type": "text",
+              "bind": "audience_line",
+              "x": 0.5,
+              "y": 2.65,
+              "w": 8,
+              "h": 0.4,
+              "fontSize": 14,
+              "color": "bgGrey"
             },
             {
-              "key": "effort_h",
-              "label": "Effort (H)",
-              "align": "center"
+              "type": "text",
+              "bind": "author",
+              "x": 0.5,
+              "y": 3.15,
+              "w": 8,
+              "h": 0.35,
+              "fontSize": 12,
+              "color": "slate"
             },
             {
-              "key": "pi27",
-              "label": "PI27",
-              "align": "center"
-            },
-            {
-              "key": "pi28",
-              "label": "PI28",
-              "align": "center"
-            },
-            {
-              "key": "pi29",
-              "label": "PI29",
-              "align": "center"
+              "type": "text",
+              "staticText": "Netcompany",
+              "x": 7,
+              "y": 4.75,
+              "w": 2.8,
+              "h": 0.4,
+              "fontSize": 16,
+              "bold": true,
+              "color": "lightTeal",
+              "align": "right"
             }
           ]
         },
-        {
-          "type": "text",
-          "staticText": "Key Points",
-          "x": 0.25,
-          "y": 4.9,
-          "w": 9.1,
-          "h": 0.28,
-          "fontSize": 10,
-          "bold": true,
-          "color": "coral"
+        "agenda": {
+          "background": "F4F6F6",
+          "footer": true,
+          "components": [
+            {
+              "type": "header",
+              "bind": {
+                "title": "header_title",
+                "subtitle": "header_subtitle"
+              }
+            },
+            {
+              "type": "agenda_grid",
+              "bind": "groups",
+              "columns": 2,
+              "cardWidth": 4.7,
+              "cardHeight": 1.2,
+              "rowHeight": 1.35,
+              "horizontalGap": 0.6,
+              "x": 0.25,
+              "y": 1.15
+            }
+          ]
         },
-        {
-          "type": "bullet_list",
-          "bind": "key_points",
-          "x": 0.25,
-          "y": 5.2,
-          "w": 9.1,
-          "h": 0.75,
-          "fontSize": 9,
-          "color": "textGrey"
+        "roadmap_initiative_group": {
+          "background": "F4F6F6",
+          "footer": true,
+          "components": [
+            {
+              "type": "header",
+              "bind": {
+                "title": "header_title",
+                "subtitle": "header_subtitle"
+              }
+            },
+            {
+              "type": "kpi_row",
+              "bind": "kpis",
+              "x": 0.25,
+              "y": 1.1,
+              "cardWidth": 2.2,
+              "cardHeight": 1.05,
+              "gap": 0.19
+            },
+            {
+              "type": "text",
+              "staticText": "Business Scope",
+              "x": 0.25,
+              "y": 2.3,
+              "w": 3.6,
+              "h": 0.28,
+              "fontSize": 10,
+              "bold": true,
+              "color": "coral"
+            },
+            {
+              "type": "text",
+              "bind": "business_scope",
+              "x": 0.25,
+              "y": 2.58,
+              "w": 3.6,
+              "h": 0.85,
+              "fontSize": 10,
+              "bold": false,
+              "color": "nearBlack"
+            },
+            {
+              "type": "text",
+              "staticText": "Market Needs & Investment Benefits",
+              "x": 0.25,
+              "y": 3.5,
+              "w": 3.6,
+              "h": 0.28,
+              "fontSize": 10,
+              "bold": true,
+              "color": "coral"
+            },
+            {
+              "type": "bullet_list",
+              "bind": "market_needs_and_benefits",
+              "x": 0.25,
+              "y": 3.82,
+              "w": 3.6,
+              "h": 1.55,
+              "fontSize": 9,
+              "color": "textGrey"
+            },
+            {
+              "type": "table",
+              "bind": "initiative_table",
+              "x": 3.95,
+              "y": 2.3,
+              "w": 5.4,
+              "h": 2.61,
+              "fontSize": 9,
+              "colW": [2.25, 1.116, 0.684, 0.756, 0.594],
+              "columns": [
+                { "key": "initiative", "label": "Initiative", "align": "left" },
+                { "key": "effort_h", "label": "Effort (H)", "align": "center" },
+                { "key": "features", "label": "Feats", "align": "center" },
+                { "key": "pi_window", "label": "PI", "align": "center" },
+                { "key": "priority", "label": "Prio", "align": "center" }
+              ]
+            }
+          ]
+        },
+        "roadmap_initiative": {
+          "background": "F4F6F6",
+          "footer": true,
+          "components": [
+            {
+              "type": "header",
+              "bind": {
+                "title": "header_title",
+                "subtitle": "header_subtitle"
+              }
+            },
+            {
+              "type": "kpi_row",
+              "bind": "kpis",
+              "x": 0.25,
+              "y": 1.1,
+              "cardWidth": 2.2,
+              "cardHeight": 1.0,
+              "gap": 0.19
+            },
+            {
+              "type": "text",
+              "staticText": "Business Scope",
+              "x": 0.25,
+              "y": 2.15,
+              "w": 3.0,
+              "h": 0.25,
+              "fontSize": 10,
+              "bold": true,
+              "color": "coral"
+            },
+            {
+              "type": "text",
+              "bind": "business_scope",
+              "x": 0.25,
+              "y": 2.42,
+              "w": 3.0,
+              "h": 0.75,
+              "fontSize": 9,
+              "color": "nearBlack"
+            },
+            {
+              "type": "text",
+              "staticText": "Key Investment Benefits",
+              "x": 0.25,
+              "y": 3.27,
+              "w": 3.0,
+              "h": 0.22,
+              "fontSize": 10,
+              "bold": true,
+              "color": "coral"
+            },
+            {
+              "type": "bullet_list",
+              "bind": "key_investment_benefits",
+              "x": 0.25,
+              "y": 3.52,
+              "w": 3.0,
+              "h": 0.82,
+              "fontSize": 9,
+              "color": "textGrey"
+            },
+            {
+              "type": "bar_chart",
+              "bind": "effort_bar_chart",
+              "x": 3.4,
+              "y": 2.15,
+              "w": 3.3,
+              "h": 2.0,
+              "titleFontSize": 10,
+              "color": "medTeal"
+            },
+            {
+              "type": "donut_chart",
+              "bind": "priority_donut",
+              "x": 6.85,
+              "y": 2.15,
+              "w": 2.9,
+              "h": 1.0,
+              "titleFontSize": 10,
+              "legendPos": "r"
+            },
+            {
+              "type": "text",
+              "staticText": "Talking Points",
+              "x": 3.4,
+              "y": 4.3,
+              "w": 3.3,
+              "h": 0.25,
+              "fontSize": 10,
+              "bold": true,
+              "color": "coral"
+            },
+            {
+              "type": "bullet_list",
+              "bind": "talking_points",
+              "x": 3.4,
+              "y": 4.55,
+              "w": 3.3,
+              "h": 0.7,
+              "fontSize": 9,
+              "color": "textGrey"
+            },
+            {
+              "type": "pi_planning",
+              "bind": "pi_planning",
+              "x": 0.25,
+              "y": 4.25,
+              "w": 9.5,
+              "h": 0.72,
+              "bandWidth": 3.17,
+              "bandHeight": 0.72,
+              "noteFontSize": 8
+            }
+          ]
         }
-      ]
+      },
+      "structure": [
+        { "type": "cover", "dataPath": null },
+        { "type": "agenda", "dataPath": null },
+        { "type": "roadmap_initiative_group", "dataPath": "initiative_groups" },
+        { "type": "roadmap_initiative", "dataPath": "initiative_groups", "children": "initiatives" }
+      ],
+      "sampleData": {
+        "title": "Solon Tax Product Roadmap 2026",
+        "subtitle": "Feature Catalog for SteerCo",
+        "audience_line": "Executive Steering Committee | 29 April 2026",
+        "author": "Prepared by: Nikolaj",
+        "header_title": "Agenda",
+        "header_subtitle": "Solon Tax Product Roadmap 2026 — SteerCo Session",
+        "groups": [
+          { "num": "01", "title": "Core Revenue Management", "sub": "Registration · Taxpayer Accounting · Billing" },
+          { "num": "02", "title": "Core Supporting Capabilities", "sub": "Supporting functions enabling the tax platform" },
+          { "num": "03", "title": "Non-Functional Requirements", "sub": "Performance, security, reliability" }
+        ],
+        "initiative_groups": [
+          {
+            "id": "core-revenue",
+            "header_title": "Core Revenue Management",
+            "header_subtitle": "Group Summary | Roadmap Initiative Overview",
+            "kpis": [
+              { "value": "~23,200", "label": "Total Estimated Effort", "unit": "Hours" },
+              { "value": "6", "label": "Roadmap Initiatives", "unit": "Count" },
+              { "value": "15", "label": "Features in Scope", "unit": "Count" },
+              { "value": "PI28", "label": "Primary PI Window", "unit": "Program Increment" }
+            ],
+            "business_scope": "Covers foundational tax administration functions enabling authorities to manage the full lifecycle of taxpayer obligations.",
+            "market_needs_and_benefits": [
+              "End-to-end taxpayer lifecycle management reduces administrative burden",
+              "Automated penalty and interest calculations improve collection rates",
+              "Modular capability design allows onboarding of new tax types"
+            ],
+            "initiative_table": {
+              "rows": [
+                { "initiative": "Registration", "effort_h": "11,866", "features": 6, "pi_window": "PI27-29", "priority": "P1" },
+                { "initiative": "Taxpayer Accounting", "effort_h": "8,064", "features": 4, "pi_window": "PI28-29", "priority": "P1" },
+                { "initiative": "Billing & Assessments", "effort_h": "2,880", "features": 3, "pi_window": "PI28-29", "priority": "P1-P2" }
+              ]
+            },
+            "initiatives": [
+              {
+                "id": "registration",
+                "header_title": "Registration",
+                "header_subtitle": "Core Revenue Management | Initiative Detail",
+                "kpis": [
+                  { "value": "~11,900", "label": "Total Estimated Effort", "unit": "Hours" },
+                  { "value": "6", "label": "Features in Scope", "unit": "Count" },
+                  { "value": "P1", "label": "Primary Priority", "unit": "Must Have" },
+                  { "value": "PI27-29", "label": "Planned PI Window", "unit": "Program Increments" }
+                ],
+                "business_scope": "Manages the complete registration lifecycle including party creation, identifier management, and historical data tracking.",
+                "key_investment_benefits": [
+                  "Faster taxpayer onboarding reduces overhead",
+                  "Flexible party model supports VAT, CIT, and PAYE",
+                  "Structured identifiers improve data quality"
+                ],
+                "effort_bar_chart": {
+                  "features": [
+                    { "name": "Party Identifiers", "hours": 3200 },
+                    { "name": "Org. Hierarchy", "hours": 2800 },
+                    { "name": "Search Enhancements", "hours": 2100 }
+                  ]
+                },
+                "priority_donut": {
+                  "segments": [
+                    { "label": "P1 – Must Have", "value": 70, "color": "123836" },
+                    { "label": "P2 – Should Have", "value": 20, "color": "1B5E52" },
+                    { "label": "P3 – Nice to Have", "value": 10, "color": "73AA87" }
+                  ]
+                },
+                "talking_points": [
+                  "Foundational for all other revenue capabilities",
+                  "PI27 delivery critical for subsequent PIs",
+                  "All P1/P2 – no descoping without revenue risk"
+                ],
+                "pi_planning": {
+                  "bands": [
+                    { "pi": "PI27", "color": "darkTeal", "note": "Party Identifiers · Historical Data" },
+                    { "pi": "PI28", "color": "medTeal", "note": "Data Area · Search Enhancements" },
+                    { "pi": "PI29", "color": "slate", "note": "Org. Hierarchy View" }
+                  ]
+                }
+              },
+              {
+                "id": "taxpayer-accounting",
+                "header_title": "Taxpayer Accounting",
+                "header_subtitle": "Core Revenue Management | Initiative Detail",
+                "kpis": [
+                  { "value": "~8,064", "label": "Total Estimated Effort", "unit": "Hours" },
+                  { "value": "4", "label": "Features in Scope", "unit": "Count" },
+                  { "value": "P1", "label": "Primary Priority", "unit": "Must Have" },
+                  { "value": "PI28-29", "label": "Planned PI Window", "unit": "Program Increments" }
+                ],
+                "business_scope": "Provides a unified financial ledger for each taxpayer, recording all transactions including payments, credits, and adjustments.",
+                "key_investment_benefits": [
+                  "Real-time balance visibility reduces disputes",
+                  "Automated reconciliation eliminates manual errors",
+                  "Single ledger supports multi-tax-type accounting"
+                ],
+                "effort_bar_chart": {
+                  "features": [
+                    { "name": "General Ledger Core", "hours": 2800 },
+                    { "name": "Transaction Processing", "hours": 2400 },
+                    { "name": "Account Reconciliation", "hours": 1664 }
+                  ]
+                },
+                "priority_donut": {
+                  "segments": [
+                    { "label": "P1 – Must Have", "value": 75, "color": "123836" },
+                    { "label": "P2 – Should Have", "value": 25, "color": "1B5E52" }
+                  ]
+                },
+                "talking_points": [
+                  "Foundational to revenue assurance",
+                  "PI28 delivery critical",
+                  "All P1/P2 features"
+                ],
+                "pi_planning": {
+                  "bands": [
+                    { "pi": "PI27", "color": "bgGrey", "note": "No features" },
+                    { "pi": "PI28", "color": "darkTeal", "note": "General Ledger Core" },
+                    { "pi": "PI29", "color": "medTeal", "note": "Reconciliation · Balance" }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "id": "core-supporting",
+            "header_title": "Core Supporting Capabilities",
+            "header_subtitle": "Group Summary | Roadmap Initiative Overview",
+            "kpis": [
+              { "value": "~12,500", "label": "Total Estimated Effort", "unit": "Hours" },
+              { "value": "4", "label": "Roadmap Initiatives", "unit": "Count" },
+              { "value": "8", "label": "Features in Scope", "unit": "Count" },
+              { "value": "PI28", "label": "Primary PI Window", "unit": "Program Increment" }
+            ],
+            "business_scope": "Supporting functions enabling the tax administration platform to operate efficiently and comply with regulations.",
+            "market_needs_and_benefits": [
+              "Enables compliance with regulatory requirements",
+              "Reduces operational overhead through automation",
+              "Provides audit trails and reporting capabilities"
+            ],
+            "initiative_table": {
+              "rows": [
+                { "initiative": "Compliance Engine", "effort_h": "5,200", "features": 3, "pi_window": "PI28-29", "priority": "P1" },
+                { "initiative": "Audit & Reporting", "effort_h": "4,100", "features": 2, "pi_window": "PI28-29", "priority": "P2" },
+                { "initiative": "Workflow Automation", "effort_h": "3,200", "features": 3, "pi_window": "PI29", "priority": "P2" }
+              ]
+            },
+            "initiatives": [
+              {
+                "id": "compliance-engine",
+                "header_title": "Compliance Engine",
+                "header_subtitle": "Core Supporting | Initiative Detail",
+                "kpis": [
+                  { "value": "~5,200", "label": "Total Estimated Effort", "unit": "Hours" },
+                  { "value": "3", "label": "Features in Scope", "unit": "Count" },
+                  { "value": "P1", "label": "Primary Priority", "unit": "Must Have" },
+                  { "value": "PI28-29", "label": "Planned PI Window", "unit": "Program Increments" }
+                ],
+                "business_scope": "Automated compliance checking and rule enforcement across tax operations.",
+                "key_investment_benefits": [
+                  "Reduces manual compliance checks",
+                  "Ensures consistent rule application",
+                  "Provides real-time compliance monitoring"
+                ],
+                "effort_bar_chart": {
+                  "features": [
+                    { "name": "Rule Engine", "hours": 2200 },
+                    { "name": "Validation Framework", "hours": 1800 },
+                    { "name": "Reporting Module", "hours": 1200 }
+                  ]
+                },
+                "priority_donut": {
+                  "segments": [
+                    { "label": "P1 – Must Have", "value": 80, "color": "123836" },
+                    { "label": "P2 – Should Have", "value": 20, "color": "1B5E52" }
+                  ]
+                },
+                "talking_points": [
+                  "Critical for regulatory compliance",
+                  "Enables automated audit trails",
+                  "Reduces risk of non-compliance"
+                ],
+                "pi_planning": {
+                  "bands": [
+                    { "pi": "PI27", "color": "bgGrey", "note": "Planning only" },
+                    { "pi": "PI28", "color": "darkTeal", "note": "Rule Engine" },
+                    { "pi": "PI29", "color": "medTeal", "note": "Validation · Reporting" }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      }
     }
   }
 }

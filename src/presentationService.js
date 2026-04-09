@@ -12,6 +12,14 @@ function loadTemplates(templatePath) {
   return payload.templates || {};
 }
 
+function loadPresentations(templatePath) {
+  if (!fs.existsSync(templatePath)) {
+    throw new Error(`Template file not found: ${templatePath}`);
+  }
+  const payload = loadJSONFile(templatePath);
+  return payload.presentations || {};
+}
+
 function resolveTemplateKey(type, templates) {
   if (!type || !templates) return type;
   if (templates[type]) return type;
@@ -85,6 +93,121 @@ function validateInputData(inputData, templates, selectedTemplate) {
     warnings,
     slideTypes,
     matchingSlides
+  };
+}
+
+function expandSlidesFromStructure(presentation, data) {
+  const expandedSlides = [];
+  
+  function getDataAtPath(dataObj, path) {
+    if (!path) return dataObj;
+    const parts = path.split('.');
+    let current = dataObj;
+    for (const part of parts) {
+      if (current && typeof current === 'object') {
+        current = current[part];
+      } else {
+        return undefined;
+      }
+    }
+    return current;
+  }
+
+  function processStructureItem(structureItem) {
+    const slideType = presentation.slideTypes[structureItem.type];
+    if (!slideType) {
+      console.warn(`Slide type '${structureItem.type}' not found in presentation`);
+      return;
+    }
+
+    if (structureItem.dataPath === null) {
+      expandedSlides.push({
+        type: structureItem.type,
+        data: { ...data },
+        slideType: slideType
+      });
+      return;
+    }
+
+    if (!structureItem.dataPath) return;
+
+    const items = getDataAtPath(data, structureItem.dataPath);
+    if (!Array.isArray(items)) return;
+
+    if (structureItem.children) {
+      items.forEach(item => {
+        const children = getDataAtPath(item, structureItem.children);
+        if (Array.isArray(children) && children.length > 0) {
+          children.forEach(child => {
+            expandedSlides.push({
+              type: structureItem.type,
+              data: { ...data, ...item, ...child },
+              slideType: slideType
+            });
+          });
+        } else {
+          expandedSlides.push({
+            type: structureItem.type,
+            data: { ...data, ...item },
+            slideType: slideType
+          });
+        }
+      });
+    } else {
+      items.forEach(item => {
+        expandedSlides.push({
+          type: structureItem.type,
+          data: { ...data, ...item },
+          slideType: slideType
+        });
+      });
+    }
+  }
+
+  presentation.structure.forEach(item => processStructureItem(item));
+  return expandedSlides;
+}
+
+function validatePresentationData(inputData, presentation) {
+  const errors = [];
+  const warnings = [];
+
+  if (!inputData || typeof inputData !== 'object') {
+    errors.push('Input data must be a JSON object.');
+    return { valid: false, errors, warnings };
+  }
+
+  const requiredFields = ['title', 'subtitle', 'header_title'];
+  const missingFields = requiredFields.filter(field => !inputData[field]);
+  
+  if (missingFields.length > 0 && !inputData.initiative_groups) {
+    warnings.push(`Some common fields are missing: ${missingFields.join(', ')}. These may be optional.`);
+  }
+
+  if (inputData.initiative_groups) {
+    if (!Array.isArray(inputData.initiative_groups)) {
+      errors.push('initiative_groups must be an array.');
+    } else {
+      inputData.initiative_groups.forEach((group, index) => {
+        if (!group.id) {
+          warnings.push(`Group ${index + 1} is missing an 'id' field.`);
+        }
+        if (group.initiatives && !Array.isArray(group.initiatives)) {
+          errors.push(`Group '${group.id || index + 1}' has invalid 'initiatives' - must be an array.`);
+        }
+        group.initiatives?.forEach((initiative, iIndex) => {
+          if (!initiative.id) {
+            warnings.push(`Initiative ${iIndex + 1} in group '${group.id || index + 1}' is missing an 'id' field.`);
+          }
+        });
+      });
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings
   };
 }
 
@@ -558,8 +681,8 @@ function renderHeader(slide, pres, component, data, theme) {
   addSlideHeader(slide, pres, title, subtitle, theme);
 }
 
-async function buildPresentation({ inputData, templateFilePath, themeFilePath, outputDir, outputPrefix = 'Solon_Generated' }) {
-  const templates = loadTemplates(templateFilePath);
+async function buildPresentation({ inputData, templateFilePath, themeFilePath, outputDir, outputPrefix = 'Solon_Generated', presentationKey = null }) {
+  const presentations = loadPresentations(templateFilePath);
   const theme = new ThemeManager();
   theme.loadFromFile(themeFilePath);
   if (inputData.slide_recipe?.design_tokens) {
@@ -568,29 +691,47 @@ async function buildPresentation({ inputData, templateFilePath, themeFilePath, o
     theme.applyTheme(inputData.design_tokens);
   }
 
-  const slides = inputData.slide_recipe?.slides || inputData.slides;
-  if (!Array.isArray(slides)) {
-    throw new Error('No slides array found in input data.');
-  }
-
   const pres = new pptxgen();
   pres.layout = 'LAYOUT_16x9';
-  pres.title = inputData.slide_recipe?.metadata?.presentation_title || 'Solon Presentation';
-  pres.author = inputData.slide_recipe?.metadata?.author || 'Solon';
+  pres.title = inputData.slide_recipe?.metadata?.presentation_title || inputData.title || 'Solon Presentation';
+  pres.author = inputData.slide_recipe?.metadata?.author || inputData.author || 'Solon';
 
-  let pageNum = 1;
-  slides.forEach(sData => {
-    const template = templates[resolveTemplateKey(sData.slide_type, templates)];
-    if (!template) return;
-    const slide = pres.addSlide();
-    if (template.background) {
-      slide.background = { color: theme.getColor(template.background) || template.background };
+  if (presentationKey && presentations[presentationKey]) {
+    const presentation = presentations[presentationKey];
+    const expandedSlides = expandSlidesFromStructure(presentation, inputData);
+    
+    let pageNum = 1;
+    expandedSlides.forEach(({ type, data, slideType }) => {
+      const slide = pres.addSlide();
+      if (slideType.background) {
+        slide.background = { color: theme.getColor(slideType.background) || slideType.background };
+      }
+      (slideType.components || []).forEach(component => renderComponent(slide, pres, component, data, theme));
+      if (slideType.footer) {
+        addFooter(slide, pres, ++pageNum, theme);
+      }
+    });
+  } else {
+    const templates = loadTemplates(templateFilePath);
+    const slides = inputData.slide_recipe?.slides || inputData.slides;
+    if (!Array.isArray(slides)) {
+      throw new Error('No slides array found in input data.');
     }
-    (template.components || []).forEach(component => renderComponent(slide, pres, component, sData, theme));
-    if (template.footer) {
-      addFooter(slide, pres, ++pageNum, theme);
-    }
-  });
+
+    let pageNum = 1;
+    slides.forEach(sData => {
+      const template = templates[resolveTemplateKey(sData.slide_type, templates)];
+      if (!template) return;
+      const slide = pres.addSlide();
+      if (template.background) {
+        slide.background = { color: theme.getColor(template.background) || template.background };
+      }
+      (template.components || []).forEach(component => renderComponent(slide, pres, component, sData, theme));
+      if (template.footer) {
+        addFooter(slide, pres, ++pageNum, theme);
+      }
+    });
+  }
 
   ensureDirectory(outputDir);
   const outputFilePath = path.join(outputDir, `${formatTimestamp()}_${outputPrefix}.pptx`);
@@ -601,5 +742,8 @@ async function buildPresentation({ inputData, templateFilePath, themeFilePath, o
 module.exports = {
   buildPresentation,
   validateInputData,
-  loadTemplates
+  validatePresentationData,
+  loadTemplates,
+  loadPresentations,
+  expandSlidesFromStructure
 };

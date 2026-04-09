@@ -2,7 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { loadJSONFile } = require('../utils/fileUtils');
-const { buildPresentation, validateInputData, loadTemplates } = require('./presentationService');
+const { buildPresentation, validateInputData, validatePresentationData, loadPresentations, loadTemplates } = require('./presentationService');
 
 const PORT = process.env.PORT || 3000;
 const ROOT = process.cwd();
@@ -200,22 +200,45 @@ const server = http.createServer(async (req, res) => {
         res.end(JSON.stringify({ error: 'Missing inputData in payload' }));
         return;
       }
-      const templates = loadTemplates(TEMPLATE_FILE);
-      const validation = validateInputData(inputData, templates, payload.selectedTemplate);
-      if (!validation.valid) {
-        res.writeHead(400);
-        res.end(JSON.stringify({ error: 'Input validation failed', details: validation.errors }));
-        return;
+
+      const presentations = loadPresentations(TEMPLATE_FILE);
+      const presentationKey = payload.presentationKey;
+      
+      if (presentationKey && presentations[presentationKey]) {
+        const validation = validatePresentationData(inputData, presentations[presentationKey]);
+        if (!validation.valid) {
+          res.writeHead(400);
+          res.end(JSON.stringify({ error: 'Input validation failed', details: validation.errors }));
+          return;
+        }
+        const outputFile = await buildPresentation({
+          inputData,
+          templateFilePath: TEMPLATE_FILE,
+          themeFilePath: THEME_FILE,
+          outputDir: OUTPUT_DIR,
+          outputPrefix: presentationKey.replace(/-/g, '_'),
+          presentationKey: presentationKey
+        });
+        const fileName = path.basename(outputFile);
+        sendJSON(res, { ok: true, fileName, downloadUrl: `/download/${encodeURIComponent(fileName)}` });
+      } else {
+        const templates = loadTemplates(TEMPLATE_FILE);
+        const validation = validateInputData(inputData, templates, payload.selectedTemplate);
+        if (!validation.valid) {
+          res.writeHead(400);
+          res.end(JSON.stringify({ error: 'Input validation failed', details: validation.errors }));
+          return;
+        }
+        const outputFile = await buildPresentation({
+          inputData,
+          templateFilePath: TEMPLATE_FILE,
+          themeFilePath: THEME_FILE,
+          outputDir: OUTPUT_DIR,
+          outputPrefix: 'Solon_Roadmap_SteerCo_2026'
+        });
+        const fileName = path.basename(outputFile);
+        sendJSON(res, { ok: true, fileName, downloadUrl: `/download/${encodeURIComponent(fileName)}` });
       }
-      const outputFile = await buildPresentation({
-        inputData,
-        templateFilePath: TEMPLATE_FILE,
-        themeFilePath: THEME_FILE,
-        outputDir: OUTPUT_DIR,
-        outputPrefix: 'Solon_Roadmap_SteerCo_2026'
-      });
-      const fileName = path.basename(outputFile);
-      sendJSON(res, { ok: true, fileName, downloadUrl: `/download/${encodeURIComponent(fileName)}` });
     } catch (err) {
       res.writeHead(500);
       res.end(JSON.stringify({ error: err.message }));
