@@ -84,6 +84,13 @@
       .layout-main { flex-direction: column; }
       .panel-left, .panel-right { width: 100%; position: static; }
     }
+    
+    .tab-nav { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px; justify-content: center; }
+    .tab-btn { padding: 12px 28px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; color: #B6D9C9; cursor: pointer; font-size: 14px; font-weight: 500; transition: all .16s; }
+    .tab-btn:hover { background: rgba(255,255,255,0.08); border-color: #73AA87; color: #E4F7EE; }
+    .tab-btn.active { background: #73AA87; border-color: #73AA87; color: #0A2422; font-weight: 600; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
   </style>
 </head>
 <body>
@@ -92,6 +99,13 @@
       <h1>Solon Slide Studio</h1>
       <p>Select a presentation template, preview slides with sample data, paste your JSON, and generate PowerPoint.</p>
     </header>
+    
+    <nav class="tab-nav">
+      <button class="tab-btn active" data-tab="generator">Generator</button>
+      <button class="tab-btn" data-tab="templating">Templating</button>
+    </nav>
+    
+    <div id="tab-generator" class="tab-content active">
 
     <div class="layout-main">
       <aside class="panel-left">
@@ -159,6 +173,12 @@
         </div>
       </aside>
     </div>
+    </div>
+    
+    <div id="tab-templating" class="tab-content">
+      <h2>Templating</h2>
+      <p>Hello World</p>
+    </div>
   </div>
 
   <script>
@@ -197,6 +217,14 @@
     document.addEventListener('DOMContentLoaded', init);
 
     function init() {
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+          btn.classList.add('active');
+          document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+        });
+      });
       document.getElementById('template-select').addEventListener('change', onTemplateChange);
       document.getElementById('load-sample-btn').addEventListener('click', loadSampleData);
       document.getElementById('apply-json-btn').addEventListener('click', applyUserJson);
