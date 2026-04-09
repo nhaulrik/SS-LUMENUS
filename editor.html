@@ -304,6 +304,16 @@
 
       const backgroundInput = createInput('text');
       backgroundInput.value = template.background || '';
+
+      function resolveColor(token) {
+        if (!token) return '#08231f';
+        if (typeof token !== 'string') return '#08231f';
+        const trimmed = token.trim();
+        const raw = themeData?.colors?.[trimmed] || trimmed;
+        if (/^[0-9A-Fa-f]{6}$/.test(raw)) return `#${raw}`;
+        if (/^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/.test(raw)) return raw;
+        return '#08231f';
+      }
       backgroundInput.addEventListener('input', () => updateTemplateValue('background', backgroundInput.value));
       container.appendChild(createField('Background color / token', backgroundInput));
 
@@ -359,13 +369,15 @@
 
       const stage = document.createElement('div');
       stage.className = 'preview-stage';
+      const slideWidth = 10;
+      const slideHeight = 5.625;
       template.components?.forEach((component, index) => {
         const box = document.createElement('div');
         box.className = selectedComponentIndex === index ? 'preview-box active' : 'preview-box';
-        const left = Math.max(0, Math.min(100, (component.x ?? 0) * 10));
-        const top = Math.max(0, Math.min(100, (component.y ?? 0) * 10));
-        const width = Math.max(5, Math.min(100, (component.w ?? 1) * 10));
-        const height = Math.max(5, Math.min(100, (component.h ?? 1) * 10));
+        const left = Math.max(0, Math.min(100, ((component.x ?? 0) / slideWidth) * 100));
+        const top = Math.max(0, Math.min(100, ((component.y ?? 0) / slideHeight) * 100));
+        const width = Math.max(2, Math.min(100, ((component.w ?? 1) / slideWidth) * 100));
+        const height = Math.max(2, Math.min(100, ((component.h ?? 1) / slideHeight) * 100));
         box.style.left = `${left}%`;
         box.style.top = `${top}%`;
         box.style.width = `${width}%`;
