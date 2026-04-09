@@ -1,12 +1,46 @@
+/* ============================================================
+   Reset & Base
+   ============================================================ */
 * {
   box-sizing: border-box;
 }
 
-.step-animate-container {
-  position: relative;
-  overflow: hidden;
+body {
+  margin: 0;
+  font-family: 'Inter', 'Calibri', system-ui, sans-serif;
+  background: #071913;
+  color: #E4F7EE;
+  min-height: 100vh;
 }
 
+/* ============================================================
+   Layout & Container
+   ============================================================ */
+.app {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+header {
+  margin-bottom: 24px;
+}
+
+header h1 {
+  margin: 0 0 8px;
+  font-size: 2rem;
+  color: #73AA87;
+}
+
+header p {
+  margin: 0;
+  color: #B6D9C9;
+  max-width: 600px;
+}
+
+/* ============================================================
+   Step Animation
+   ============================================================ */
 .step-content {
   animation-duration: 0.7s;
   animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
@@ -43,36 +77,9 @@
   }
 }
 
-body {
-  margin: 0;
-  font-family: 'Inter', 'Calibri', system-ui, sans-serif;
-  background: #071913;
-  color: #E4F7EE;
-  min-height: 100vh;
-}
-
-.app {
-  max-width: 1600px;
-  margin: 0 auto;
-  padding: 24px;
-}
-
-header {
-  margin-bottom: 24px;
-}
-
-header h1 {
-  margin: 0 0 8px;
-  font-size: 2rem;
-  color: #73AA87;
-}
-
-header p {
-  margin: 0;
-  color: #B6D9C9;
-  max-width: 600px;
-}
-
+/* ============================================================
+   Upload Zone
+   ============================================================ */
 .upload-zone {
   border: 2px dashed #144C43;
   border-radius: 14px;
@@ -103,6 +110,9 @@ header p {
   font-size: 14px;
 }
 
+/* ============================================================
+   Main Layout (Tag Step)
+   ============================================================ */
 .main-layout {
   display: grid;
   grid-template-columns: 280px 1fr 300px;
@@ -116,6 +126,13 @@ header p {
   height: fit-content;
 }
 
+.workspace {
+  min-height: 500px;
+}
+
+/* ============================================================
+   Panel Sections
+   ============================================================ */
 .panel-section {
   background: #0C2220;
   border: 1px solid #143A34;
@@ -134,6 +151,9 @@ header p {
   color: #E4F7EE;
 }
 
+/* ============================================================
+   Slide Thumbnails
+   ============================================================ */
 .slide-strip {
   display: flex;
   gap: 8px;
@@ -178,10 +198,9 @@ header p {
   border-style: dashed;
 }
 
-.workspace {
-  min-height: 500px;
-}
-
+/* ============================================================
+   Slide Preview
+   ============================================================ */
 .slide-preview {
   background: #0B2822;
   border: 1px solid #144C43;
@@ -202,15 +221,9 @@ header p {
   box-shadow: 0 4px 24px rgba(0,0,0,0.4);
 }
 
-.slide-canvas {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
-
+/* ============================================================
+   Slide Elements
+   ============================================================ */
 .slide-element {
   position: absolute;
   cursor: pointer;
@@ -235,51 +248,46 @@ header p {
   font-weight: 600;
 }
 
-.slide-element.tagged {
-  background: rgba(255,99,89,0.35) !important;
-  outline: 3px dashed #FF6359;
-  color: #C14A31 !important;
-  font-weight: 600;
-}
-
-.tag-panel {
-  background: #0C2220;
-  border: 1px solid #143A34;
-  border-radius: 14px;
-  padding: 20px;
-}
-
-.tag-panel h4 {
-  margin: 0 0 16px;
-  font-size: 16px;
-}
-
-.form-group {
-  margin-bottom: 16px;
-}
-
-.form-group label {
-  display: block;
-  font-size: 12px;
-  color: #B6D9C9;
-  margin-bottom: 6px;
-}
-
-.form-group input {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid #144C43;
-  background: #0A2B28;
-  color: #E4F7EE;
+.no-elements {
+  text-align: center;
+  color: #718886;
+  padding: 40px;
   font-size: 14px;
 }
 
-.form-group input:focus {
-  outline: none;
-  border-color: #73AA87;
+.help-text {
+  font-size: 12px;
+  color: #718886;
+  margin-top: 12px;
 }
 
+/* ============================================================
+   Record Toggle
+   ============================================================ */
+.record-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: rgba(115,170,135,0.1);
+  border-radius: 8px;
+  margin-top: 12px;
+}
+
+.record-toggle input {
+  accent-color: #73AA87;
+  width: 18px;
+  height: 18px;
+}
+
+.record-toggle label {
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* ============================================================
+   Buttons
+   ============================================================ */
 .btn {
   padding: 12px 20px;
   border-radius: 8px;
@@ -316,6 +324,48 @@ header p {
   background: rgba(255,255,255,0.12);
 }
 
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.actions .btn {
+  flex: 1;
+}
+
+/* ============================================================
+   Forms
+   ============================================================ */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 12px;
+  color: #B6D9C9;
+  margin-bottom: 6px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #144C43;
+  background: #0A2B28;
+  color: #E4F7EE;
+  font-size: 14px;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #73AA87;
+}
+
+/* ============================================================
+   Recipe Area
+   ============================================================ */
 .recipe-area {
   background: #071913;
   border: 1px solid #144C43;
@@ -330,6 +380,9 @@ header p {
   line-height: 1.6;
 }
 
+/* ============================================================
+   JSON Input
+   ============================================================ */
 .json-input {
   width: 100%;
   min-height: 300px;
@@ -349,6 +402,9 @@ header p {
   border-color: #73AA87;
 }
 
+/* ============================================================
+   Validation Status
+   ============================================================ */
 .validation-status {
   padding: 14px 16px;
   border-radius: 8px;
@@ -368,60 +424,14 @@ header p {
   color: #FFB0A3;
 }
 
-.actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 20px;
-}
-
-.actions .btn {
-  flex: 1;
-}
-
-.record-toggle {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px;
-  background: rgba(115,170,135,0.1);
-  border-radius: 8px;
-  margin-top: 12px;
-}
-
-.record-toggle input {
-  accent-color: #73AA87;
-  width: 18px;
-  height: 18px;
-}
-
-.record-toggle label {
-  font-size: 13px;
-  cursor: pointer;
-}
-
+/* ============================================================
+   Preview Grid
+   ============================================================ */
 .preview-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 12px;
   margin-bottom: 20px;
-}
-
-.slide-preview-canvas {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16/9;
-  background: #fff;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.preview-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: #718886;
-  font-size: 12px;
 }
 
 .preview-card {
@@ -447,6 +457,27 @@ header p {
   justify-content: center;
 }
 
+.slide-preview-canvas {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: #fff;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.preview-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #718886;
+  font-size: 12px;
+}
+
+/* ============================================================
+   Tagged List
+   ============================================================ */
 .tagged-list {
   max-height: 200px;
   overflow-y: auto;
@@ -470,6 +501,9 @@ header p {
   margin-top: 2px;
 }
 
+/* ============================================================
+   Modal
+   ============================================================ */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -513,19 +547,9 @@ header p {
   flex: 1;
 }
 
-.no-elements {
-  text-align: center;
-  color: #718886;
-  padding: 40px;
-  font-size: 14px;
-}
-
-.help-text {
-  font-size: 12px;
-  color: #718886;
-  margin-top: 12px;
-}
-
+/* ============================================================
+   Breadcrumbs
+   ============================================================ */
 .breadcrumbs {
   display: flex;
   align-items: center;

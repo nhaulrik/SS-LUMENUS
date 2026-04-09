@@ -8,19 +8,33 @@ import fs from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const app = express();
+// ============================================================
+// Configuration
+// ============================================================
 const PORT = 3001;
-
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-
 const TEMP_DIR = path.join(__dirname, 'temp');
 const OUTPUT_DIR = path.join(__dirname, 'output');
+const EMU_PER_INCH = 914400; // English Metric Units per inch
 
+// Initialize directories
 if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
 if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
-// UC-01: Upload and parse PPTX
+// ============================================================
+// Express App Setup
+// ============================================================
+const app = express();
+app.use(cors());
+app.use(express.json({ limit: '50mb' }));
+
+// ============================================================
+// API Endpoints
+// ============================================================
+
+/**
+ * UC-01: Upload and parse PPTX template
+ * Accepts base64-encoded PPTX, extracts slides and text elements with positions
+ */
 app.post('/api/upload-pptx', (req, res) => {
   try {
     const { file, fileName } = req.body;
@@ -46,6 +60,207 @@ app.post('/api/upload-pptx', (req, res) => {
   }
 });
 
+/**
+ * UC-04: Generate recipe prompt for AI
+ * Creates a JSON schema prompt based on tagged placeholders
+ */
+app.post('/api/generate-recipe', (req, res) => {
+  try {
+    const { tags, recordSlideIndex } = req.body;
+    
+    let recipe = `Return a JSON object with the following structure. Do not include any explanation — return only the JSON.\n\n{\n`;
+    
+    const rootFields = tags.filter(t => t.slideIndex !== recordSlideIndex);
+    const recordFields = tags.filter(t => t.slideIndex === recordSlideIndex);
+    
+    rootFields.forEach((tag, idx) => {
+      const comma = idx < rootFields.length - 1 || recordFields.length > 0 ? ',' : '';
+      const hint = tag.hint ? ` // ${tag.hint}` : '';
+      recipe += `  "${tag.key}": "..."${hint}${comma}\n`;
+    });
+    
+    if (recordSlideIndex !== null && recordFields.length > 0) {
+      recipe += `  "records": [\n    {\n`;
+      recordFields.forEach((tag, idx) => {
+        const comma = idx < recordFields.length - 1 ? ',' : '';
+        const hint = tag.hint ? ` // ${tag.hint}` : '';
+        recipe += `      "${tag.key}": "..."${hint}${comma}\n`;
+      });
+      recipe += `    }\n    // repeat for each item\n  ]\n`;
+    }
+    
+    recipe += `}`;
+    
+    res.json({ ok: true, recipe });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/**
+ * UC-05: Validate JSON from AI response
+ * Checks if all required fields are present
+ */
+app.post('/api/validate-json', (req, res) => {
+  try {
+    const { jsonString, tags, recordSlideIndex } = req.body;
+    
+    let data;
+    try {
+      data = JSON.parse(jsonString);
+    } catch (e) {
+      return res.json({ 
+        valid: false, 
+        error: 'Invalid JSON syntax',
+        foundFields: [],
+        missingFields: tags.map(t => t.key)
+      });
+    }
+    
+    const foundFields = [];
+    const missingFields = [];
+    
+    const rootTags = tags.filter(t => t.slideIndex !== recordSlideIndex);
+    rootTags.forEach(tag => {
+      if (data[tag.key] !== undefined) {
+        foundFields.push(tag.key);
+      } else {
+        missingFields.push(tag.key);
+      }
+    });
+    
+    const recordTags = tags.filter(t => t.slideIndex === recordSlideIndex);
+    if (recordSlideIndex !== null && Array.isArray(data.records)) {
+      data.records.forEach((record, idx) => {
+        recordTags.forEach(tag => {
+          if (record[tag.key] !== undefined) {
+            if (!foundFields.includes(`${tag.key} (record ${idx + 1})`)) {
+              foundFields.push(`${tag.key} (record ${idx + 1})`);
+            }
+          } else {
+            if (!missingFields.includes(`${tag.key} (record ${idx + 1})`)) {
+              missingFields.push(`${tag.key} (record ${idx + 1})`);
+            }
+          }
+        });
+      });
+    }
+    
+    res.json({
+      valid: true,
+      error: null,
+      foundFields,
+      missingFields,
+      recordCount: data.records ? data.records.length : 0
+    });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+/**
+ * UC-06, UC-07: Generate and download PPTX
+ * Replaces placeholders with JSON data, returns preview and download URL
+ */
+app.post('/api/generate-pptx', (req, res) => {
+  try {
+    const { templatePath, tags, jsonData, recordSlideIndex } = req.body;
+    
+    if (!templatePath || !fs.existsSync(templatePath)) {
+      return res.status(400).json({ error: 'Template not found' });
+    }
+    
+    const zip = new admZip(templatePath);
+    const slideEntries = zip.getEntries().filter(e => e.entryName.match(/^ppt\/slides\/slide\d+\.xml$/));
+    
+    const sortedEntries = slideEntries.sort((a, b) => {
+      const numA = parseInt(a.entryName.match(/slide(\d+)\.xml/)[1]);
+      const numB = parseInt(b.entryName.match(/slide(\d+)\.xml/)[1]);
+      return numA - numB;
+    });
+    
+    const generatedSlides = [];
+    
+    for (let slideIdx = 0; slideIdx < sortedEntries.length; slideIdx++) {
+      const entry = sortedEntries[slideIdx];
+      let content = entry.getData().toString('utf8');
+      
+      const isRecordSlide = slideIdx + 1 === recordSlideIndex;
+      
+      if (isRecordSlide && jsonData.records && jsonData.records.length > 0) {
+        jsonData.records.forEach((record, recordIdx) => {
+          const slideContent = replacePlaceholders(content, jsonData, record, tags, slideIdx + 1, recordSlideIndex);
+          generatedSlides.push({ slideIndex: slideIdx + 1, recordIndex: recordIdx + 1, content: slideContent });
+        });
+      } else if (!isRecordSlide) {
+        const slideContent = replacePlaceholders(content, jsonData, null, tags, slideIdx + 1, recordSlideIndex);
+        generatedSlides.push({ slideIndex: slideIdx + 1, recordIndex: null, content: slideContent });
+      }
+    }
+    
+    if (recordSlideIndex === null) {
+      for (const entry of sortedEntries) {
+        let content = entry.getData().toString('utf8');
+        const slideIdx = parseInt(entry.entryName.match(/slide(\d+)\.xml/)[1]);
+        content = replacePlaceholders(content, jsonData, null, tags, slideIdx, recordSlideIndex);
+        generatedSlides.push({ slideIndex: slideIdx, recordIndex: null, content });
+      }
+    }
+    
+    const outputSlides = sortedEntries.map((entry, idx) => {
+      const gen = generatedSlides.find(g => g.slideIndex === idx + 1 && g.recordIndex === null);
+      if (gen) {
+        return { entry, content: gen.content };
+      }
+      return { entry, content: entry.getData().toString('utf8') };
+    });
+    
+    const previewData = generatedSlides.map(gs => {
+      const elements = extractSlideElements(gs.content, gs.slideIndex);
+      return {
+        slideNumber: gs.slideIndex,
+        recordIndex: gs.recordIndex,
+        content: gs.content,
+        elements: elements.elements
+      };
+    });
+    
+    outputSlides.forEach(({ entry, content }) => {
+      entry.setData(Buffer.from(content, 'utf8'));
+    });
+    
+    const timestamp = Date.now();
+    const outputPath = path.join(OUTPUT_DIR, `generated-${timestamp}.pptx`);
+    zip.writeZip(outputPath);
+    
+    res.json({
+      ok: true,
+      previewData,
+      downloadUrl: `/api/download/${path.basename(outputPath)}`
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to generate: ' + err.message });
+  }
+});
+
+/**
+ * Download generated PPTX file
+ */
+app.get('/api/download/:filename', (req, res) => {
+  const filePath = path.join(OUTPUT_DIR, req.params.filename);
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ error: 'File not found' });
+  }
+  res.download(filePath);
+});
+
+// ============================================================
+// Utility Functions
+// ============================================================
+
+/**
+ * Parse all slides from PPTX zip
+ */
 function parseSlides(zip) {
   const slides = [];
   const slideEntries = zip.getEntries().filter(e => e.entryName.match(/^ppt\/slides\/slide\d+\.xml$/));
@@ -63,6 +278,9 @@ function parseSlides(zip) {
   return slides;
 }
 
+/**
+ * Extract text elements with positions from slide XML
+ */
 function extractSlideElements(xml, slideIndex) {
   const slide = {
     index: slideIndex,
@@ -70,7 +288,7 @@ function extractSlideElements(xml, slideIndex) {
     background: '#ffffff'
   };
 
-  // Get background color
+  // Background color
   const bgMatch = xml.match(/<p:bg>([\s\S]*?)<\/p:bg>/);
   if (bgMatch) {
     const srgbMatch = bgMatch[1].match(/<a:srgbClr val="([^"]+)"/);
@@ -82,7 +300,7 @@ function extractSlideElements(xml, slideIndex) {
     }
   }
 
-  // Match all shapes - also include spTree children
+  // Parse shapes
   const spTreeMatch = xml.match(/<p:spTree>([\s\S]*?)<\/p:spTree>/);
   const shapesToCheck = spTreeMatch ? spTreeMatch[1] : xml;
   const shapeMatches = shapesToCheck.match(/<p:sp>([\s\S]*?)<\/p:sp>/g) || [];
@@ -96,15 +314,13 @@ function extractSlideElements(xml, slideIndex) {
     const textContent = textMatches.map(t => t.replace(/<[^>]+>/g, '')).join(' ');
     if (!textContent.trim()) continue;
     
-    // Get shape position - look in multiple places
+    // Bounds (position and size)
     let bounds = { x: 0.5, y: 0.5, w: 2, h: 0.5 };
-    
-    // Try p:xfrm first
     let xfrmContent = '';
+    
     const xfrmMatch = shapeXml.match(/<p:xfrm>([\s\S]*?)<\/p:xfrm>/);
     if (xfrmMatch) xfrmContent = xfrmMatch[1];
     
-    // Try a:xfrm inside spPr
     if (!xfrmContent) {
       const spPrMatch = shapeXml.match(/<p:spPr>([\s\S]*?)<\/p:spPr>/);
       if (spPrMatch) {
@@ -119,20 +335,20 @@ function extractSlideElements(xml, slideIndex) {
       
       if (offMatch && extMatch) {
         bounds = {
-          x: parseInt(offMatch[1]) / 914400,
-          y: parseInt(offMatch[2]) / 914400,
-          w: Math.max(0.1, parseInt(extMatch[1]) / 914400),
-          h: Math.max(0.1, parseInt(extMatch[2]) / 914400)
+          x: parseInt(offMatch[1]) / EMU_PER_INCH,
+          y: parseInt(offMatch[2]) / EMU_PER_INCH,
+          w: Math.max(0.1, parseInt(extMatch[1]) / EMU_PER_INCH),
+          h: Math.max(0.1, parseInt(extMatch[2]) / EMU_PER_INCH)
         };
       }
     }
 
-    // Get shape name
+    // Shape name
     let shapeName = `text_${i}`;
     const cNvPrMatch = shapeXml.match(/<p:cNvPr\s+id="\d+"\s+name="([^"]+)"/);
     if (cNvPrMatch) shapeName = cNvPrMatch[1];
 
-    // Get fill color
+    // Fill color
     let fill = null;
     const spPrMatch = shapeXml.match(/<p:spPr>([\s\S]*?)<\/p:spPr>/);
     if (spPrMatch) {
@@ -140,7 +356,7 @@ function extractSlideElements(xml, slideIndex) {
       if (srgbMatch) fill = '#' + srgbMatch[1];
     }
 
-    // Get text formatting
+    // Text formatting
     let fontSize = 14;
     let fontBold = false;
     let fontColor = '#333333';
@@ -179,6 +395,9 @@ function extractSlideElements(xml, slideIndex) {
   return slide;
 }
 
+/**
+ * Get hex color from PPTX preset color name
+ */
 function getPresetColor(name) {
   const colors = {
     white: '#FFFFFF',
@@ -196,209 +415,16 @@ function getPresetColor(name) {
   return colors[name] || '#FFFFFF';
 }
 
-// Generate recipe prompt (UC-04)
-app.post('/api/generate-recipe', (req, res) => {
-  try {
-    const { tags, recordSlideIndex } = req.body;
-    
-    let recipe = `Return a JSON object with the following structure. Do not include any explanation — return only the JSON.\n\n{\n`;
-    
-    const rootFields = tags.filter(t => t.slideIndex !== recordSlideIndex);
-    const recordFields = tags.filter(t => t.slideIndex === recordSlideIndex);
-    
-    // Root level fields
-    rootFields.forEach((tag, idx) => {
-      const comma = idx < rootFields.length - 1 || recordFields.length > 0 ? ',' : '';
-      const hint = tag.hint ? ` // ${tag.hint}` : '';
-      recipe += `  "${tag.key}": "..."${hint}${comma}\n`;
-    });
-    
-    // Record slide as array
-    if (recordSlideIndex !== null && recordFields.length > 0) {
-      recipe += `  "records": [\n    {\n`;
-      recordFields.forEach((tag, idx) => {
-        const comma = idx < recordFields.length - 1 ? ',' : '';
-        const hint = tag.hint ? ` // ${tag.hint}` : '';
-        recipe += `      "${tag.key}": "..."${hint}${comma}\n`;
-      });
-      recipe += `    }\n    // repeat for each item\n  ]\n`;
-    }
-    
-    recipe += `}`;
-    
-    res.json({ ok: true, recipe });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-// Validate JSON (UC-05)
-app.post('/api/validate-json', (req, res) => {
-  try {
-    const { jsonString, tags, recordSlideIndex } = req.body;
-    
-    let data;
-    try {
-      data = JSON.parse(jsonString);
-    } catch (e) {
-      return res.json({ 
-        valid: false, 
-        error: 'Invalid JSON syntax',
-        foundFields: [],
-        missingFields: tags.map(t => t.key)
-      });
-    }
-    
-    const foundFields = [];
-    const missingFields = [];
-    
-    // Check root fields
-    const rootTags = tags.filter(t => t.slideIndex !== recordSlideIndex);
-    rootTags.forEach(tag => {
-      if (data[tag.key] !== undefined) {
-        foundFields.push(tag.key);
-      } else {
-        missingFields.push(tag.key);
-      }
-    });
-    
-    // Check record fields
-    const recordTags = tags.filter(t => t.slideIndex === recordSlideIndex);
-    if (recordSlideIndex !== null && Array.isArray(data.records)) {
-      data.records.forEach((record, idx) => {
-        recordTags.forEach(tag => {
-          if (record[tag.key] !== undefined) {
-            if (!foundFields.includes(`${tag.key} (record ${idx + 1})`)) {
-              foundFields.push(`${tag.key} (record ${idx + 1})`);
-            }
-          } else {
-            if (!missingFields.includes(`${tag.key} (record ${idx + 1})`)) {
-              missingFields.push(`${tag.key} (record ${idx + 1})`);
-            }
-          }
-        });
-      });
-    }
-    
-    res.json({
-      valid: true,
-      error: null,
-      foundFields,
-      missingFields,
-      recordCount: data.records ? data.records.length : 0
-    });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
-// Preview and Generate (UC-06, UC-07)
-app.post('/api/generate-pptx', (req, res) => {
-  try {
-    const { templatePath, tags, jsonData, recordSlideIndex } = req.body;
-    
-    if (!templatePath || !fs.existsSync(templatePath)) {
-      return res.status(400).json({ error: 'Template not found' });
-    }
-    
-    const zip = new admZip(templatePath);
-    const slideEntries = zip.getEntries().filter(e => e.entryName.match(/^ppt\/slides\/slide\d+\.xml$/));
-    
-    const sortedEntries = slideEntries.sort((a, b) => {
-      const numA = parseInt(a.entryName.match(/slide(\d+)\.xml/)[1]);
-      const numB = parseInt(b.entryName.match(/slide(\d+)\.xml/)[1]);
-      return numA - numB;
-    });
-    
-    // Map tags by element ID for quick lookup
-    const tagMap = {};
-    tags.forEach(tag => {
-      tagMap[tag.elementId] = tag.key;
-    });
-    
-    // Replace placeholders in each slide
-    const generatedSlides = [];
-    const recordTag = tags.find(t => t.slideIndex === recordSlideIndex);
-    
-    for (let slideIdx = 0; slideIdx < sortedEntries.length; slideIdx++) {
-      const entry = sortedEntries[slideIdx];
-      let content = entry.getData().toString('utf8');
-      
-      // Check if this is the record slide
-      const isRecordSlide = slideIdx + 1 === recordSlideIndex;
-      
-      if (isRecordSlide && jsonData.records && jsonData.records.length > 0) {
-        // Generate multiple copies of this slide
-        jsonData.records.forEach((record, recordIdx) => {
-          const slideContent = replacePlaceholders(content, jsonData, record, tags, slideIdx + 1);
-          generatedSlides.push({ slideIndex: slideIdx + 1, recordIndex: recordIdx + 1, content: slideContent });
-        });
-      } else if (!isRecordSlide) {
-        // Regular slide - just replace with root level data
-        const slideContent = replacePlaceholders(content, jsonData, null, tags, slideIdx + 1);
-        generatedSlides.push({ slideIndex: slideIdx + 1, recordIndex: null, content: slideContent });
-      }
-    }
-    
-    // If no record slide, just use all original slides with replacement
-    if (recordSlideIndex === null) {
-      for (const entry of sortedEntries) {
-        let content = entry.getData().toString('utf8');
-        const slideIdx = parseInt(entry.entryName.match(/slide(\d+)\.xml/)[1]);
-        content = replacePlaceholders(content, jsonData, null, tags, slideIdx);
-        generatedSlides.push({ slideIndex: slideIdx, recordIndex: null, content });
-      }
-    }
-    
-    // Write the modified slides back (replacing in order)
-    // This is a simplified version - in production you'd rebuild properly
-    const outputSlides = sortedEntries.map((entry, idx) => {
-      const gen = generatedSlides.find(g => g.slideIndex === idx + 1 && g.recordIndex === null);
-      if (gen) {
-        return { entry, content: gen.content };
-      }
-      return { entry, content: entry.getData().toString('utf8') };
-    });
-    
-    // For preview, return the modified slide data with element positions
-    const previewData = generatedSlides.map(gs => {
-      const elements = extractSlideElements(gs.content, gs.slideIndex);
-      return {
-        slideNumber: gs.slideIndex,
-        recordIndex: gs.recordIndex,
-        content: gs.content,
-        elements: elements.elements
-      };
-    });
-    
-    // For download, create the file
-    outputSlides.forEach(({ entry, content }) => {
-      entry.setData(Buffer.from(content, 'utf8'));
-    });
-    
-    const timestamp = Date.now();
-    const outputPath = path.join(OUTPUT_DIR, `generated-${timestamp}.pptx`);
-    zip.writeZip(outputPath);
-    
-    res.json({
-      ok: true,
-      previewData,
-      downloadUrl: `/api/download/${path.basename(outputPath)}`
-    });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to generate: ' + err.message });
-  }
-});
-
-function replacePlaceholders(content, jsonData, recordData, tags, slideIndex) {
+/**
+ * Replace {{placeholder}} tags with JSON data
+ */
+function replacePlaceholders(content, jsonData, recordData, tags, slideIndex, recordSlideIndex) {
   const slideTags = tags.filter(t => t.slideIndex === slideIndex);
   
   return content.replace(/<a:t>([^<]*)<\/a:t>/g, (match, text) => {
-    // Check if this text was tagged
     const tag = slideTags.find(t => text.includes(`{{${t.key}}}`));
     
     if (tag) {
-      // Replace with actual data
       let value;
       if (recordData && tag.slideIndex === recordSlideIndex) {
         value = recordData[tag.key] || '';
@@ -412,15 +438,9 @@ function replacePlaceholders(content, jsonData, recordData, tags, slideIndex) {
   });
 }
 
-// Download generated file
-app.get('/api/download/:filename', (req, res) => {
-  const filePath = path.join(OUTPUT_DIR, req.params.filename);
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: 'File not found' });
-  }
-  res.download(filePath);
-});
-
+// ============================================================
+// Start Server
+// ============================================================
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
