@@ -5,9 +5,18 @@ const url = require('url');
 
 const PORT = process.env.PORT || 3000;
 const ROOT = process.cwd();
-const THEME_FILE = path.join(ROOT, 'data', 'theme.json');
-const TEMPLATE_FILE = path.join(ROOT, 'data', 'slide_templates.json');
-const PUBLIC_DIR = path.join(ROOT, 'public');
+const THEME_FILE = 'data/theme.json';
+const TEMPLATE_FILE = 'data/slide_templates.json';
+const INPUT_FILE = 'data/input.json';
+const PUBLIC_DIR = 'public';
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled Rejection:', err);
+});
 
 function sendJSON(res, data, status = 200) {
   const payload = JSON.stringify(data, null, 2);
@@ -34,8 +43,22 @@ function safePath(requestPath) {
 }
 
 const server = http.createServer((req, res) => {
-  const parsed = url.parse(req.url, true);
-  const pathname = parsed.pathname;
+  let parsed, pathname;
+  try {
+    parsed = url.parse(req.url, true);
+    pathname = parsed.pathname;
+  } catch (error) {
+    console.error('URL parsing error:', error);
+    res.writeHead(400);
+    res.end('Bad Request');
+    return;
+  }
+
+  if (pathname === '/favicon.ico') {
+    res.writeHead(404);
+    res.end();
+    return;
+  }
 
   if (pathname === '/api/theme') {
     if (req.method === 'GET') {
@@ -127,8 +150,34 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (pathname === '/api/input') {
+    if (req.method === 'GET') {
+      fs.readFile(INPUT_FILE, 'utf8', (err, data) => {
+        if (err) {
+          res.writeHead(500);
+          res.end(JSON.stringify({ error: 'Failed to read input.json' }));
+          return;
+        }
+        try {
+          const input = JSON.parse(data);
+          sendJSON(res, input);
+        } catch (err) {
+          res.writeHead(500);
+          res.end(JSON.stringify({ error: 'Invalid JSON in input.json' }));
+        }
+      });
+      return;
+    }
+    res.writeHead(405);
+    res.end(JSON.stringify({ error: 'Method not allowed' }));
+    return;
+  }
+
   // Serve static files from public directory
   let filePath = pathname === '/' ? '/public/editor.html' : '/public' + pathname;
+  if (pathname === '/preview') {
+    filePath = '/public/slide_previewer.html';
+  }
   const ext = path.extname(filePath).toLowerCase();
   const safe = safePath(filePath);
   if (!safe) {

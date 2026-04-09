@@ -91,7 +91,7 @@
       },
 
       {
-        "slide_type": "group_summary",
+        "slide_type": "group_summary_pi",
         "header_title":    "Core Revenue Management Capabilities",
         "header_subtitle": "Group Summary | Roadmap Initiative Overview",
         "kpis": [
@@ -111,14 +111,20 @@
         "initiative_table": {
           "title": "Roadmap Initiatives at a Glance",
           "rows": [
-            { "initiative": "Registration",               "effort_h": "11,866", "features": "6", "pi_window": "PI27-29", "priority": "P1"  },
-            { "initiative": "Taxpayer Accounting",        "effort_h": "8,064",  "features": "4", "pi_window": "PI28-29", "priority": "P1"  },
-            { "initiative": "Billing & Assessments",      "effort_h": "2,880",  "features": "3", "pi_window": "PI28-29", "priority": "P1-2"},
-            { "initiative": "Exemptions",                 "effort_h": "390",    "features": "1", "pi_window": "PI28",    "priority": "P2"  },
-            { "initiative": "Penalty & Interest",         "effort_h": "TBD",    "features": "1", "pi_window": "PI28-29", "priority": "P2"  },
-            { "initiative": "Tax Accounts",               "effort_h": "TBD",    "features": "1", "pi_window": "PI28-29", "priority": "P1"  }
+            { "initiative": "Registration",               "effort_h": "11,866", "pi27": true,  "pi28": true,  "pi29": true  },
+            { "initiative": "Taxpayer Accounting",        "effort_h": "8,064",  "pi27": false, "pi28": true,  "pi29": true  },
+            { "initiative": "Billing & Assessments",      "effort_h": "2,880",  "pi27": false, "pi28": true,  "pi29": true  },
+            { "initiative": "Exemptions",                 "effort_h": "390",    "pi27": false, "pi28": true,  "pi29": false },
+            { "initiative": "Penalty & Interest",         "effort_h": "TBD",    "pi27": false, "pi28": true,  "pi29": true  },
+            { "initiative": "Tax Accounts",               "effort_h": "TBD",    "pi27": false, "pi28": true,  "pi29": true  }
           ]
-        }
+        },
+        "key_points": [
+          "Largest investment group with ~23,200 hours across 6 initiatives",
+          "PI28 is critical delivery window — capacity must be confirmed immediately",
+          "Registration spans all three PIs — earliest start maximizes value",
+          "All initiatives are P1/P2 priority — no descoping without revenue risk"
+        ]
       },
 
       {

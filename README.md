@@ -16,6 +16,7 @@ Key problems it solves:
 - **Template System**: Modular slide templates with components like text, shapes, tables, and charts
 - **Theme Support**: Customizable color palettes and fonts via theme files
 - **Visual Template Editor**: Web-based UI for editing templates with live preview
+- **Slide Previewer**: In-browser preview of slides before PowerPoint generation
 - **Multiple Slide Types**: Support for cover slides, agenda grids, KPI summaries, initiative details, and closing slides
 - **Timestamped Outputs**: Automatically prefixes generated files with date-time stamps for uniqueness
 - **Dark Theme UI**: Modern, dark-themed editor interface
@@ -69,6 +70,21 @@ The generated PowerPoint file will be saved in the `output` folder with a timest
    - Modify slide templates and component positions
    - Preview changes in real-time
    - Save changes back to JSON files
+
+### Previewing Slides
+
+1. Start the slide previewer server:
+   ```bash
+   npm run preview-slides
+   ```
+
+2. Open your browser and navigate to `http://localhost:3000/preview`
+
+3. Use the slide previewer to:
+   - Select from available slide templates
+   - Choose data samples from your input.json
+   - See a visual preview of how slides will look
+   - Test different template + data combinations without generating PowerPoint files
 
 ### Input Data Format
 
