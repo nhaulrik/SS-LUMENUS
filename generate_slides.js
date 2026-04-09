@@ -167,28 +167,28 @@ async function buildPresentation() {
 
       // Initiative Table
       const tX = 3.95, tY = 2.3;
-      s.addText(sData.initiative_table?.title || "Roadmap Initiatives at a Glance", { x: tX, y: tY, w: 3, h: 0.28, fontSize: 10, bold: true, color: NC.coral });
+      s.addText(sData.initiative_table?.title || "Roadmap Initiatives at a Glance", { x: tX, y: tY, w: 5.4, h: 0.28, fontSize: 9, bold: true, color: NC.coral });
 
       const rows = sData.initiative_table?.rows || [];
       const tableData = [
-        [{ text: "Initiative", options: { bold: true, color: NC.white, fill: { color: NC.darkTeal } } },
-         { text: "Effort (H)", options: { bold: true, color: NC.white, fill: { color: NC.darkTeal }, align: "center" } },
-         { text: "Feats", options: { bold: true, color: NC.white, fill: { color: NC.darkTeal }, align: "center" } },
-         { text: "PI", options: { bold: true, color: NC.white, fill: { color: NC.darkTeal }, align: "center" } },
-         { text: "Prio", options: { bold: true, color: NC.white, fill: { color: NC.darkTeal }, align: "center" } }]
+        [{ text: "Initiative", options: { bold: true, color: NC.white, fill: { color: NC.darkTeal }, fontSize: 9 } },
+         { text: "Effort (H)", options: { bold: true, color: NC.white, fill: { color: NC.darkTeal }, align: "center", fontSize: 9 } },
+         { text: "Feats", options: { bold: true, color: NC.white, fill: { color: NC.darkTeal }, align: "center", fontSize: 9 } },
+         { text: "PI", options: { bold: true, color: NC.white, fill: { color: NC.darkTeal }, align: "center", fontSize: 9 } },
+         { text: "Prio", options: { bold: true, color: NC.white, fill: { color: NC.darkTeal }, align: "center", fontSize: 9 } }]
       ];
 
       rows.forEach(r => {
         tableData.push([
-          { text: r.initiative || "" },
-          { text: r.effort_h || "", options: { align: "center" } },
-          { text: r.features || "", options: { align: "center" } },
-          { text: r.pi_window || "", options: { align: "center" } },
-          { text: r.priority || "", options: { align: "center" } }
+          { text: r.initiative || "", options: { fontSize: 9 } },
+          { text: r.effort_h || "", options: { align: "center", fontSize: 9 } },
+          { text: r.features || "", options: { align: "center", fontSize: 9 } },
+          { text: r.pi_window || "", options: { align: "center", fontSize: 9 } },
+          { text: r.priority || "", options: { align: "center", fontSize: 9 } }
         ]);
       });
 
-      s.addTable(tableData, { x: tX, y: tY + 0.32, w: 3, h: 2.9, colW: [1.25, 0.62, 0.38, 0.42, 0.33], border: { pt: 0.5, color: NC.bgGrey } });
+      s.addTable(tableData, { x: tX, y: tY + 0.32, w: 5.4, h: 2.61, colW: [2.25, 1.116, 0.684, 0.756, 0.594], border: { pt: 0.5, color: NC.bgGrey } });
     }
 
     else if (type === "initiative_detail") {
