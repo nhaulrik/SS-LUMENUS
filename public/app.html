@@ -91,6 +91,27 @@
     .tab-btn.active { background: #73AA87; border-color: #73AA87; color: #0A2422; font-weight: 600; }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
+    
+    .template-toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; padding: 16px; background: rgba(255,255,255,0.03); border-radius: 10px; }
+    .template-layout { display: flex; gap: 20px; }
+    .template-sidebar { width: 280px; flex-shrink: 0; }
+    .template-sidebar h3 { margin: 0 0 12px; font-size: 14px; color: #E4F7EE; }
+    .template-list { display: flex; flex-direction: column; gap: 8px; }
+    .template-item { padding: 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; transition: all .16s; }
+    .template-item:hover { border-color: #73AA87; background: rgba(115,170,135,0.08); }
+    .template-item.selected { border-color: #FF6359; background: rgba(255,99,89,0.08); }
+    .template-item-name { font-size: 13px; font-weight: 600; color: #E4F7EE; margin-bottom: 4px; }
+    .template-item-desc { font-size: 11px; color: #B6D9C9; }
+    .template-main { flex: 1; min-width: 0; }
+    .upload-preview { padding: 20px; background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.15); border-radius: 10px; }
+    .slide-details { margin-top: 16px; padding: 16px; background: rgba(255,255,255,0.03); border-radius: 10px; }
+    .slide-details h3 { margin: 0 0 12px; font-size: 14px; color: #E4F7EE; }
+    .slide-preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 16px; }
+    .slide-preview-card { padding: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; cursor: pointer; transition: all .16s; }
+    .slide-preview-card:hover { border-color: #73AA87; }
+    .slide-preview-card.selected { border-color: #FF6359; background: rgba(255,99,89,0.08); }
+    .slide-preview-num { font-size: 10px; color: #B6D9C9; margin-bottom: 4px; }
+    .slide-preview-info { font-size: 11px; color: #E4F7EE; }
   </style>
 </head>
 <body>
@@ -176,8 +197,30 @@
     </div>
     
     <div id="tab-templating" class="tab-content">
-      <h2>Templating</h2>
-      <p>Hello World</p>
+      <div class="template-toolbar">
+        <input type="file" id="pptx-upload" accept=".pptx" style="display: none;">
+        <button id="upload-pptx-btn" class="primary">Upload PPTX</button>
+        <button id="save-template-btn" class="secondary" disabled>Save as Template</button>
+        <span id="template-status" class="status"></span>
+      </div>
+      
+      <div class="template-layout">
+        <aside class="template-sidebar">
+          <h3>Existing Templates</h3>
+          <div id="template-list" class="template-list"></div>
+        </aside>
+        
+        <main class="template-main">
+          <div id="upload-preview" class="upload-preview">
+            <p style="color: #B6D9C9; text-align: center; padding: 40px;">Upload a PPTX file to analyze and convert it to a template</p>
+          </div>
+          
+          <div id="slide-details" class="slide-details" style="display: none;">
+            <h3>Slide Details</h3>
+            <div id="slide-detail-content"></div>
+          </div>
+        </main>
+      </div>
     </div>
   </div>
 
@@ -213,6 +256,7 @@
     let currentSlides = [];
     let selectedSlideIndex = 0;
     let isUsingSampleData = true;
+    let pptxAnalysis = null;
 
     document.addEventListener('DOMContentLoaded', init);
 
@@ -234,6 +278,7 @@
       document.getElementById('carousel-next').addEventListener('click', () => showSlide(selectedSlideIndex + 1));
       document.addEventListener('keydown', handleKeyboardNavigation);
       loadData();
+      initTemplating();
     }
 
     async function loadData() {
@@ -1186,6 +1231,161 @@
       document.getElementById('field-mapping').innerHTML = '';
       document.getElementById('slide-info').innerHTML = '<p style="color:#B6D9C9; font-size:12px;">Select a slide to see details.</p>';
       document.getElementById('ai-prompt').innerHTML = '';
+    }
+
+    function initTemplating() {
+      document.getElementById('upload-pptx-btn').addEventListener('click', () => document.getElementById('pptx-upload').click());
+      document.getElementById('pptx-upload').addEventListener('change', handlePPTXUpload);
+      document.getElementById('save-template-btn').addEventListener('click', saveTemplate);
+      loadTemplateList();
+    }
+
+    async function handlePPTXUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = async function(evt) {
+        const base64 = evt.target.result.split(',')[1];
+        
+        setTemplateStatus('Analyzing PPTX...', 'success');
+        
+        try {
+          const response = await fetch('/api/upload-pptx', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ file: base64 })
+          });
+          const result = await response.json();
+          
+          if (result.ok) {
+            pptxAnalysis = result.analysis;
+            renderPPTXPreview(pptxAnalysis);
+            document.getElementById('save-template-btn').disabled = false;
+            setTemplateStatus(`Found ${pptxAnalysis.slides.length} slides`, 'success');
+          } else {
+            setTemplateStatus(result.error, 'error');
+          }
+        } catch (err) {
+          setTemplateStatus('Failed to upload: ' + err.message, 'error');
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function renderPPTXPreview(analysis) {
+      const container = document.getElementById('upload-preview');
+      container.innerHTML = `
+        <h3 style="margin: 0 0 12px; font-size: 14px; color: #E4F7EE;">PPTX Slides (${analysis.slides.length})</h3>
+        <div class="slide-preview-grid">
+          ${analysis.slides.map((slide, idx) => `
+            <div class="slide-preview-card" data-slide-index="${idx}">
+              <div class="slide-preview-num">Slide ${idx + 1}</div>
+              <div class="slide-preview-info">${slide.shapes.length} shapes, ${slide.texts.length || 0} text elements</div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      
+      container.querySelectorAll('.slide-preview-card').forEach(card => {
+        card.addEventListener('click', () => showSlideDetails(parseInt(card.dataset.slideIndex)));
+      });
+    }
+
+    function showSlideDetails(index) {
+      const slide = pptxAnalysis.slides[index];
+      const container = document.getElementById('slide-detail-content');
+      document.getElementById('slide-details').style.display = 'block';
+      
+      const toPx = (cm) => Math.round(cm * 37.8);
+      
+      container.innerHTML = `
+        <div style="background: ${slide.background || '#fff'}; padding: 20px; border-radius: 8px; margin-bottom: 16px; position: relative; width: ${toPx(10)}px; height: ${toPx(5.625)}px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+          ${slide.shapes.map(shape => `
+            <div style="position: absolute; left: ${toPx(shape.x)}px; top: ${toPx(shape.y)}px; width: ${toPx(shape.w)}px; height: ${toPx(shape.h)}px; background: ${shape.fill || 'transparent'}; border: 1px solid #999; display: flex; align-items: center; justify-content: center; overflow: hidden; box-sizing: border-box;">
+              <span style="font-size: 9px; color: #333; text-align: center; padding: 2px;">${shape.text || ''}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div style="font-size: 12px; color: #B6D9C9;">
+          <strong>Background:</strong> ${slide.background || 'Default'}<br>
+          <strong>Shapes:</strong> ${slide.shapes.length}<br>
+          <strong>Text elements:</strong> ${slide.texts.length || 0}
+        </div>
+      `;
+    }
+
+    async function saveTemplate() {
+      if (!pptxAnalysis) return;
+      const template = {
+        name: prompt('Enter template name:', 'New Template'),
+        description: 'Imported from PPTX',
+        slideTypes: {}
+      };
+      
+      pptxAnalysis.slides.forEach((slide, idx) => {
+        const typeKey = 'slide_' + (idx + 1);
+        template.slideTypes[typeKey] = {
+          background: slide.background || 'white',
+          components: slide.shapes.map(shape => ({
+            type: shape.text ? 'text' : 'shape',
+            shape: shape.text ? undefined : 'RECTANGLE',
+            x: shape.x,
+            y: shape.y,
+            w: shape.w,
+            h: shape.h,
+            fill: shape.fill,
+            text: shape.text
+          }))
+        };
+      });
+      
+      try {
+        const response = await fetch('/api/templates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ presentations: { [Date.now().toString()]: template } })
+        });
+        const result = await response.json();
+        if (result.ok) {
+          setTemplateStatus('Template saved!', 'success');
+          loadTemplateList();
+        }
+      } catch (err) {
+        setTemplateStatus('Failed to save: ' + err.message, 'error');
+      }
+    }
+
+    function setTemplateStatus(message, type) {
+      const status = document.getElementById('template-status');
+      status.textContent = message;
+      status.className = `status ${type}`;
+    }
+
+    async function loadTemplateList() {
+      try {
+        const response = await fetch('/api/templates');
+        const data = await response.json();
+        const list = document.getElementById('template-list');
+        const templates = data.presentations || {};
+        
+        list.innerHTML = Object.entries(templates).map(([key, tmpl]) => `
+          <div class="template-item" data-key="${key}">
+            <div class="template-item-name">${tmpl.name || key}</div>
+            <div class="template-item-desc">${tmpl.description || 'No description'}</div>
+          </div>
+        `).join('') || '<p style="font-size: 12px; color: #B6D9C9;">No templates yet</p>';
+        
+        list.querySelectorAll('.template-item').forEach(item => {
+          item.addEventListener('click', () => loadTemplateDetails(item.dataset.key));
+        });
+      } catch (err) {
+        console.error('Failed to load templates:', err);
+      }
+    }
+
+    function loadTemplateDetails(key) {
+      console.log('Load template:', key);
     }
   </script>
 </body>

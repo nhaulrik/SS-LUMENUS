@@ -1,6 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const AdmZip = require('adm-zip');
 const { loadJSONFile } = require('../utils/fileUtils');
 const { buildPresentation, buildPresentationWithSlides, validateInputData, validatePresentationData, loadPresentations, loadTemplates, expandSlidesFromStructure } = require('./presentationService');
 
@@ -251,6 +252,85 @@ const server = http.createServer(async (req, res) => {
   if (pathname.startsWith('/download/')) {
     const fileName = decodeURIComponent(path.basename(pathname.replace('/download/', '')));
     return sendFileFromOutput(res, fileName);
+  }
+
+  if (pathname === '/api/upload-pptx' && req.method === 'POST') {
+    const chunks = [];
+    req.on('data', chunk => chunks.push(chunk));
+    req.on('end', () => {
+      try {
+        const body = JSON.parse(Buffer.concat(chunks).toString());
+        const buffer = Buffer.from(body.file, 'base64');
+        const zip = new AdmZip(buffer);
+        const pptxAnalysis = analyzePPTX(zip);
+        sendJSON(res, { ok: true, analysis: pptxAnalysis });
+      } catch (err) {
+        res.writeHead(400);
+        res.end(JSON.stringify({ error: 'Failed to parse PPTX: ' + err.message }));
+      }
+    });
+    return;
+  }
+
+  function analyzePPTX(zip) {
+    const slides = [];
+    const slideEntries = zip.getEntries().filter(e => e.entryName.match(/^ppt\/slides\/slide\d+\.xml$/));
+    
+    for (const entry of slideEntries.sort((a, b) => {
+      const numA = parseInt(a.entryName.match(/slide(\d+)\.xml/)[1]);
+      const numB = parseInt(b.entryName.match(/slide(\d+)\.xml/)[1]);
+      return numA - numB;
+    })) {
+      const content = entry.getData().toString('utf8');
+      const slideData = parseSlideXML(content);
+      slides.push(slideData);
+    }
+    
+    return { slides };
+  }
+
+  function parseSlideXML(xml) {
+    const slide = { index: 0, background: null, shapes: [], texts: [], images: [] };
+    
+    const bgMatch = xml.match(/<p:bg>([\s\S]*?)<\/p:bg>/);
+    if (bgMatch) {
+      const bgFill = bgMatch[1];
+      const srgbMatch = bgFill.match(/<a:srgbClr val="([^"]+)"/);
+      if (srgbMatch) slide.background = '#' + srgbMatch[1];
+    }
+    
+    const shapeMatches = xml.match(/<p:sp>[\s\S]*?<\/p:sp>/g) || [];
+    for (const shapeXml of shapeMatches) {
+      const shape = { type: 'shape', x: 0, y: 0, w: 0, h: 0, fill: null, text: '' };
+      
+      const xfrmMatch = shapeXml.match(/<p:xfrm>[\s\S]*?<\/p:xfrm>/);
+      if (xfrmMatch) {
+        const offMatch = xfrmMatch[0].match(/<a:off x="(\d+)" y="(\d+)"/);
+        const extMatch = xfrmMatch[0].match(/<a:ext cx="(\d+)" cy="(\d+)"/);
+        if (offMatch && extMatch) {
+          shape.x = Math.round(parseInt(offMatch[1]) / 10000 * 100) / 100;
+          shape.y = Math.round(parseInt(offMatch[2]) / 10000 * 100) / 100;
+          shape.w = Math.round(parseInt(extMatch[1]) / 10000 * 100) / 100;
+          shape.h = Math.round(parseInt(extMatch[2]) / 10000 * 100) / 100;
+        }
+      }
+      
+      const spPrMatch = shapeXml.match(/<p:spPr>([\s\S]*?)<\/p:spPr>/);
+      if (spPrMatch) {
+        const srgbMatch = spPrMatch[1].match(/<a:srgbClr val="([^"]+)"/);
+        if (srgbMatch) shape.fill = '#' + srgbMatch[1];
+      }
+      
+      const txMatch = shapeXml.match(/<p:txBody>([\s\S]*?)<\/p:txBody>/);
+      if (txMatch) {
+        const textContent = txMatch[1].replace(/<[^>]+>/g, '').trim();
+        if (textContent) shape.text = textContent;
+      }
+      
+      slide.shapes.push(shape);
+    }
+    
+    return slide;
   }
 
   let filePath = path.join(PUBLIC_DIR, 'app.html');
