@@ -349,41 +349,38 @@ function extractSlideElements(xml, slideIndex) {
     let fontColor = '#333333';
     let textAlign = 'left';
 
-    // Extract txBody content
+    // Find the full txBody block
     const txBodyMatch = shapeXml.match(/<p:txBody[^>]*>([\s\S]*?)<\/p:txBody>/);
     if (txBodyMatch && txBodyMatch[1]) {
       const txBody = txBodyMatch[1];
       
-      // Find rPr element
-      const rPrMatch = txBody.match(/<a:rPr([^>]*)>/);
-      if (rPrMatch && rPrMatch[1]) {
-        const rPrAttrs = rPrMatch[1];
-        // Check for sz attribute
-        if (rPrAttrs.includes('sz="')) {
-          const szIdx = rPrAttrs.indexOf('sz="');
-          const endIdx = rPrAttrs.indexOf('"', szIdx + 3);
-          if (szIdx > -1 && endIdx > szIdx) {
-            const szVal = rPrAttrs.substring(szIdx + 3, endIdx);
-            fontSize = parseInt(szVal) / 100;
-          }
-        }
-        // Check for bold
+      // Extract font size from rPr
+      const rPrOpenMatch = txBody.match(/<a:rPr([^>]*)>/);
+      if (rPrOpenMatch && rPrOpenMatch[1]) {
+        const rPrAttrs = rPrOpenMatch[1];
+        const szMatch = rPrAttrs.match(/sz="(\d+)"/);
+        if (szMatch) fontSize = parseInt(szMatch[1]) / 100;
         if (rPrAttrs.includes('b="1"') || rPrAttrs.includes('b="true"')) fontBold = true;
-        // Check for color - look inside the rPr or after it
-        const colorMatch = rPrAttrs.match(/<a:srgbClr\s+val="([^"]+)"/);
-        if (colorMatch) fontColor = '#' + colorMatch[1];
       }
-      // Check for paragraph alignment
+      
+// Extract any color from anywhere in txBody
+      const colorMatches = txBody.match(/<a:srgbClr val="([^"]+)"/);
+      if (colorMatches) {
+        fontColor = '#' + colorMatches[1];
+      } else {
+        const schemeMatch = txBody.match(/<a:schemeClr val="([^"]+)"/);
+        if (schemeMatch) {
+          const schemeMap = { tx1: '#000000', tx2: '#44546a', tx3: '#4472c4' };
+          fontColor = schemeMap[schemeMatch[1]] || '#333333';
+        }
+      }
+      }
+      
+      // Extract paragraph alignment
       const pPrMatch = txBody.match(/<a:pPr([^>]*)/);
       if (pPrMatch && pPrMatch[1]) {
-        const pPrAttrs = pPrMatch[1];
-        if (pPrAttrs.includes('algn="')) {
-          const algnIdx = pPrAttrs.indexOf('algn="');
-          const endIdx = pPrAttrs.indexOf('"', algnIdx + 5);
-          if (algnIdx > -1 && endIdx > algnIdx) {
-            textAlign = pPrAttrs.substring(algnIdx + 5, endIdx);
-          }
-        }
+        const algnMatch = pPrMatch[1].match(/algn="(\w+)"/);
+        if (algnMatch) textAlign = algnMatch[1];
       }
     }
 

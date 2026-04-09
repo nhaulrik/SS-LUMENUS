@@ -28,7 +28,7 @@ function SlidePreview({ slide, size = 'normal' }) {
   }
 
   const padding = size === 'small' ? 1 : 3
-  const bgColor = background || '#ffffff'
+  const bgColor = '#ffffff'
   const scale = size === 'small' ? 0.12 : 0.9
   
   return (
@@ -50,7 +50,7 @@ function SlidePreview({ slide, size = 'normal' }) {
           padding: padding,
           fontSize: `${elemFontSize}px`,
           fontWeight: el.fontBold ? 'bold' : 'normal',
-          color: el.fontColor || color || '#222222',
+          color: '#000000',
           overflow: 'hidden',
           display: 'flex',
           alignItems: 'center',
@@ -452,7 +452,7 @@ function App() {
                 <div className="slide-preview">
                   <div 
                     className="slide-preview-inner"
-                    style={{ backgroundColor: currentSlide.background || '#ffffff' }}
+                    style={{ backgroundColor: '#ffffff' }}
                   >
                     {currentSlide.elements.length === 0 ? (
                       <div className="no-elements">No text elements found</div>
@@ -476,9 +476,10 @@ function App() {
                               height: `${height}%`,
                               fontSize: `${Math.max(8, elem.fontSize * 0.7)}px`,
                               fontWeight: elem.fontBold ? 'bold' : 'normal',
-                              color: isTagged ? '#C14A31' : (elem.fontColor || '#333333'),
+                              color: isTagged ? '#C14A31' : '#000000',
                               textAlign: elem.textAlign || 'left',
                               justifyContent: elem.textAlign === 'center' ? 'center' : elem.textAlign === 'right' ? 'flex-end' : 'flex-start',
+                              opacity: isTagged ? 0.7 : 1,
                             }}
                             onClick={() => handleElementClick(elem)}
                             title={elem.text}
@@ -682,11 +683,6 @@ function App() {
             <div className="preview-large-canvas">
               {selectedSlide && <SlidePreview slide={selectedSlide} />}
             </div>
-            {selectedSlide?.sampleText && selectedSlide.sampleText.length > 0 && (
-              <div className="preview-large-text">
-                {selectedSlide.sampleText.slice(0, 5).join(' › ')}
-              </div>
-            )}
           </div>
           
           {/* Thumbnail Strip - SECOND */}
