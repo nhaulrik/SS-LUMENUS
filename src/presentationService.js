@@ -12,6 +12,12 @@ function loadTemplates(templatePath) {
   return payload.templates || {};
 }
 
+function resolveTemplateKey(type, templates) {
+  if (!type || !templates) return type;
+  if (templates[type]) return type;
+  return Object.keys(templates).find(key => type === key || type.startsWith(`${key}_`) || key.startsWith(`${type}_`)) || type;
+}
+
 function validateInputData(inputData, templates, selectedTemplate) {
   const errors = [];
   const warnings = [];
@@ -46,7 +52,13 @@ function validateInputData(inputData, templates, selectedTemplate) {
       matchingSlides += 1;
     }
 
-    (templates[type].components || []).forEach(component => {
+    const templateKey = resolveTemplateKey(type, templates);
+    const template = templates[templateKey];
+    if (!template) {
+      warnings.push(`Slide ${index + 1}: template '${type}' is not defined.`);
+      return;
+    }
+    (template.components || []).forEach(component => {
       if (!component.bind || component.type === 'shape' || component.type === 'header') return;
       if (typeof component.bind === 'string') {
         const value = getField(slide, component.bind);
@@ -568,7 +580,7 @@ async function buildPresentation({ inputData, templateFilePath, themeFilePath, o
 
   let pageNum = 1;
   slides.forEach(sData => {
-    const template = templates[sData.slide_type];
+    const template = templates[resolveTemplateKey(sData.slide_type, templates)];
     if (!template) return;
     const slide = pres.addSlide();
     if (template.background) {

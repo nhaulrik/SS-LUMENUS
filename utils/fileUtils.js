@@ -12,7 +12,14 @@ function loadJSONFile(filePath) {
 
 function getField(data, fieldPath) {
   if (!fieldPath || !data) return undefined;
-  return fieldPath.split('.').reduce((obj, key) => (obj && obj[key] !== undefined ? obj[key] : undefined), data);
+  const direct = fieldPath.split('.').reduce((obj, key) => (obj && obj[key] !== undefined ? obj[key] : undefined), data);
+  if (direct !== undefined) return direct;
+  const contentSource = data.content || data.fields;
+  if (contentSource) {
+    const nested = fieldPath.split('.').reduce((obj, key) => (obj && obj[key] !== undefined ? obj[key] : undefined), contentSource);
+    if (nested !== undefined) return nested;
+  }
+  return undefined;
 }
 
 function ensureDirectory(dirPath) {
