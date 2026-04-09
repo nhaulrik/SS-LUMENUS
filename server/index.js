@@ -173,6 +173,10 @@ app.post('/api/generate-pptx', (req, res) => {
     const zip = new admZip(templatePath);
     const slideEntries = zip.getEntries().filter(e => e.entryName.match(/^ppt\/slides\/slide\d+\.xml$/));
     
+    if (!tags || tags.length === 0) {
+      return res.status(400).json({ error: 'No tags provided' });
+    }
+    
     const sortedEntries = slideEntries.sort((a, b) => {
       const numA = parseInt(a.entryName.match(/slide(\d+)\.xml/)[1]);
       const numB = parseInt(b.entryName.match(/slide(\d+)\.xml/)[1]);
@@ -181,11 +185,47 @@ app.post('/api/generate-pptx', (req, res) => {
     
     const generatedSlides = [];
     
+    // Step 1: Inject {{placeholders}} into the original slide content for tagged elements
+    const baseContent = {};
     for (let slideIdx = 0; slideIdx < sortedEntries.length; slideIdx++) {
       const entry = sortedEntries[slideIdx];
       let content = entry.getData().toString('utf8');
+      const slideNum = slideIdx + 1;
+      
+      // Get tags for this slide
+      const slideTags = tags.filter(t => t.slideIndex === slideNum);
+      
+      // Inject placeholders: replace original text with {{key}}
+      slideTags.forEach(tag => {
+        if (tag.originalText) {
+          const escaped = tag.originalText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(`<a:t>(${escaped})</a:t>`, 'g');
+          content = content.replace(regex, `<a:t>{{${tag.key}}}</a:t>`);
+        }
+      });
+      
+      baseContent[slideNum] = content;
+    }
+    
+    // Step 2: Replace placeholders with JSON data (using content with inject placeholders)
+    for (let slideIdx = 0; slideIdx < sortedEntries.length; slideIdx++) {
+      const entry = sortedEntries[slideIdx];
+      let content = baseContent[slideIdx + 1];
+      const slideNum = slideIdx + 1;
+      
+      // Find tags for this slide
+      const slideTags = tags.filter(t => t.slideIndex === slideNum);
+      const tagKeys = slideTags.map(t => t.key);
+      
+      // Check for placeholders
+      const hasPlaceholder = content.includes('<a:t>{{');
+      if (hasPlaceholder) {
+        console.log(`Slide ${slideNum} has placeholders:`, tagKeys);
+      }
       
       const isRecordSlide = slideIdx + 1 === recordSlideIndex;
+      const recordKey = recordSlideIndex;
+      console.log(`Slide ${slideNum}: isRecordSlide=${isRecordSlide}, recordSlideIndex=${recordKey}`);
       
       if (isRecordSlide && jsonData.records && jsonData.records.length > 0) {
         jsonData.records.forEach((record, recordIdx) => {
@@ -198,35 +238,54 @@ app.post('/api/generate-pptx', (req, res) => {
       }
     }
     
-    if (recordSlideIndex === null) {
-      for (const entry of sortedEntries) {
-        let content = entry.getData().toString('utf8');
-        const slideIdx = parseInt(entry.entryName.match(/slide(\d+)\.xml/)[1]);
-        content = replacePlaceholders(content, jsonData, null, tags, slideIdx, recordSlideIndex);
-        generatedSlides.push({ slideIndex: slideIdx, recordIndex: null, content });
-      }
-    }
+    // Note: When recordSlideIndex is null, the first loop already processes all slides
     
+    // For output: map each original slide to its processed version
     const outputSlides = sortedEntries.map((entry, idx) => {
-      const gen = generatedSlides.find(g => g.slideIndex === idx + 1 && g.recordIndex === null);
-      if (gen) {
-        return { entry, content: gen.content };
-      }
-      return { entry, content: entry.getData().toString('utf8') };
+      const slideNum = idx + 1;
+      // If record slide, use first record; otherwise use the processed version
+      const gen = generatedSlides.find(g => g.slideIndex === slideNum && g.recordIndex === 1) 
+        || generatedSlides.find(g => g.slideIndex === slideNum && g.recordIndex === null);
+      const content = gen ? gen.content : (baseContent[slideNum] || entry.getData().toString('utf8'));
+      return { entry, content };
     });
     
-    const previewData = generatedSlides.map(gs => {
-      const elements = extractSlideElements(gs.content, gs.slideIndex);
+    const previewData = generatedSlides.map((gs, idx) => {
+      const content = gs.content || '';
+      const hasContent = content.length > 0;
+      const textCount = (content.match(/<a:t>/g) || []).length;
+      const sampleRaw = content.slice(0, 200);
+      
+      console.log(`Preview slide ${idx}: hasContent=${hasContent}, textElements=${textCount}`);
+      
+      let elements = { elements: [] };
+      try {
+        elements = extractSlideElements(content, gs.slideIndex);
+      } catch (e) {
+        console.log('Extract error:', e.message);
+      }
+      
+      // Get sample text to show what was rendered
+      const textMatches = content.match(/<a:t>([^<]*)<\/a:t>/g) || [];
+      const sampleText = textMatches.slice(0, 3).map(t => t.replace(/<[^>]+>/g, ''));
+      
+      // Check if there were {{ placeholders that weren't replaced
+      const hadUnreplaced = content.includes('{{');
+      
       return {
         slideNumber: gs.slideIndex,
         recordIndex: gs.recordIndex,
         content: gs.content,
-        elements: elements.elements
+        elements: elements.elements,
+        sampleText,
+        hadUnreplaced
       };
     });
     
     outputSlides.forEach(({ entry, content }) => {
-      entry.setData(Buffer.from(content, 'utf8'));
+      if (content && entry) {
+        entry.setData(Buffer.from(content, 'utf8'));
+      }
     });
     
     const timestamp = Date.now();
@@ -236,7 +295,12 @@ app.post('/api/generate-pptx', (req, res) => {
     res.json({
       ok: true,
       previewData,
-      downloadUrl: `/api/download/${path.basename(outputPath)}`
+      downloadUrl: `/api/download/${path.basename(outputPath)}`,
+      debug: { 
+        totalTags: tags.length,
+        tagKeys: tags.map(t => t.key),
+        jsonKeys: Object.keys(jsonData)
+      }
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to generate: ' + err.message });
@@ -282,6 +346,10 @@ function parseSlides(zip) {
  * Extract text elements with positions from slide XML
  */
 function extractSlideElements(xml, slideIndex) {
+  if (!xml) {
+    return { index: slideIndex, elements: [], background: '#ffffff' };
+  }
+  
   const slide = {
     index: slideIndex,
     elements: [],
@@ -420,8 +488,14 @@ function getPresetColor(name) {
  */
 function replacePlaceholders(content, jsonData, recordData, tags, slideIndex, recordSlideIndex) {
   const slideTags = tags.filter(t => t.slideIndex === slideIndex);
+  const tagKeys = slideTags.map(t => t.key);
+  const jsonKeys = Object.keys(jsonData);
   
-  return content.replace(/<a:t>([^<]*)<\/a:t>/g, (match, text) => {
+  // Debug
+  console.log(`replacePlaceholders slide ${slideIndex}: tags=${tagKeys.join(',')}, json=${jsonKeys.join(',')}`);
+  
+  let replacements = 0;
+  const result = content.replace(/<a:t>([^<]*)<\/a:t>/g, (match, text) => {
     const tag = slideTags.find(t => text.includes(`{{${t.key}}}`));
     
     if (tag) {
@@ -436,6 +510,8 @@ function replacePlaceholders(content, jsonData, recordData, tags, slideIndex, re
     
     return match;
   });
+  
+  return result;
 }
 
 // ============================================================

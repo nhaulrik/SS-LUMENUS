@@ -30,22 +30,23 @@ function SlidePreview({ slide }) {
   return (
     <div className="slide-preview-canvas">
       {elements.map((el, idx) => {
-        const x = (el.bounds.x / EMU_PER_PIXEL) / (SLIDE_WIDTH / 10)
-        const y = (el.bounds.y / EMU_PER_PIXEL) / (SLIDE_HEIGHT / 10)
-        const w = (el.bounds.w / EMU_PER_PIXEL) / (SLIDE_WIDTH / 10)
-        const h = (el.bounds.h / EMU_PER_PIXEL) / (SLIDE_HEIGHT / 10)
+        // bounds are in inches, convert to percentage
+        const left = (el.bounds.x / SLIDE_WIDTH) * 100
+        const top = (el.bounds.y / SLIDE_HEIGHT) * 100
+        const width = (el.bounds.w / SLIDE_WIDTH) * 100
+        const height = (el.bounds.h / SLIDE_HEIGHT) * 100
         
         const style = {
           position: 'absolute',
-          left: `${x * 10}%`,
-          top: `${y * 10}%`,
-          width: `${w * 10}%`,
-          height: `${h * 10}%`,
+          left: `${left}%`,
+          top: `${top}%`,
+          width: `${width}%`,
+          height: `${height}%`,
           background: el.isPlaceholder ? '#73AA8740' : '#0C2220',
           border: el.isPlaceholder ? '1px dashed #73AA87' : '1px solid #143A34',
           borderRadius: '2px',
           padding: '2px',
-          fontSize: `${Math.min(10, h * 10 * 0.3)}px`,
+          fontSize: `${Math.max(4, Math.min(12, height * 0.4))}px`,
           color: el.textColor || '#fff',
           overflow: 'hidden',
           display: 'flex',
@@ -195,6 +196,11 @@ function App() {
     try {
       const jsonData = JSON.parse(jsonInput)
       
+      console.log('Sending to server:', { 
+        tags: tags.map(t => ({ key: t.key, slideIndex: t.slideIndex })),
+        jsonData 
+      })
+      
       const response = await fetch('/api/generate-pptx', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -207,7 +213,9 @@ function App() {
       })
       
       const result = await response.json()
+      console.log('Generate result:', result.debug)
       if (result.ok) {
+        console.log('Debug:', result.debug)
         setPreviewData(result.previewData)
         navigateTo('preview')
       } else {
@@ -595,6 +603,11 @@ function App() {
                   <div className="preview-card-body">
                     <SlidePreview slide={slide} />
                   </div>
+                  {slide.sampleText && slide.sampleText.length > 0 && (
+                    <div style={{ padding: '8px 12px', fontSize: 10, color: slide.hadUnreplaced ? '#FF6359' : '#73AA87', borderTop: '1px solid #143A34' }}>
+                      {slide.hadUnreplaced ? 'UNREPLACED: ' : ''}{slide.sampleText.join(' | ')}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
