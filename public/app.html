@@ -41,8 +41,9 @@
     .carousel-nav-btn:hover { background: rgba(255,255,255,0.12); border-color: #73AA87; }
     .carousel-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
     .carousel-nav-btn svg { width: 16px; height: 16px; }
-    .carousel-slides { display: flex; gap: 10px; overflow: hidden; flex: 1; flex-wrap: wrap; align-content: flex-start; }
-    .carousel-thumb { min-width: 140px; max-width: 180px; padding: 10px; border-radius: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: #E4F7EE; cursor: pointer; transition: all .16s; text-align: left; flex: 1; }
+    .carousel-slides { display: flex; gap: 10px; overflow-x: auto; flex: 1; overflow-y: hidden; scrollbar-width: none; -ms-overflow-style: none; }
+    .carousel-slides::-webkit-scrollbar { display: none; }
+    .carousel-thumb { width: 160px; flex-shrink: 0; padding: 10px; border-radius: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: #E4F7EE; cursor: pointer; transition: all .16s; text-align: left; }
     .carousel-thumb:hover { border-color: #73AA87; background: rgba(115,170,135,0.1); transform: translateY(-1px); }
     .carousel-thumb.active { border-color: #FF6359; background: rgba(255,99,89,0.12); }
     .carousel-thumb-num { font-size: 9px; color: #B6D9C9; margin-bottom: 3px; }
@@ -421,11 +422,23 @@
       updateNavButtons();
       updateCarouselCounter();
       
-      document.getElementById('slide-carousel').scrollTo({
-        top: 0,
-        left: document.querySelector('.carousel-thumb.active')?.offsetLeft - 50 || 0,
-        behavior: 'smooth'
-      });
+      const carousel = document.getElementById('slide-carousel');
+      const activeSlide = document.querySelector('.carousel-thumb.active');
+      if (activeSlide) {
+        const carouselRect = carousel.getBoundingClientRect();
+        const slideRect = activeSlide.getBoundingClientRect();
+        const slideLeft = slideRect.left - carouselRect.left + carousel.scrollLeft;
+        const slideRight = slideLeft + slideRect.width;
+        
+        let newScrollLeft = carousel.scrollLeft;
+        if (slideLeft < carousel.scrollLeft) {
+          newScrollLeft = slideLeft - 10;
+        } else if (slideRight > carousel.scrollLeft + carouselRect.width) {
+          newScrollLeft = slideRight - carouselRect.width + 10;
+        }
+        
+        carousel.scrollTo({ left: newScrollLeft, top: 0, behavior: 'smooth' });
+      }
     }
     
     function updateCarouselCounter() {
