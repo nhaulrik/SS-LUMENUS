@@ -35,6 +35,13 @@
     .slide-canvas { width: 100%; max-width: 960px; height: 540px; margin: 0 auto; position: relative; overflow: hidden; }
     .canvas-label { position: absolute; top: 12px; left: 16px; right: 16px; color: #1B5E52; font-weight: 700; font-size: 0.95rem; }
     .template-stage { position: relative; width: 100%; height: 380px; background: #0A2B28; border-radius: 12px; overflow: hidden; }
+    .page-carousel { display: flex; gap: 10px; overflow-x: auto; padding: 10px 0; margin-bottom: 8px; }
+    .page-carousel { flex-wrap: nowrap; scroll-snap-type: x mandatory; }
+    .carousel-item { min-width: 130px; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: #E4F7EE; cursor: pointer; transition: transform .16s, border-color .16s, background .16s; }
+    .carousel-item { scroll-snap-align: center; }
+    .carousel-item:hover { transform: translateY(-1px); border-color: #73AA87; }
+    .carousel-item.active { background: linear-gradient(135deg, rgba(255,99,89,0.18), rgba(115,170,135,0.2)); border-color: #FF6359; box-shadow: 0 10px 25px rgba(0,0,0,0.12); }
+    .carousel-item span { display: block; font-size: 0.85rem; margin-top: 6px; color: #B6D9C9; }
     .slide-element { position: absolute; box-sizing: border-box; }
     .slide-element table { width: 100%; border-collapse: collapse; font-size: 11px; color: #141E1E; }
     .slide-element th, .slide-element td { border: 1px solid rgba(0,0,0,0.12); padding: 4px; }
@@ -82,9 +89,9 @@
         <div class="canvas-label">Slide preview</div>
         <div class="slide-canvas" id="slide-canvas"></div>
         <div class="controls" style="margin-top: 12px;">
+          <div id="page-info" style="color: #B6D9C9; font-size: 0.95rem; margin-bottom: 10px;">Page 1 / 1</div>
+          <div id="page-carousel" class="page-carousel"></div>
           <div style="display: grid; gap: 10px; width: 100%;">
-            <label style="font-size: 0.9rem; color: #B6D9C9;">Slide page</label>
-            <select id="page-select" style="width: 100%; min-height: 44px; border-radius: 10px; border: 1px solid #144C43; background: #0A2B28; color: #E4F7EE; padding: 0 12px;"></select>
             <label style="font-size: 0.9rem; color: #B6D9C9;">Template sample</label>
             <select id="sample-select" style="width: 100%; min-height: 44px; border-radius: 10px; border: 1px solid #144C43; background: #0A2B28; color: #E4F7EE; padding: 0 12px;"></select>
           </div>
@@ -136,22 +143,11 @@
           const selectedSlide = matchingSlides[selectedSampleIndex];
           if (selectedSlide) {
             selectedPageIndex = allSlides.findIndex(slide => slide === selectedSlide);
-            document.getElementById('page-select').value = selectedPageIndex;
           }
         }
-        renderSlidePreview();
+        showSelectedPage();
       });
-      document.getElementById('page-select').addEventListener('change', event => {
-        selectedPageIndex = Number(event.target.value);
-        const slideData = allSlides[selectedPageIndex] || getSelectedSlide(parseJsonInput());
-        if (!slideData) return;
-        selectedTemplate = slideData.slide_type;
-        renderTemplateList();
-        renderTemplateMeta();
-        renderTemplatePreview();
-        populateSampleOptions();
-        renderSlidePreview();
-      });
+      document.addEventListener('keydown', handleKeyboardNavigation);
       loadData();
     }
 
@@ -185,6 +181,7 @@
       setInputStatus('Sample JSON loaded. Validate and preview or generate.', 'success');
       populateSampleOptions();
       populatePageOptions();
+      renderSlidePreview();
     }
 
     function renderTemplateList() {
@@ -248,6 +245,7 @@
         select.innerHTML = '<option value="0">No matching slides</option>';
         return;
       }
+      setPageInfo();
       matching.forEach((slide, idx) => {
         const opt = document.createElement('option');
         opt.value = idx;
@@ -259,23 +257,83 @@
     }
 
     function populatePageOptions() {
-      const select = document.getElementById('page-select');
-      select.innerHTML = '';
       if (!Array.isArray(allSlides) || allSlides.length === 0) {
-        select.innerHTML = '<option value="">No slides available</option>';
+        selectedPageIndex = 0;
+        renderPageCarousel();
+        setPageInfo();
         return;
       }
       if (selectedPageIndex < 0 || selectedPageIndex >= allSlides.length) {
         selectedPageIndex = 0;
       }
+      renderPageCarousel();
+      setPageInfo();
+    }
+
+    function renderPageCarousel() {
+      const carousel = document.getElementById('page-carousel');
+      if (!carousel) return;
+      carousel.innerHTML = '';
+      if (!Array.isArray(allSlides) || allSlides.length === 0) {
+        carousel.textContent = 'No pages available';
+        return;
+      }
       allSlides.forEach((slide, idx) => {
-        const opt = document.createElement('option');
-        opt.value = idx;
-        const title = slide.title || slide.header_title || slide.subtitle || slide.slide_type;
-        opt.textContent = `${idx + 1}. [${slide.slide_type}] ${title}`;
-        select.appendChild(opt);
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'carousel-item' + (idx === selectedPageIndex ? ' active' : '');
+        item.innerHTML = `<strong>Page ${idx + 1}</strong><span>${slide.title || slide.header_title || slide.subtitle || slide.slide_type}</span>`;
+        item.addEventListener('click', () => {
+          selectedPageIndex = idx;
+          showSelectedPage();
+        });
+        carousel.appendChild(item);
       });
-      select.value = selectedPageIndex;
+      const activeNode = carousel.querySelector('.carousel-item.active');
+      if (activeNode) {
+        activeNode.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+      }
+    }
+
+    function setPageInfo() {
+      const info = document.getElementById('page-info');
+      if (!info) return;
+      if (!Array.isArray(allSlides) || allSlides.length === 0) {
+        info.textContent = 'No slides available';
+        return;
+      }
+      if (selectedPageIndex < 0 || selectedPageIndex >= allSlides.length) {
+        selectedPageIndex = 0;
+      }
+      const slide = allSlides[selectedPageIndex] || {};
+      const title = slide.title || slide.header_title || slide.subtitle || slide.slide_type || 'Untitled';
+      info.textContent = `Page ${selectedPageIndex + 1} / ${allSlides.length}: ${title}`;
+    }
+
+    function showSelectedPage() {
+      const slideData = allSlides[selectedPageIndex];
+      if (!slideData) return;
+      selectedTemplate = slideData.slide_type;
+      renderTemplateList();
+      renderTemplateMeta();
+      renderTemplatePreview();
+      populatePageOptions();
+      populateSampleOptions();
+      renderSlidePreview();
+    }
+
+    function handleKeyboardNavigation(event) {
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      const activeTag = document.activeElement?.tagName;
+      if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(activeTag)) return;
+      if (!Array.isArray(allSlides) || !allSlides.length) return;
+      if (event.key === 'ArrowLeft') {
+        selectedPageIndex = Math.max(0, selectedPageIndex - 1);
+      } else {
+        selectedPageIndex = Math.min(allSlides.length - 1, selectedPageIndex + 1);
+      }
+      showSelectedPage();
+      event.preventDefault();
     }
 
     function parseJsonInput() {
