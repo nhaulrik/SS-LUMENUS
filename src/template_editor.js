@@ -2,7 +2,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { loadJSONFile } = require('../utils/fileUtils');
-const { buildPresentation, validateInputData, validatePresentationData, loadPresentations, loadTemplates } = require('./presentationService');
+const { buildPresentation, buildPresentationWithSlides, validateInputData, validatePresentationData, loadPresentations, loadTemplates, expandSlidesFromStructure } = require('./presentationService');
 
 const PORT = process.env.PORT || 3000;
 const ROOT = process.cwd();
@@ -201,26 +201,28 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      const presentations = loadPresentations(TEMPLATE_FILE);
       const presentationKey = payload.presentationKey;
       
-      if (presentationKey && presentations[presentationKey]) {
-        const validation = validatePresentationData(inputData, presentations[presentationKey]);
-        if (!validation.valid) {
+      if (presentationKey) {
+        const presentations = loadPresentations(TEMPLATE_FILE);
+        if (!presentations[presentationKey]) {
           res.writeHead(400);
-          res.end(JSON.stringify({ error: 'Input validation failed', details: validation.errors }));
+          res.end(JSON.stringify({ error: `Presentation '${presentationKey}' not found` }));
           return;
         }
-        const outputFile = await buildPresentation({
-          inputData,
-          templateFilePath: TEMPLATE_FILE,
+        
+        const presentation = presentations[presentationKey];
+        
+        const expandedSlides = expandSlidesFromStructure(presentation, inputData);
+        
+        const outputFile = await buildPresentationWithSlides({
+          expandedSlides,
           themeFilePath: THEME_FILE,
           outputDir: OUTPUT_DIR,
-          outputPrefix: presentationKey.replace(/-/g, '_'),
-          presentationKey: presentationKey
+          outputPrefix: presentationKey.replace(/-/g, '_')
         });
         const fileName = path.basename(outputFile);
-        sendJSON(res, { ok: true, fileName, downloadUrl: `/download/${encodeURIComponent(fileName)}` });
+        sendJSON(res, { ok: true, fileName, downloadUrl: `/download/${encodeURIComponent(fileName)}`, slideCount: expandedSlides.length });
       } else {
         const templates = loadTemplates(TEMPLATE_FILE);
         const validation = validateInputData(inputData, templates, payload.selectedTemplate);
@@ -241,7 +243,7 @@ const server = http.createServer(async (req, res) => {
       }
     } catch (err) {
       res.writeHead(500);
-      res.end(JSON.stringify({ error: err.message }));
+      res.end(JSON.stringify({ error: err.message + '\n' + (err.stack || '') }));
     }
     return;
   }

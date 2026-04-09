@@ -308,8 +308,7 @@
       "structure": [
         { "type": "cover", "dataPath": null },
         { "type": "agenda", "dataPath": null },
-        { "type": "roadmap_initiative_group", "dataPath": "initiative_groups" },
-        { "type": "roadmap_initiative", "dataPath": "initiative_groups", "children": "initiatives" }
+        { "type": "roadmap_initiative_group", "dataPath": "initiative_groups", "children": "initiatives", "childrenType": "roadmap_initiative" }
       ],
       "sampleData": {
         "title": "Solon Tax Product Roadmap 2026",

@@ -34,12 +34,22 @@
     .preview-badge { font-size: 11px; padding: 4px 8px; border-radius: 6px; background: rgba(115,170,135,0.2); color: #73AA87; }
     .slide-canvas { width: 100%; max-width: 720px; aspect-ratio: 16/9; height: auto; margin: 0 auto; position: relative; overflow: hidden; border: 1px solid #144C43; border-radius: 8px; background: white; }
     
-    .slide-carousel { display: flex; gap: 8px; overflow-x: auto; padding: 12px 0; margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.08); }
-    .carousel-item { min-width: 100px; padding: 8px 12px; border-radius: 8px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: #E4F7EE; cursor: pointer; transition: all .16s; flex-shrink: 0; }
-    .carousel-item:hover { border-color: #73AA87; }
-    .carousel-item.active { border-color: #FF6359; background: rgba(255,99,89,0.12); }
-    .carousel-item .slide-num { font-size: 10px; color: #B6D9C9; }
-    .carousel-item .slide-type { font-size: 12px; font-weight: 600; margin-top: 2px; }
+
+    
+    .slide-carousel-container { display: flex; align-items: center; gap: 12px; padding: 12px 0; margin-top: 16px; border-top: 1px solid rgba(255,255,255,0.08); }
+    .carousel-nav-btn { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #E4F7EE; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .16s; flex-shrink: 0; }
+    .carousel-nav-btn:hover { background: rgba(255,255,255,0.12); border-color: #73AA87; }
+    .carousel-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .carousel-nav-btn svg { width: 16px; height: 16px; }
+    .carousel-slides { display: flex; gap: 10px; overflow: hidden; flex: 1; flex-wrap: wrap; align-content: flex-start; }
+    .carousel-thumb { min-width: 140px; max-width: 180px; padding: 10px; border-radius: 10px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); color: #E4F7EE; cursor: pointer; transition: all .16s; text-align: left; flex: 1; }
+    .carousel-thumb:hover { border-color: #73AA87; background: rgba(115,170,135,0.1); transform: translateY(-1px); }
+    .carousel-thumb.active { border-color: #FF6359; background: rgba(255,99,89,0.12); }
+    .carousel-thumb-num { font-size: 9px; color: #B6D9C9; margin-bottom: 3px; }
+    .carousel-thumb-type { font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
+    .carousel-thumb-label { font-size: 10px; color: #E4F7EE; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+    .carousel-counter { font-size: 12px; color: #B6D9C9; margin-left: auto; flex-shrink: 0; white-space: nowrap; }
+    .carousel-counter strong { color: #E4F7EE; }
     
     .template-info { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
     .template-info h4 { margin: 0 0 8px; font-size: 13px; color: #E4F7EE; }
@@ -110,7 +120,16 @@
             <span class="preview-badge" id="preview-badge">Sample Data</span>
           </div>
           <div class="slide-canvas" id="slide-canvas"></div>
-          <div id="slide-carousel" class="slide-carousel"></div>
+          <div class="slide-carousel-container">
+            <button id="carousel-prev" class="carousel-nav-btn" title="Previous slide">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <div id="slide-carousel" class="carousel-slides"></div>
+            <button id="carousel-next" class="carousel-nav-btn" title="Next slide">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+            <div id="carousel-counter" class="carousel-counter"><strong>1</strong> / 1</div>
+          </div>
           <div id="field-mapping" class="field-mapping"></div>
           <div id="generate-status" class="status"></div>
         </div>
@@ -182,6 +201,8 @@
       document.getElementById('apply-json-btn').addEventListener('click', applyUserJson);
       document.getElementById('generate-btn').addEventListener('click', generatePptx);
       document.getElementById('copy-prompt-btn').addEventListener('click', copyAIPrompt);
+      document.getElementById('carousel-prev').addEventListener('click', () => showSlide(selectedSlideIndex - 1));
+      document.getElementById('carousel-next').addEventListener('click', () => showSlide(selectedSlideIndex + 1));
       document.addEventListener('keydown', handleKeyboardNavigation);
       loadData();
     }
@@ -303,21 +324,23 @@
         if (!Array.isArray(items)) return;
 
         if (structureItem.children) {
+          const childSlideType = presentation.slideTypes[structureItem.childrenType];
+          
           items.forEach(item => {
+            slides.push({
+              type: structureItem.type,
+              data: { ...data, ...item },
+              slideType: slideType
+            });
+
             const children = getDataAtPath(item, structureItem.children);
-            if (Array.isArray(children) && children.length > 0) {
+            if (Array.isArray(children) && childSlideType) {
               children.forEach(child => {
                 slides.push({
-                  type: structureItem.type,
+                  type: structureItem.childrenType,
                   data: { ...data, ...item, ...child },
-                  slideType: slideType
+                  slideType: childSlideType
                 });
-              });
-            } else {
-              slides.push({
-                type: structureItem.type,
-                data: { ...data, ...item },
-                slideType: slideType
               });
             }
           });
@@ -339,13 +362,41 @@
     function renderSlideCarousel() {
       const carousel = document.getElementById('slide-carousel');
       carousel.innerHTML = '';
+      
       currentSlides.forEach((slide, idx) => {
         const item = document.createElement('button');
-        item.className = 'carousel-item' + (idx === selectedSlideIndex ? ' active' : '');
-        item.innerHTML = `<div class="slide-num">${idx + 1} / ${currentSlides.length}</div><div class="slide-type">${formatTypeName(slide.type)}</div>`;
+        item.className = 'carousel-thumb' + (idx === selectedSlideIndex ? ' active' : '');
+        
+        const slideLabel = getSlideLabel(slide);
+        
+        item.innerHTML = `
+          <div class="carousel-thumb-num">Slide ${idx + 1}</div>
+          <div class="carousel-thumb-type">${formatTypeName(slide.type)}</div>
+          <div class="carousel-thumb-label">${slideLabel}</div>
+        `;
         item.addEventListener('click', () => showSlide(idx));
         carousel.appendChild(item);
       });
+      
+      updateCarouselCounter();
+      updateNavButtons();
+    }
+    
+    function getSlideLabel(slide) {
+      const data = slide.data;
+      
+      if (data.title) return data.title;
+      if (data.header_title) return data.header_title;
+      if (data.group_title) return data.group_title;
+      if (data.initiative_title) return data.initiative_title;
+      
+      const typeName = formatTypeName(slide.type);
+      if (typeName === 'Cover') return data.subtitle || 'Cover Slide';
+      if (typeName === 'Agenda') return 'Agenda';
+      if (typeName === 'Roadmap Initiative Group') return data.header_title || typeName;
+      if (typeName === 'Roadmap Initiative') return data.header_title || typeName;
+      
+      return typeName;
     }
 
     function formatTypeName(type) {
@@ -356,16 +407,37 @@
       if (index < 0 || index >= currentSlides.length) return;
       selectedSlideIndex = index;
       
-      document.querySelectorAll('.carousel-item').forEach((item, idx) => {
+      document.querySelectorAll('.carousel-thumb').forEach((item, idx) => {
         item.classList.toggle('active', idx === index);
       });
       
       const slide = currentSlides[index];
-      document.getElementById('preview-title').textContent = `Slide ${index + 1} of ${currentSlides.length}: ${formatTypeName(slide.type)}`;
+      const slideLabel = getSlideLabel(slide);
+      document.getElementById('preview-title').textContent = `Slide ${index + 1} of ${currentSlides.length}: ${slideLabel}`;
       
       renderSlidePreview(slide);
       renderSlideInfo(slide);
       renderFieldMapping(slide);
+      updateNavButtons();
+      updateCarouselCounter();
+      
+      document.getElementById('slide-carousel').scrollTo({
+        top: 0,
+        left: document.querySelector('.carousel-thumb.active')?.offsetLeft - 50 || 0,
+        behavior: 'smooth'
+      });
+    }
+    
+    function updateCarouselCounter() {
+      const counter = document.getElementById('carousel-counter');
+      counter.innerHTML = `<strong>${selectedSlideIndex + 1}</strong> / ${currentSlides.length}`;
+    }
+    
+    function updateNavButtons() {
+      const prevBtn = document.getElementById('carousel-prev');
+      const nextBtn = document.getElementById('carousel-next');
+      prevBtn.disabled = selectedSlideIndex === 0;
+      nextBtn.disabled = selectedSlideIndex === currentSlides.length - 1;
     }
 
     function renderSlidePreview(slide) {
@@ -974,14 +1046,28 @@
 
     function handleKeyboardNavigation(event) {
       if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
-      const activeTag = document.activeElement?.tagName;
-      if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(activeTag)) return;
       if (currentSlides.length === 0) return;
       
+      const activeTag = document.activeElement?.tagName;
+      const activeId = document.activeElement?.id;
+      
+      if (['INPUT', 'TEXTAREA'].includes(activeTag)) return;
+      
+      if (activeTag === 'SELECT') {
+        const selectId = document.activeElement?.closest('select')?.id;
+        if (selectId === 'template-select') return;
+      }
+      
+      event.preventDefault();
+      
       if (event.key === 'ArrowLeft') {
-        showSlide(selectedSlideIndex - 1);
-      } else {
-        showSlide(selectedSlideIndex + 1);
+        if (selectedSlideIndex > 0) {
+          showSlide(selectedSlideIndex - 1);
+        }
+      } else if (event.key === 'ArrowRight') {
+        if (selectedSlideIndex < currentSlides.length - 1) {
+          showSlide(selectedSlideIndex + 1);
+        }
       }
     }
 
@@ -1022,7 +1108,7 @@
         }
         
         const result = await response.json();
-        setGenerateStatus('Downloading...', 'success');
+        setGenerateStatus(`Generating ${result.slideCount || '?'} slides...`, 'success');
         
         const downloadResponse = await fetch(result.downloadUrl);
         const blob = await downloadResponse.blob();

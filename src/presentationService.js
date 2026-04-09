@@ -134,22 +134,24 @@ function expandSlidesFromStructure(presentation, data) {
     const items = getDataAtPath(data, structureItem.dataPath);
     if (!Array.isArray(items)) return;
 
+    const childSlideType = structureItem.childrenType ? presentation.slideTypes[structureItem.childrenType] : null;
+
     if (structureItem.children) {
       items.forEach(item => {
+        expandedSlides.push({
+          type: structureItem.type,
+          data: { ...data, ...item },
+          slideType: slideType
+        });
+
         const children = getDataAtPath(item, structureItem.children);
-        if (Array.isArray(children) && children.length > 0) {
+        if (Array.isArray(children) && childSlideType) {
           children.forEach(child => {
             expandedSlides.push({
-              type: structureItem.type,
+              type: structureItem.childrenType,
               data: { ...data, ...item, ...child },
-              slideType: slideType
+              slideType: childSlideType
             });
-          });
-        } else {
-          expandedSlides.push({
-            type: structureItem.type,
-            data: { ...data, ...item },
-            slideType: slideType
           });
         }
       });
@@ -739,8 +741,36 @@ async function buildPresentation({ inputData, templateFilePath, themeFilePath, o
   return outputFilePath;
 }
 
+async function buildPresentationWithSlides({ expandedSlides, themeFilePath, outputDir, outputPrefix = 'Solon_Generated' }) {
+  const theme = new ThemeManager();
+  theme.loadFromFile(themeFilePath);
+
+  const pres = new pptxgen();
+  pres.layout = 'LAYOUT_16x9';
+  pres.title = 'Generated Presentation';
+  pres.author = 'Solon';
+
+  let pageNum = 1;
+  expandedSlides.forEach(({ type, data, slideType }) => {
+    const slide = pres.addSlide();
+    if (slideType.background) {
+      slide.background = { color: theme.getColor(slideType.background) || slideType.background };
+    }
+    (slideType.components || []).forEach(component => renderComponent(slide, pres, component, data, theme));
+    if (slideType.footer) {
+      addFooter(slide, pres, ++pageNum, theme);
+    }
+  });
+
+  ensureDirectory(outputDir);
+  const outputFilePath = path.join(outputDir, `${formatTimestamp()}_${outputPrefix}.pptx`);
+  await pres.writeFile({ fileName: outputFilePath });
+  return outputFilePath;
+}
+
 module.exports = {
   buildPresentation,
+  buildPresentationWithSlides,
   validateInputData,
   validatePresentationData,
   loadTemplates,
