@@ -98,6 +98,92 @@ function App() {
   }
   const [tagModal, setTagModal] = useState(null)
   
+  // Patch state
+  const [patches, setPatches] = useState([])
+  const [currentPatch, setCurrentPatch] = useState(null)
+  const [patchName, setPatchName] = useState('')
+
+  // Load patches from server
+  useEffect(() => {
+    fetch('/api/patches')
+      .then(res => res.json())
+      .then(data => setPatches(data || []))
+      .catch(() => setPatches([]))
+  }, [])
+
+  // Save patch to server
+  const savePatchToServer = useCallback(async (patch) => {
+    await fetch('/api/patches', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patch })
+    })
+  }, [])
+
+  // Delete patch from server
+  const deletePatchFromServer = useCallback(async (id) => {
+    await fetch(`/api/patches/${id}`, { method: 'DELETE' })
+  }, [])
+
+  // Auto-save patch when tags change
+  useEffect(() => {
+    if (currentPatch && tags.length > 0) {
+      const timeout = setTimeout(() => {
+        const updated = patches.map(p => 
+          p.id === currentPatch 
+            ? { ...p, tags: [...tags], recordSlideIndex: [...recordSlideIndex], updatedAt: new Date().toISOString() }
+            : p
+        )
+        setPatches(updated)
+        savePatchToServer(updated.find(p => p.id === currentPatch))
+      }, 500)
+      return () => clearTimeout(timeout)
+    }
+  }, [tags, recordSlideIndex, currentPatch, patches, savePatchToServer])
+
+  // Create new patch
+  const createPatch = useCallback((name) => {
+    if (!name.trim()) return
+    const newPatch = {
+      id: Date.now(),
+      name: name.trim(),
+      pptxFile: templateFile?.fileName || '',
+      createdAt: new Date().toISOString(),
+      tags: [...tags],
+      recordSlideIndex: [...recordSlideIndex]
+    }
+    const updated = [...patches, newPatch]
+    setPatches(updated)
+    savePatchToServer(newPatch)
+    setCurrentPatch(newPatch.id)
+    setPatchName(name.trim())
+  }, [templateFile, tags, recordSlideIndex, patches, savePatchToServer])
+
+  // Apply patch to current tags
+  const applyPatch = useCallback((patchId) => {
+    const patch = patches.find(p => p.id === patchId)
+    if (patch) {
+      setTags(patch.tags || [])
+      setRecordSlideIndex(patch.recordSlideIndex || [])
+      setCurrentPatch(patch.id)
+      setPatchName(patch.name)
+    }
+  }, [patches])
+
+  // Auto-suggest matching patch when PPTX is loaded
+  useEffect(() => {
+    if (templateFile?.fileName && patches.length > 0) {
+      const matchingPatch = patches.find(p => p.pptxFile === templateFile.fileName)
+      if (matchingPatch) {
+        // Auto-apply if matches
+        setTags(matchingPatch.tags || [])
+        setRecordSlideIndex(matchingPatch.recordSlideIndex || [])
+        setCurrentPatch(matchingPatch.id)
+        setPatchName(matchingPatch.name)
+      }
+    }
+  }, [templateFile, patches])
+  
   // Generation state
   const [recipe, setRecipe] = useState('')
   const [jsonInput, setJsonInput] = useState('')
@@ -436,46 +522,102 @@ function App() {
             ))}
           </div>
           
-          {/* Main layout */}
+          {/* Two column layout */}
           <div className="main-layout">
-            {/* Left sidebar */}
-            <div className="sidebar">
-              <div className="panel-section">
-                <h3>Tagged Fields ({tags.length})</h3>
-                <div className="tagged-list">
-                  {tags.length === 0 ? (
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No fields tagged yet. Click elements on the slide to tag them.</p>
-                  ) : (
-                    tags.map(t => {
-                      const slide = slides.find(s => s.index === t.slideIndex)
-                      const element = slide?.elements.find(e => e.id === t.elementId)
-                      return (
-                        <div 
-                          key={t.elementId} 
-                          className="tagged-item"
-                          onClick={() => element && setTagModal({ element, slideIndex: t.slideIndex, existingTag: t })}
-                        >
-                          <strong>{t.key}</strong>
-                          {t.hint && <span>{t.hint}</span>}
-                          {t.maxChars && <span className="tagged-max">~{t.maxChars} chars</span>}
-                        </div>
-                      )
-                    })
-                  )}
-                </div>
+            {/* Left - Patch Panel */}
+            <div className="patch-panel">
+<h3>Patch</h3>
                 
+              {/* Patch name input */}
+              <div className="patch-name-row">
+                <input 
+                  type="text" 
+                  className="patch-name-input"
+                  value={patchName}
+                  onChange={(e) => setPatchName(e.target.value)}
+                  placeholder="Enter patch name..."
+                />
                 <button 
-                  className="btn btn-secondary" 
-                  onClick={generateRecipe}
-                  disabled={tags.length === 0}
-                  style={{ width: '100%', marginTop: 16 }}
+                  className="btn btn-primary btn-sm"
+                  onClick={() => createPatch(patchName)}
+                  disabled={!patchName.trim() || tags.length === 0}
                 >
-                  Generate Recipe
+                  Save
                 </button>
               </div>
+              
+              {/* Patch selector */}
+              {patches.length > 0 && (
+                <div className="patch-selector">
+                  <select 
+                    value={currentPatch || ''} 
+                    onChange={(e) => applyPatch(Number(e.target.value))}
+                  >
+                    <option value="">Select a patch...</option>
+                    {patches.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} {p.pptxFile ? `(${p.pptxFile})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {currentPatch && (
+                    <button 
+                      className="btn-link"
+                      onClick={async () => {
+                        await deletePatchFromServer(currentPatch)
+                        const updated = patches.filter(p => p.id !== currentPatch)
+                        setPatches(updated)
+                        setCurrentPatch(null)
+                        setPatchName('')
+                      }}
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+              )}
+              
+              {/* Patch data table */}
+              <div className="patch-table">
+                <div className="patch-table-header">
+                  <span>Key</span>
+                  <span>Hint</span>
+                  <span>Max Chars</span>
+                </div>
+                {tags.length === 0 ? (
+                  <div className="patch-empty">
+                    No fields tagged. Click elements on the slide to tag them.
+                  </div>
+                ) : (
+                  tags.map((t, idx) => {
+                    const slide = slides.find(s => s.index === t.slideIndex)
+                    const element = slide?.elements.find(e => e.id === t.elementId)
+                    return (
+                      <div 
+                        key={t.elementId} 
+                        className="patch-row"
+                        onClick={() => element && setTagModal({ element, slideIndex: t.slideIndex, existingTag: t })}
+                      >
+                        <span className="patch-key">{'{{' + t.key + '}}'}</span>
+                        <span className="patch-hint">{t.hint || '—'}</span>
+                        <span className="patch-max">{t.maxChars || '—'}</span>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+              
+              <button 
+                className="btn btn-secondary" 
+                onClick={generateRecipe}
+                disabled={tags.length === 0}
+                style={{ width: '100%', marginTop: 16 }}
+              >
+                Generate Recipe
+              </button>
             </div>
             
-            {/* Center - Large slide preview */}
+            {/* Right - Large slide preview */}
             <div className="workspace">
               <div className="panel-section">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-md)' }}>

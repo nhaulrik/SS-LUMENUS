@@ -9,18 +9,22 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const PORT = 3001;
-const TEMP_DIR = path.join(__dirname, 'temp');
-const OUTPUT_DIR = path.join(__dirname, 'output');
+const PROJECT_ROOT = path.join(__dirname);
+const TEMP_DIR = path.join(PROJECT_ROOT, 'temp');
+const OUTPUT_DIR = path.join(PROJECT_ROOT, 'output');
+const PATCHES_DIR = path.join(PROJECT_ROOT, 'patches');
 const EMU_PER_INCH = 914400;
 
+// Ensure directories exist
 if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
 if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+if (!fs.existsSync(PATCHES_DIR)) fs.mkdirSync(PATCHES_DIR, { recursive: true });
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-// UC-01: Upload and parse PPTX
+// UC-01: Upload PPTX
 app.post('/api/upload-pptx', (req, res) => {
   try {
     const { file, fileName } = req.body;
@@ -75,14 +79,14 @@ app.post('/api/generate-recipe', (req, res) => {
         else if (tag.maxChars === 0) hint += ' (short text)';
         recipe += `      "${tag.key}": "..."${hint}${comma}\n`;
       });
-      recipe += `    }\n    // repeat for each item\n  ]\n`;
+      recipe += `    }\n  ]\n`;
     }
     
     recipe += `}`;
     
     res.json({ ok: true, recipe });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -133,14 +137,14 @@ app.post('/api/validate-json', (req, res) => {
     }
     
     res.json({
-      valid: true,
+      valid: missingFields.length === 0,
       error: null,
       foundFields,
       missingFields,
       recordCount: data.records ? data.records.length : 0
     });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
@@ -150,26 +154,25 @@ app.post('/api/generate-pptx', (req, res) => {
     const { templatePath, tags, jsonData, recordSlideIndex } = req.body;
     
     if (!templatePath || !fs.existsSync(templatePath)) {
-      return res.status(400).json({ error: 'Template not found' });
+      return res.status(400).json({ error: 'Template file not found' });
     }
     
-    const zip = new admZip(templatePath);
-    const slideEntries = zip.getEntries().filter(e => e.entryName.match(/^ppt\/slides\/slide\d+\.xml$/));
+    const buffer = fs.readFileSync(templatePath);
+    const zip = new admZip(buffer);
     
-    const sortedEntries = slideEntries.sort((a, b) => {
-      const numA = parseInt(a.entryName.match(/slide(\d+)\.xml/)[1]);
-      const numB = parseInt(b.entryName.match(/slide(\d+)\.xml/)[1]);
-      return numA - numB;
-    });
+    // Get original slides content
+    const sortedEntries = zip.getEntries()
+      .filter(e => e.entryName.match(/^ppt\/slides\/slide\d+\.xml$/))
+      .sort((a, b) => {
+        const numA = parseInt(a.entryName.match(/slide(\d+)\.xml/)[1]);
+        const numB = parseInt(b.entryName.match(/slide(\d+)\.xml/)[1]);
+        return numA - numB;
+      });
     
-    const generatedSlides = [];
     const baseContent = {};
-    
-    // Inject placeholders
-    for (let slideIdx = 0; slideIdx < sortedEntries.length; slideIdx++) {
-      const entry = sortedEntries[slideIdx];
+    for (const entry of sortedEntries) {
       let content = entry.getData().toString('utf8');
-      const slideNum = slideIdx + 1;
+      const slideNum = parseInt(entry.entryName.match(/slide(\d+)\.xml/)[1]);
       
       const slideTags = tags.filter(t => t.slideIndex === slideNum);
       slideTags.forEach(tag => {
@@ -184,6 +187,7 @@ app.post('/api/generate-pptx', (req, res) => {
     }
     
     // Replace with JSON data
+    const generatedSlides = [];
     for (let slideIdx = 0; slideIdx < sortedEntries.length; slideIdx++) {
       let content = baseContent[slideIdx + 1];
       const slideNum = slideIdx + 1;
@@ -201,7 +205,7 @@ app.post('/api/generate-pptx', (req, res) => {
     }
     
     // Output slides
-    const outputSlides = sortedEntries.map((entry, idx) => {
+    const outputEntries = sortedEntries.map((entry, idx) => {
       const slideNum = idx + 1;
       const gen = generatedSlides.find(g => g.slideIndex === slideNum && g.recordIndex === 1) 
         || generatedSlides.find(g => g.slideIndex === slideNum && g.recordIndex === null);
@@ -229,7 +233,7 @@ app.post('/api/generate-pptx', (req, res) => {
       };
     });
     
-    outputSlides.forEach(({ entry, content }) => {
+    outputEntries.forEach(({ entry, content }) => {
       if (content && entry) {
         entry.setData(Buffer.from(content, 'utf8'));
       }
@@ -258,7 +262,59 @@ app.get('/api/download/:filename', (req, res) => {
   res.download(filePath);
 });
 
-// Parse slides
+// Patch endpoints
+app.get('/api/patches', (req, res) => {
+  try {
+    console.log('PATCHES_DIR:', PATCHES_DIR);
+    if (!fs.existsSync(PATCHES_DIR)) {
+      console.log('Patches dir does not exist');
+      return res.json([]);
+    }
+    const files = fs.readdirSync(PATCHES_DIR);
+    console.log('Files:', files);
+    const patches = files.filter(f => f.endsWith('.json')).map(f => {
+      const data = fs.readFileSync(path.join(PATCHES_DIR, f), 'utf8');
+      return JSON.parse(data);
+    });
+    res.json(patches);
+  } catch (err) {
+    console.error('Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/patches', (req, res) => {
+  try {
+    const { patch } = req.body;
+    if (!patch || !patch.name) {
+      return res.status(400).json({ error: 'Patch name required' });
+    }
+    const filename = `${patch.id}-${patch.name.toLowerCase().replace(/\s+/g, '-')}.json`;
+    fs.writeFileSync(path.join(PATCHES_DIR, filename), JSON.stringify(patch, null, 2));
+    res.json({ ok: true, filename });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/patches/:id', (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const files = fs.readdirSync(PATCHES_DIR).filter(f => f.endsWith('.json'));
+    const file = files.find(f => f.startsWith(`${id}-`));
+    if (file) {
+      fs.unlinkSync(path.join(PATCHES_DIR, file));
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ========================
+// Helper Functions
+// ========================
+
 function parseSlides(zip) {
   const slides = [];
   const slideEntries = zip.getEntries().filter(e => e.entryName.match(/^ppt\/slides\/slide\d+\.xml$/));
@@ -276,7 +332,6 @@ function parseSlides(zip) {
   return slides;
 }
 
-// Extract elements
 function extractSlideElements(xml, slideIndex) {
   if (!xml) {
     return { index: slideIndex, elements: [], background: '#ffffff' };
@@ -349,12 +404,10 @@ function extractSlideElements(xml, slideIndex) {
     let fontColor = '#333333';
     let textAlign = 'left';
 
-    // Find the full txBody block
     const txBodyMatch = shapeXml.match(/<p:txBody[^>]*>([\s\S]*?)<\/p:txBody>/);
     if (txBodyMatch && txBodyMatch[1]) {
       const txBody = txBodyMatch[1];
       
-      // Extract font size from rPr
       const rPrOpenMatch = txBody.match(/<a:rPr([^>]*)>/);
       if (rPrOpenMatch && rPrOpenMatch[1]) {
         const rPrAttrs = rPrOpenMatch[1];
@@ -363,7 +416,6 @@ function extractSlideElements(xml, slideIndex) {
         if (rPrAttrs.includes('b="1"') || rPrAttrs.includes('b="true"')) fontBold = true;
       }
       
-// Extract any color from anywhere in txBody
       const colorMatches = txBody.match(/<a:srgbClr val="([^"]+)"/);
       if (colorMatches) {
         fontColor = '#' + colorMatches[1];
@@ -374,9 +426,7 @@ function extractSlideElements(xml, slideIndex) {
           fontColor = schemeMap[schemeMatch[1]] || '#333333';
         }
       }
-      }
       
-      // Extract paragraph alignment
       const pPrMatch = txBody.match(/<a:pPr([^>]*)/);
       if (pPrMatch && pPrMatch[1]) {
         const algnMatch = pPrMatch[1].match(/algn="(\w+)"/);
@@ -384,8 +434,6 @@ function extractSlideElements(xml, slideIndex) {
       }
     }
 
-// Estimate max characters based on element area and font size
-    // Conservative: ~5 chars per sq inch works well for short titles
     const area = bounds.w * bounds.h;
     const maxChars = Math.floor(area * 5);
     
