@@ -784,6 +784,43 @@ header p {
   color: #FFA59A !important;
 }
 
+/* ============================================================
+   Slide Overlay (for tag elements step)
+   ============================================================ */
+.slide-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.overlay-element {
+  position: absolute;
+  cursor: pointer;
+  pointer-events: auto;
+  border-radius: 2px;
+  transition: all var(--transition-fast);
+}
+
+/* Default tagged state - no highlight, just clickable */
+.overlay-element.tagged {
+  background: transparent;
+  border: none;
+}
+
+/* Highlight when hovering or when highlightedElement is set */
+.overlay-element.tagged:hover,
+.overlay-element.tagged.highlighted {
+  outline: 3px solid var(--accent-primary);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--accent-primary), 0 4px 12px rgba(115, 170, 135, 0.4);
+  z-index: 20;
+  background: rgba(115, 170, 135, 0.2);
+}
+
 .no-text {
   display: flex;
   align-items: center;

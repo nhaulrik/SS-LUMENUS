@@ -861,48 +861,45 @@ function App() {
                 <div className="slide-preview">
                   <div 
                     className="slide-preview-inner"
-                    style={{ backgroundColor: '#ffffff' }}
+                    style={{ backgroundColor: '#ffffff', position: 'relative' }}
                   >
                     {currentSlide.elements.length === 0 ? (
                       <div className="no-elements">No text elements found</div>
                     ) : (
-                      currentSlide.elements.map((elem, idx) => {
-                        const isTagged = taggedElementIds.includes(elem.id)
+                      <>
+                        {/* Realistic slide preview */}
+                        <SlidePreview slide={currentSlide} size="normal" />
                         
-                        const left = Math.max(0, Math.min(95, (elem.bounds.x / 10) * 100))
-                        const top = Math.max(0, Math.min(95, (elem.bounds.y / 5.625) * 100))
-                        const width = Math.max(5, Math.min(50, (elem.bounds.w / 10) * 100))
-                        const height = Math.max(3, Math.min(30, (elem.bounds.h / 5.625) * 100))
-                        
-                        return (
-                          <div
-                            key={idx}
-                            className={`slide-element ${isTagged ? 'tagged' : ''}`}
-                            style={{
-                              left: `${left}%`,
-                              top: `${top}%`,
-                              width: `${width}%`,
-                              height: `${height}%`,
-                              fontSize: `${Math.max(8, elem.fontSize * 0.7)}px`,
-                              fontWeight: elem.fontBold ? 'bold' : 'normal',
-                              color: isTagged ? '#C14A31' : '#000000',
-                              textAlign: elem.textAlign || 'left',
-                              justifyContent: elem.textAlign === 'center' ? 'center' : elem.textAlign === 'right' ? 'flex-end' : 'flex-start',
-                              opacity: isTagged ? 0.7 : 1,
-                              outline: highlightedElement === elem.id ? '3px solid #73AA87' : 'none',
-                              boxShadow: highlightedElement === elem.id ? '0 0 0 4px #73AA87, 0 4px 12px rgba(115, 170, 135, 0.4)' : 'none',
-                              zIndex: highlightedElement === elem.id ? 10 : 1,
-                              backgroundColor: highlightedElement === elem.id ? 'rgba(115, 170, 135, 0.5)' : 'rgba(255,255,255,0.85)',
-                            }}
-                            onClick={() => handleElementClick(elem)}
-                            onMouseEnter={() => isTagged && setHighlightedElement(elem.id)}
-                            onMouseLeave={() => setHighlightedElement(null)}
-                            title={elem.text}
-                          >
-                            {isTagged ? `{{${tags.find(t => t.elementId === elem.id).key}}}` : (elem.text || '').substring(0, 60)}
-                          </div>
-                        )
-                      })
+                        {/* Interaction overlay */}
+                        <div className="slide-overlay">
+                          {currentSlide.elements.map((elem, idx) => {
+                            const isTagged = taggedElementIds.includes(elem.id)
+                            const isHighlighted = highlightedElement === elem.id
+                            
+                            const left = Math.max(0, Math.min(95, (elem.bounds.x / 10) * 100))
+                            const top = Math.max(0, Math.min(95, (elem.bounds.y / 5.625) * 100))
+                            const width = Math.max(5, Math.min(50, (elem.bounds.w / 10) * 100))
+                            const height = Math.max(3, Math.min(30, (elem.bounds.h / 5.625) * 100))
+                            
+                            return (
+                              <div
+                                key={idx}
+                                className={`overlay-element ${isTagged ? 'tagged' : ''} ${isHighlighted ? 'highlighted' : ''}`}
+                                style={{
+                                  left: `${left}%`,
+                                  top: `${top}%`,
+                                  width: `${width}%`,
+                                  height: `${height}%`,
+                                }}
+                                onClick={() => handleElementClick(elem)}
+                                onMouseEnter={() => isTagged && setHighlightedElement(elem.id)}
+                                onMouseLeave={() => setHighlightedElement(null)}
+                                title={isTagged ? tags.find(t => t.elementId === elem.id)?.key : elem.text}
+                              />
+                            )
+                          })}
+                        </div>
+                      </>
                     )}
                   </div>
                 </div>
