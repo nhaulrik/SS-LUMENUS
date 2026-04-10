@@ -19,51 +19,84 @@ const STEP_LABELS = {
 // Renders a preview of a single slide with positioned elements
 // ============================================================
 function SlidePreview({ slide, size = 'normal' }) {
-  const { elements, background, color } = slide
-  
+  const { elements, background } = slide
+
   if (!elements || elements.length === 0) {
     return <div className="preview-empty">{size === 'small' ? '—' : 'No elements'}</div>
   }
 
-  const padding = size === 'small' ? 1 : 3
-  const bgColor = '#ffffff'
-  const scale = size === 'small' ? 0.12 : 0.9
-  
+  // cqw-based font sizing: fontPt / 7.2 gives the correct proportional size
+  // at any canvas width (derived from 1cqw = 0.1" = 7.2pt of slide width).
+  // Thumbnails halve it so text doesn't bleed into neighbours.
+  const fontScale = size === 'small' ? 14.4 : 7.2
+
   return (
-    <div className="slide-preview-canvas" style={{ background: bgColor }}>
+    <div className="slide-preview-canvas" style={{ background: background || '#ffffff' }}>
       {elements.map((el, idx) => {
-        const left = (el.bounds.x / SLIDE_WIDTH) * 100
-        const top = (el.bounds.y / SLIDE_HEIGHT) * 100
-        const width = (el.bounds.w / SLIDE_WIDTH) * 100
+        const left   = (el.bounds.x / SLIDE_WIDTH)  * 100
+        const top    = (el.bounds.y / SLIDE_HEIGHT) * 100
+        const width  = (el.bounds.w / SLIDE_WIDTH)  * 100
         const height = (el.bounds.h / SLIDE_HEIGHT) * 100
-        
-        const elemFontSize = el.fontSize ? Math.round(el.fontSize * scale) : 12
-        
-        const style = {
+
+        const posStyle = {
           position: 'absolute',
-          left: `${left}%`,
-          top: `${top}%`,
-          width: `${width}%`,
-          height: `${height}%`,
-          padding: padding,
-          fontSize: `${elemFontSize}px`,
-          fontWeight: el.fontBold ? 'bold' : 'normal',
-          color: '#000000',
-          overflow: 'hidden',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: el.textAlign === 'center' ? 'center' : el.textAlign === 'right' ? 'flex-end' : 'flex-start',
-          wordBreak: 'break-word',
-          lineHeight: 1.2,
-          textAlign: el.textAlign || 'left',
-          whiteSpace: 'pre-wrap'
+          left:     `${left}%`,
+          top:      `${top}%`,
+          width:    `${width}%`,
+          height:   `${height}%`,
+          overflow: 'hidden'
         }
-        
-        const text = el.text.length > 80 ? el.text.substring(0, 80) + '...' : el.text
-        
+
+        // Decorative shape: render as a plain coloured panel, no text
+        if (el.type === 'rect') {
+          const borderShadow = el.shapeBorder
+            ? `inset 0 0 0 ${Math.max(1, Math.round(el.shapeBorder.widthPt * 0.8))}px ${el.shapeBorder.color}`
+            : undefined
+          return (
+            <div key={idx} style={{
+              ...posStyle,
+              backgroundColor: el.shapeFill || 'transparent',
+              boxShadow: borderShadow
+            }} />
+          )
+        }
+
+        // Text shape
+        const vAlign =
+          el.verticalAlign === 't' ? 'flex-start' :
+          el.verticalAlign === 'b' ? 'flex-end'   : 'center'
+
+        const hAlign =
+          el.textAlign === 'ctr' || el.textAlign === 'center' ? 'center' :
+          el.textAlign === 'r'   || el.textAlign === 'right'  ? 'flex-end' : 'flex-start'
+
+        const borderShadow = el.shapeBorder
+          ? `inset 0 0 0 ${Math.max(1, Math.round(el.shapeBorder.widthPt * 0.8))}px ${el.shapeBorder.color}`
+          : undefined
+
+        const textStyle = {
+          ...posStyle,
+          padding:        size === 'small' ? '1px' : '3px',
+          fontSize:       `${(el.fontSize || 12) / fontScale}cqw`,
+          fontWeight:     el.fontBold      ? 'bold'      : 'normal',
+          fontStyle:      el.fontItalic    ? 'italic'    : 'normal',
+          textDecoration: el.fontUnderline ? 'underline' : 'none',
+          fontFamily:     el.fontFamily    ? `"${el.fontFamily}", sans-serif` : 'inherit',
+          color:          el.fontColor     || '#333333',
+          backgroundColor: el.shapeFill   || 'transparent',
+          boxShadow:      borderShadow,
+          display:        'flex',
+          alignItems:     vAlign,
+          justifyContent: hAlign,
+          wordBreak:      'break-word',
+          lineHeight:     1.2,
+          textAlign:      el.textAlign === 'ctr' ? 'center' : el.textAlign === 'r' ? 'right' : 'left',
+          whiteSpace:     'pre-wrap'
+        }
+
         return (
-          <div key={idx} style={style} title={el.shapeName}>
-            {text}
+          <div key={idx} style={textStyle} title={el.shapeName}>
+            {el.text}
           </div>
         )
       })}
@@ -249,24 +282,6 @@ function App() {
   const deletePatchFromServer = useCallback(async (id) => {
     await fetch(`/api/patches/${id}`, { method: 'DELETE' })
   }, [])
-
-  // Create new patch
-  const createPatch = useCallback((name) => {
-    if (!name.trim()) return
-    const newPatch = {
-      id: Date.now(),
-      name: name.trim(),
-      pptxFile: templateFile?.fileName || '',
-      createdAt: new Date().toISOString(),
-      tags: [...tags],
-      repeatableSlides: [...repeatableSlides]
-    }
-    const updated = [...patches, newPatch]
-    setPatches(updated)
-    savePatchToServer(newPatch)
-    setCurrentPatch(newPatch.id)
-    setPatchName(name.trim())
-  }, [templateFile, tags, repeatableSlides, patches, savePatchToServer])
 
   // Apply patch to current tags
   const applyPatch = useCallback((patchId) => {
@@ -701,9 +716,6 @@ function App() {
                 {(() => {
                   const currentSlideNum = slides[selectedSlide]?.index
                   const slideTags = tags.filter(t => t.slideIndex === currentSlideNum)
-                  const hasAnyAutoGenerate = slideTags.some(t => t.autoGenerate)
-                  const hasAnyNonAutoGenerate = slideTags.some(t => !(t.autoGenerate))
-                  
                   return (
                     <>
                       <div className="patch-table-header">
@@ -887,7 +899,7 @@ function App() {
                             onMouseLeave={() => setHighlightedElement(null)}
                             title={elem.text}
                           >
-                            {isTagged ? `{{${tags.find(t => t.elementId === elem.id).key}}}` : elem.text.substring(0, 60)}
+                            {isTagged ? `{{${tags.find(t => t.elementId === elem.id).key}}}` : (elem.text || '').substring(0, 60)}
                           </div>
                         )
                       })

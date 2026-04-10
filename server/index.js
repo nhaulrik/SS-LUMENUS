@@ -579,14 +579,25 @@ function extractSlideElements(xml, slideIndex) {
     background: '#ffffff'
   };
 
+  const bgSchemeMap = {
+    dk1: '#000000', dk2: '#44546A', lt1: '#FFFFFF', lt2: '#E7E6E6',
+    accent1: '#4472C4', accent2: '#ED7D31', accent3: '#A9D18E',
+    accent4: '#FFC000', accent5: '#5B9BD5', accent6: '#70AD47',
+    bg1: '#FFFFFF', bg2: '#E7E6E6'
+  };
   const bgMatch = xml.match(/<p:bg>([\s\S]*?)<\/p:bg>/);
   if (bgMatch) {
-    const srgbMatch = bgMatch[1].match(/<a:srgbClr val="([^"]+)"/);
+    const srgbMatch = bgMatch[1].match(/<a:srgbClr val="([0-9A-Fa-f]{6})"/);
     if (srgbMatch) {
       slide.background = '#' + srgbMatch[1];
     } else {
-      const prstMatch = bgMatch[1].match(/<a:prstClr val="(\w+)"/);
-      if (prstMatch) slide.background = getPresetColor(prstMatch[1]);
+      const schemeMatch = bgMatch[1].match(/<a:schemeClr val="([^"]+)"/);
+      if (schemeMatch) {
+        slide.background = bgSchemeMap[schemeMatch[1]] || '#FFFFFF';
+      } else {
+        const prstMatch = bgMatch[1].match(/<a:prstClr val="(\w+)"/);
+        if (prstMatch) slide.background = getPresetColor(prstMatch[1]);
+      }
     }
   }
 
@@ -594,21 +605,35 @@ function extractSlideElements(xml, slideIndex) {
   const shapesToCheck = spTreeMatch ? spTreeMatch[1] : xml;
   const shapeMatches = shapesToCheck.match(/<p:sp>([\s\S]*?)<\/p:sp>/g) || [];
   
+  // Full Office theme palette (defined once, used by resolveColor below)
+  const schemeMap = {
+    dk1: '#000000', dk2: '#44546A',
+    lt1: '#FFFFFF', lt2: '#E7E6E6',
+    accent1: '#4472C4', accent2: '#ED7D31', accent3: '#A9D18E',
+    accent4: '#FFC000', accent5: '#5B9BD5', accent6: '#70AD47',
+    tx1: '#000000', tx2: '#44546A',
+    bg1: '#FFFFFF', bg2: '#E7E6E6',
+    hlink: '#0563C1', folHlink: '#954F72'
+  };
+
+  const resolveColor = (xml) => {
+    const srgb = xml.match(/<a:srgbClr val="([0-9A-Fa-f]{6})"/);
+    if (srgb) return '#' + srgb[1];
+    const scheme = xml.match(/<a:schemeClr val="([^"]+)"/);
+    if (scheme) return schemeMap[scheme[1]] || '#333333';
+    return null;
+  };
+
   for (let i = 0; i < shapeMatches.length; i++) {
     const shapeXml = shapeMatches[i];
-    const textMatches = shapeXml.match(/<a:t>([^<]*)<\/a:t>/g);
-    
-    if (!textMatches || textMatches.length === 0) continue;
-    
-    const textContent = textMatches.map(t => t.replace(/<[^>]+>/g, '')).join(' ');
-    if (!textContent.trim()) continue;
-    
+
+    // --- Extract bounds (needed for both rect and text elements) ---
     let bounds = { x: 0.5, y: 0.5, w: 2, h: 0.5 };
     let xfrmContent = '';
-    
+
     const xfrmMatch = shapeXml.match(/<p:xfrm>([\s\S]*?)<\/p:xfrm>/);
     if (xfrmMatch) xfrmContent = xfrmMatch[1];
-    
+
     if (!xfrmContent) {
       const spPrMatch = shapeXml.match(/<p:spPr>([\s\S]*?)<\/p:spPr>/);
       if (spPrMatch) {
@@ -616,11 +641,10 @@ function extractSlideElements(xml, slideIndex) {
         if (axfrmMatch) xfrmContent = axfrmMatch[1];
       }
     }
-    
+
     if (xfrmContent) {
       const offMatch = xfrmContent.match(/<a:off\s+x="(\d+)"\s+y="(\d+)"/);
       const extMatch = xfrmContent.match(/<a:ext\s+cx="(\d+)"\s+cy="(\d+)"/);
-      
       if (offMatch && extMatch) {
         bounds = {
           x: parseInt(offMatch[1]) / EMU_PER_INCH,
@@ -631,57 +655,139 @@ function extractSlideElements(xml, slideIndex) {
       }
     }
 
+    // --- Extract shape fill and border (needed for both rect and text elements) ---
+    let shapeFill = null;
+    let shapeBorder = null;
+    const spPrMatch2 = shapeXml.match(/<p:spPr>([\s\S]*?)<\/p:spPr>/);
+    if (spPrMatch2) {
+      const spPr = spPrMatch2[1];
+
+      // Solid fill
+      const solidFillMatch = spPr.match(/<a:solidFill>([\s\S]*?)<\/a:solidFill>/);
+      if (solidFillMatch) {
+        shapeFill = resolveColor(solidFillMatch[1]);
+      } else {
+        // Gradient: use the first stop colour as an approximation
+        const gradStopMatch = spPr.match(/<a:gs\s+pos="\d+">([\s\S]*?)<\/a:gs>/);
+        if (gradStopMatch) shapeFill = resolveColor(gradStopMatch[1]);
+      }
+
+      // Border / outline  (<a:ln w="EMUs">)
+      const lnMatch = spPr.match(/<a:ln\b([^>]*)>([\s\S]*?)<\/a:ln>/);
+      if (lnMatch) {
+        const wMatch = lnMatch[1].match(/\bw="(\d+)"/);
+        const lnWidthPt = wMatch ? parseInt(wMatch[1]) / 12700 : 1;
+        const lnSolidMatch = lnMatch[2].match(/<a:solidFill>([\s\S]*?)<\/a:solidFill>/);
+        if (lnSolidMatch) {
+          const lnColor = resolveColor(lnSolidMatch[1]);
+          if (lnColor) shapeBorder = { color: lnColor, widthPt: lnWidthPt };
+        }
+      }
+    }
+
+    // --- Determine whether this shape has visible text ---
+    const textMatches = shapeXml.match(/<a:t>([^<]*)<\/a:t>/g);
+    const textContent = textMatches
+      ? textMatches.map(t => t.replace(/<[^>]+>/g, '')).join(' ')
+      : '';
+    const hasText = textContent.trim().length > 0;
+
+    if (!hasText) {
+      // No text: emit a rect element only if it has a fill or border (otherwise invisible — skip)
+      if (!shapeFill && !shapeBorder) continue;
+      slide.elements.push({
+        type: 'rect',
+        id: `slide${slideIndex}-rect${i}`,
+        bounds,
+        shapeFill,
+        shapeBorder
+      });
+      continue;
+    }
+
+    // --- Text shape: extract all font/style properties ---
     let shapeName = `text_${i}`;
     const cNvPrMatch = shapeXml.match(/<p:cNvPr\s+id="\d+"\s+name="([^"]+)"/);
     if (cNvPrMatch) shapeName = cNvPrMatch[1];
 
     let fontSize = 14;
     let fontBold = false;
+    let fontItalic = false;
+    let fontUnderline = false;
+    let fontFamily = null;
     let fontColor = '#333333';
     let textAlign = 'left';
+    let verticalAlign = 'ctr';
 
-    const txBodyMatch = shapeXml.match(/<p:txBody[^>]*>([\s\S]*?)<\/p:txBody>/);
+    const txBodyMatch = shapeXml.match(/<p:txBody>([\s\S]*?)<\/p:txBody>/);
     if (txBodyMatch && txBodyMatch[1]) {
       const txBody = txBodyMatch[1];
-      
-      const rPrOpenMatch = txBody.match(/<a:rPr([^>]*)>/);
-      if (rPrOpenMatch && rPrOpenMatch[1]) {
-        const rPrAttrs = rPrOpenMatch[1];
-        const szMatch = rPrAttrs.match(/sz="(\d+)"/);
-        if (szMatch) fontSize = parseInt(szMatch[1]) / 100;
-        if (rPrAttrs.includes('b="1"') || rPrAttrs.includes('b="true"')) fontBold = true;
+
+      // Vertical alignment from <a:bodyPr anchor="">
+      const bodyPrMatch = txBody.match(/<a:bodyPr([^>]*)/);
+      if (bodyPrMatch) {
+        const anchorMatch = bodyPrMatch[1].match(/anchor="(\w+)"/);
+        if (anchorMatch) verticalAlign = anchorMatch[1];
       }
-      
-      const colorMatches = txBody.match(/<a:srgbClr val="([^"]+)"/);
-      if (colorMatches) {
-        fontColor = '#' + colorMatches[1];
-      } else {
-        const schemeMatch = txBody.match(/<a:schemeClr val="([^"]+)"/);
-        if (schemeMatch) {
-          const schemeMap = { tx1: '#000000', tx2: '#44546a', tx3: '#4472c4' };
-          fontColor = schemeMap[schemeMatch[1]] || '#333333';
-        }
-      }
-      
+
+      // Paragraph alignment from first <a:pPr>
       const pPrMatch = txBody.match(/<a:pPr([^>]*)/);
-      if (pPrMatch && pPrMatch[1]) {
+      if (pPrMatch) {
         const algnMatch = pPrMatch[1].match(/algn="(\w+)"/);
         if (algnMatch) textAlign = algnMatch[1];
+      }
+
+      // Font properties from first <a:rPr>; fall back to <a:defRPr>
+      const rPrMatch = txBody.match(/<a:rPr([^/]*?)(?:\/>|>([\s\S]*?)<\/a:rPr>)/);
+      if (rPrMatch) {
+        const attrs = rPrMatch[1];
+        const inner = rPrMatch[2] || '';
+        const szMatch = attrs.match(/sz="(\d+)"/);
+        if (szMatch) fontSize = parseInt(szMatch[1]) / 100;
+        if (attrs.includes('b="1"') || attrs.includes('b="true"')) fontBold = true;
+        if (attrs.includes('i="1"') || attrs.includes('i="true"')) fontItalic = true;
+        const uAttr = attrs.match(/\bu="([^"]+)"/);
+        if (uAttr && uAttr[1] !== 'none') fontUnderline = true;
+        const latinMatch = inner.match(/<a:latin typeface="([^"]+)"/);
+        if (latinMatch && !latinMatch[1].startsWith('+')) fontFamily = latinMatch[1];
+        const clr = resolveColor(inner);
+        if (clr) fontColor = clr;
+      }
+
+      // If no color found in rPr, try defRPr
+      if (fontColor === '#333333') {
+        const defRPrMatch = txBody.match(/<a:defRPr([^/]*?)(?:\/>|>([\s\S]*?)<\/a:defRPr>)/);
+        if (defRPrMatch) {
+          const inner = defRPrMatch[2] || '';
+          if (!fontFamily) {
+            const latinMatch = inner.match(/<a:latin typeface="([^"]+)"/);
+            if (latinMatch && !latinMatch[1].startsWith('+')) fontFamily = latinMatch[1];
+          }
+          const clr = resolveColor(inner);
+          if (clr) fontColor = clr;
+        }
       }
     }
 
     const area = bounds.w * bounds.h;
     const maxChars = Math.floor(area * 5);
-    
+
     slide.elements.push({
+      type: 'text',
       id: `slide${slideIndex}-elem${i}`,
       shapeName,
       text: textContent,
       bounds,
       fontSize,
       fontBold,
+      fontItalic,
+      fontUnderline,
+      fontFamily,
       fontColor,
       textAlign,
+      verticalAlign,
+      shapeFill,
+      shapeBorder,
       maxChars
     });
   }

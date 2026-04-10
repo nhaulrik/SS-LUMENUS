@@ -1107,6 +1107,7 @@ header p {
   aspect-ratio: 16/9;
   border-radius: 2px;
   overflow: hidden;
+  container-type: inline-size; /* enables cqw units for proportional font sizing */
 }
 
 .preview-empty {
