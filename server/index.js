@@ -273,20 +273,16 @@ app.get('/api/download/:filename', (req, res) => {
 // Patch endpoints
 app.get('/api/patches', (req, res) => {
   try {
-    console.log('PATCHES_DIR:', PATCHES_DIR);
     if (!fs.existsSync(PATCHES_DIR)) {
-      console.log('Patches dir does not exist');
       return res.json([]);
     }
     const files = fs.readdirSync(PATCHES_DIR);
-    console.log('Files:', files);
     const patches = files.filter(f => f.endsWith('.json')).map(f => {
       const data = fs.readFileSync(path.join(PATCHES_DIR, f), 'utf8');
       return JSON.parse(data);
     });
     res.json(patches);
   } catch (err) {
-    console.error('Error:', err);
     res.status(500).json({ error: err.message });
   }
 });

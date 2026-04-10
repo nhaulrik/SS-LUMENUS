@@ -3,7 +3,6 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 // ============================================================
 // Constants
 // ============================================================
-const EMU_PER_PIXEL = 914400 / 96
 const SLIDE_WIDTH = 10 // inches
 const SLIDE_HEIGHT = 5.625 // inches
 

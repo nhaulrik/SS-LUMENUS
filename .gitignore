@@ -7,6 +7,12 @@ yarn-error.log
 # PowerPoint output
 *.pptx
 
+# Build output
+client/dist/
+server/temp/
+server/output/
+output/
+
 # Environment / config
 .env
 .env.local
