@@ -140,6 +140,46 @@ function App() {
     })
   }, [])
 
+  // Auto-create tags from slide elements when entering tag step
+  useEffect(() => {
+    if (step === 'tag' && slides.length > 0 && tags.length === 0) {
+      const autoTags = []
+      slides.forEach(slide => {
+        slide.elements.forEach(elem => {
+          if (elem.text && elem.text.trim()) {
+            const key = elem.text.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').substring(0, 20)
+            autoTags.push({
+              elementId: elem.id,
+              key: key || 'field',
+              hint: elem.text.trim(),
+              slideIndex: slide.index,
+              originalText: elem.text,
+              maxChars: elem.maxChars
+            })
+          }
+        })
+      })
+      if (autoTags.length > 0) {
+        setTags(autoTags)
+        
+        // Auto-create and save a patch
+        const patchName = templateFile?.fileName ? templateFile.fileName.replace('.pptx', '') + '_auto' : 'auto_patch'
+        const newPatch = {
+          id: Date.now(),
+          name: patchName,
+          pptxFile: templateFile?.fileName || '',
+          createdAt: new Date().toISOString(),
+          tags: autoTags,
+          recordSlideIndex: []
+        }
+        setPatches(prev => [...prev, newPatch])
+        setCurrentPatch(newPatch.id)
+        setPatchName(patchName)
+        savePatchToServer(newPatch)
+      }
+    }
+  }, [step, slides, tags.length, templateFile, savePatchToServer, setPatches, setCurrentPatch, setPatchName])
+
   // Delete patch from server
   const deletePatchFromServer = useCallback(async (id) => {
     await fetch(`/api/patches/${id}`, { method: 'DELETE' })
@@ -155,7 +195,10 @@ function App() {
             : p
         )
         setPatches(updated)
-        savePatchToServer(updated.find(p => p.id === currentPatch))
+        const patchToSave = updated.find(p => p.id === currentPatch)
+        if (patchToSave) {
+          savePatchToServer(patchToSave)
+        }
       }, 500)
       return () => clearTimeout(timeout)
     }
@@ -551,13 +594,6 @@ function App() {
                   onChange={(e) => setPatchName(e.target.value)}
                   placeholder="Enter patch name..."
                 />
-                <button 
-                  className="btn btn-primary btn-sm"
-                  onClick={() => createPatch(patchName)}
-                  disabled={!patchName.trim() || tags.length === 0}
-                >
-                  Save
-                </button>
               </div>
               
               {/* Patch selector */}
@@ -591,34 +627,53 @@ function App() {
                 </div>
               )}
               
-              {/* Patch data table */}
+{/* Patch data table */}
               <div className="patch-table">
                 <div className="patch-table-header">
                   <span>Key</span>
                   <span>Hint</span>
-                  <span>Max Chars</span>
+                  <span>Max</span>
                 </div>
-                {tags.length === 0 ? (
-                  <div className="patch-empty">
-                    No fields tagged. Click elements on the slide to tag them.
-                  </div>
-                ) : (
-                  tags.map((t, idx) => {
+                {(() => {
+                  const currentSlideNum = slides[selectedSlide]?.index
+                  const slideTags = tags.filter(t => t.slideIndex === currentSlideNum)
+                  
+                  if (slideTags.length === 0) {
+                    return (
+                      <div className="patch-empty">
+                        No fields tagged on this slide. Click elements to tag them.
+                      </div>
+                    )
+                  }
+                  
+                  return slideTags.map((t) => {
                     const slide = slides.find(s => s.index === t.slideIndex)
                     const element = slide?.elements.find(e => e.id === t.elementId)
                     return (
                       <div 
                         key={t.elementId} 
                         className="patch-row"
-                        onClick={() => element && setTagModal({ element, slideIndex: t.slideIndex, existingTag: t })}
                       >
                         <span className="patch-key">{'{{' + t.key + '}}'}</span>
-                        <span className="patch-hint">{t.hint || '—'}</span>
+                        <input 
+                          className="patch-hint-input"
+                          defaultValue={t.hint || ''}
+                          placeholder={element?.text || ''}
+                          onChange={(e) => {
+                            const newTags = tags.map(tag => 
+                              tag.elementId === t.elementId 
+                                ? { ...tag, hint: e.target.value }
+                                : tag
+                            )
+                            setTags(newTags)
+                          }}
+                          onBlur={() => updatePatch && updatePatch()}
+                        />
                         <span className="patch-max">{t.maxChars || '—'}</span>
                       </div>
                     )
                   })
-                )}
+                })()}
               </div>
               
               <button 

@@ -68,7 +68,7 @@ body {
    Layout & Container
    ============================================================ */
 .app {
-  max-width: 1400px;
+  max-width: 1500px;
   margin: 0 auto;
   padding: var(--space-xl);
   min-height: 100vh;
@@ -434,14 +434,13 @@ header p {
 
 .patch-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 70px;
+  grid-template-columns: 1fr 1.5fr 50px;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
   background: var(--bg-primary);
   border-top: 1px solid var(--border-subtle);
   font-size: 0.85rem;
-  cursor: pointer;
-  transition: background 0.15s;
+  align-items: center;
 }
 
 .patch-row:hover {
@@ -453,7 +452,26 @@ header p {
   font-family: monospace;
 }
 
-.patch-hint {
+.patch-hint-input {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  width: 100%;
+}
+
+.patch-hint-input:hover {
+  border-color: var(--border-default);
+}
+
+.patch-hint-input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
   color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
