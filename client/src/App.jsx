@@ -231,13 +231,37 @@ function App() {
       // Check if a patch already exists for this file
       const existingPatch = patches.find(p => p.pptxFile === templateFile?.fileName)
       if (existingPatch) {
-        // Apply existing patch instead of creating new one
-        setTags(existingPatch.tags || [])
+        // Merge existing patch with new elements from current slides
+        const existingTagIds = new Set(existingPatch.tags.map(t => t.elementId))
+        
+        // Add any new elements that don't exist in the patch
+        const newTags = []
+        slides.forEach(slide => {
+          slide.elements.forEach(elem => {
+            if (elem.text && elem.text.trim() && !existingTagIds.has(elem.id)) {
+              const key = elem.text.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+              newTags.push({
+                elementId: elem.id,
+                key: key || 'field',
+                hint: elem.text.trim(),
+                slideIndex: slide.index,
+                originalText: elem.text,
+                maxChars: elem.maxChars,
+                autoGenerate: false
+              })
+            }
+          })
+        })
+        
+        // Combine existing tags with new ones
+        const mergedTags = [...(existingPatch.tags || []), ...newTags]
+        
+        setTags(mergedTags)
         setRepeatableSlides(existingPatch.repeatableSlides || [])
         setCurrentPatch(existingPatch.id)
         setPatchName(existingPatch.name)
         setGlobalPrompt(existingPatch.globalPrompt || '')
-        lastSavedPatchRef.current = JSON.stringify({ tags: existingPatch.tags, repeatableSlides: existingPatch.repeatableSlides || [], globalPrompt: existingPatch.globalPrompt || '' })
+        lastSavedPatchRef.current = JSON.stringify({ tags: mergedTags, repeatableSlides: existingPatch.repeatableSlides || [], globalPrompt: existingPatch.globalPrompt || '' })
         return
       }
       
@@ -292,32 +316,81 @@ function App() {
   // Apply patch to current tags
   const applyPatch = useCallback((patchId) => {
     const patch = patches.find(p => p.id === patchId)
-    if (patch) {
-      setTags(patch.tags || [])
+    if (patch && slides.length > 0) {
+      // Merge existing patch with new elements from current slides
+      const existingTagIds = new Set(patch.tags.map(t => t.elementId))
+      
+      // Add any new elements that don't exist in the patch
+      const newTags = []
+      slides.forEach(slide => {
+        slide.elements.forEach(elem => {
+          if (elem.text && elem.text.trim() && !existingTagIds.has(elem.id)) {
+            const key = elem.text.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+            newTags.push({
+              elementId: elem.id,
+              key: key || 'field',
+              hint: elem.text.trim(),
+              slideIndex: slide.index,
+              originalText: elem.text,
+              maxChars: elem.maxChars,
+              autoGenerate: false
+            })
+          }
+        })
+      })
+      
+      // Combine existing tags with new ones
+      const mergedTags = [...(patch.tags || []), ...newTags]
+      
+      setTags(mergedTags)
       setRepeatableSlides(patch.repeatableSlides || [])
       setCurrentPatch(patch.id)
       setPatchName(patch.name)
       setGlobalPrompt(patch.globalPrompt || '')
-      lastSavedPatchRef.current = JSON.stringify({ tags: patch.tags, repeatableSlides: patch.repeatableSlides || [], globalPrompt: patch.globalPrompt || '' })
+      lastSavedPatchRef.current = JSON.stringify({ tags: mergedTags, repeatableSlides: patch.repeatableSlides || [], globalPrompt: patch.globalPrompt || '' })
     }
-  }, [patches])
+  }, [patches, slides])
 
   // Auto-suggest matching patch when PPTX is loaded
   useEffect(() => {
     if (templateFile?.fileName && patches.length > 0) {
       const matchingPatch = patches.find(p => p.pptxFile === templateFile.fileName)
-      if (matchingPatch) {
-        // Auto-apply if matches
-        setTags(matchingPatch.tags || [])
+      if (matchingPatch && slides.length > 0) {
+        // Merge existing patch with new elements from current slides
+        const existingTagIds = new Set(matchingPatch.tags.map(t => t.elementId))
+        
+        // Add any new elements that don't exist in the patch
+        const newTags = []
+        slides.forEach(slide => {
+          slide.elements.forEach(elem => {
+            if (elem.text && elem.text.trim() && !existingTagIds.has(elem.id)) {
+              const key = elem.text.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+              newTags.push({
+                elementId: elem.id,
+                key: key || 'field',
+                hint: elem.text.trim(),
+                slideIndex: slide.index,
+                originalText: elem.text,
+                maxChars: elem.maxChars,
+                autoGenerate: false
+              })
+            }
+          })
+        })
+        
+        // Combine existing tags with new ones
+        const mergedTags = [...(matchingPatch.tags || []), ...newTags]
+        
+        setTags(mergedTags)
         setRepeatableSlides(matchingPatch.repeatableSlides || [])
         setCurrentPatch(matchingPatch.id)
         setPatchName(matchingPatch.name)
         setGlobalPrompt(matchingPatch.globalPrompt || '')
         // Initialize ref to prevent re-saving the loaded patch
-        lastSavedPatchRef.current = JSON.stringify({ tags: matchingPatch.tags, repeatableSlides: matchingPatch.repeatableSlides, globalPrompt: matchingPatch.globalPrompt || '' })
+        lastSavedPatchRef.current = JSON.stringify({ tags: mergedTags, repeatableSlides: matchingPatch.repeatableSlides, globalPrompt: matchingPatch.globalPrompt || '' })
       }
     }
-  }, [templateFile, patches])
+  }, [templateFile, patches, slides])
   
   // Generation state
   const [recipe, setRecipe] = useState('')

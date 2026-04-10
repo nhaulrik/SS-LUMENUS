@@ -275,12 +275,30 @@
       "autoGenerate": true
     },
     {
+      "elementId": "slide2-elem30",
+      "key": "features_in_initiative",
+      "hint": "Features in initiative",
+      "slideIndex": 2,
+      "originalText": "Features in initiative",
+      "maxChars": 46,
+      "autoGenerate": false
+    },
+    {
       "elementId": "slide2-elem11",
-      "key": "23200",
+      "key": "total original estimate",
       "hint": "total of final original estimate",
       "slideIndex": 2,
       "originalText": "~23,200",
       "maxChars": 11,
+      "autoGenerate": true
+    },
+    {
+      "elementId": "slide2-elem29",
+      "key": "irm1234__some_feature__1000h",
+      "hint": "List all features that belong to the initiative group. The sum of \"final original estimate\" of these features must be the same as what is displayed in the \"total original estimate\" element.",
+      "slideIndex": 2,
+      "originalText": "IRM-1234 – some feature – 1000H",
+      "maxChars": 1088,
       "autoGenerate": true
     }
   ],
@@ -296,6 +314,6 @@
       "structureType": "initiative detail"
     }
   ],
-  "globalPrompt": "for business scopes, use bullets and highlight the value that the business will get from the iniative.",
-  "updatedAt": "2026-04-10T16:32:09.616Z"
+  "globalPrompt": "for business scopes, use bullets and highlight the value that the business will get from the iniative.\n\nCorrect metrics and counts are important.",
+  "updatedAt": "2026-04-10T16:45:36.919Z"
 }

@@ -112,7 +112,7 @@ ${globalPromptSection}GENERATE THE FOLLOWING DATA:
         recipe += `    "${dataKey}": [\n`;
         
         // Show example instance with structure_type
-        recipe += `      // CUSTOM PROMPT ${rf.customPrompt || 'instances of this slide type'}\n`;
+        recipe += `      // CUSTOM PROMPT: ${rf.customPrompt || 'instances of this slide type'}\n`;
         recipe += `      {\n`;
         recipe += `        "structure_type": "${rf.structureType}",\n`;
         
