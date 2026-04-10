@@ -104,6 +104,7 @@ function App() {
   const [templateFile, setTemplateFile] = useState(null)
   const [slides, setSlides] = useState([])
   const [selectedSlide, setSelectedSlide] = useState(0)
+  const [highlightedElement, setHighlightedElement] = useState(null)
   
   // Tags state
   const [tags, setTags] = useState([])
@@ -648,65 +649,88 @@ function App() {
               
 {/* Patch data table */}
               <div className="patch-table">
-                <div className="patch-table-header">
-                  <span>Key</span>
-                  <span>AI</span>
-                  <span>Hint</span>
-                  <span>Max</span>
-                </div>
                 {(() => {
                   const currentSlideNum = slides[selectedSlide]?.index
                   const slideTags = tags.filter(t => t.slideIndex === currentSlideNum)
+                  const hasAnyAutoGenerate = slideTags.some(t => t.autoGenerate)
+                  const hasAnyNonAutoGenerate = slideTags.some(t => !(t.autoGenerate))
                   
-                  if (slideTags.length === 0) {
-                    return (
-                      <div className="patch-empty">
-                        No fields tagged on this slide. Click elements to tag them.
+                  return (
+                    <>
+                      <div className="patch-table-header">
+                        <span style={{ width: '40px' }}>AI</span>
+                        <span>Hint</span>
+                        <span>Content</span>
+                        <span style={{ width: '40px' }}>Max</span>
                       </div>
-                    )
-                  }
-                  
-                  return slideTags.map((t) => {
-                    const slide = slides.find(s => s.index === t.slideIndex)
-                    const element = slide?.elements.find(e => e.id === t.elementId)
-                    return (
-                      <div 
-                        key={t.elementId} 
-                        className="patch-row"
-                      >
-                        <span className="patch-key">{'{{' + t.key + '}}'}</span>
-                        <input 
-                          type="checkbox"
-                          checked={t.autoGenerate ?? false}
-                          onChange={(e) => {
-                            const newTags = tags.map(tag => 
-                              tag.elementId === t.elementId 
-                                ? { ...tag, autoGenerate: e.target.checked }
-                                : tag
+                      
+                      {slideTags.length === 0 ? (
+                        <div className="patch-empty">
+                          No fields tagged on this slide. Click elements to tag them.
+                        </div>
+                      ) : (
+                        <div className="patch-table-body">
+                          {slideTags.map((t) => {
+                            const slide = slides.find(s => s.index === t.slideIndex)
+                            const element = slide?.elements.find(e => e.id === t.elementId)
+                            const isAutoGenerate = t.autoGenerate ?? false
+                            return (
+                              <div 
+                                key={t.elementId} 
+                                className="patch-row"
+                                onMouseEnter={() => setHighlightedElement(t.elementId)}
+                                onMouseLeave={() => setHighlightedElement(null)}
+                                onClick={() => setHighlightedElement(t.elementId)}
+                                style={{ 
+                                  cursor: 'pointer',
+                                  background: highlightedElement === t.elementId ? 'rgba(255, 195, 0, 0.2)' : undefined
+                                }}
+                              >
+                                <label className="toggle-switch">
+                                  <input 
+                                    type="checkbox"
+                                    checked={isAutoGenerate}
+                                    onChange={(e) => {
+                                      const newTags = tags.map(tag => 
+                                        tag.elementId === t.elementId 
+                                          ? { ...tag, autoGenerate: e.target.checked }
+                                          : tag
+                                      )
+                                      setTags(newTags)
+                                      triggerSave(newTags, recordSlideIndex)
+                                    }}
+                                  />
+                                  <span className="toggle-slider"></span>
+                                </label>
+                                {isAutoGenerate ? (
+                                  <input 
+                                    className="patch-hint-input"
+                                    defaultValue={t.hint || ''}
+                                    placeholder="Enter hint for AI..."
+                                    onChange={(e) => {
+                                      const newTags = tags.map(tag => 
+                                        tag.elementId === t.elementId 
+                                          ? { ...tag, hint: e.target.value }
+                                          : tag
+                                      )
+                                      setTags(newTags)
+                                      triggerSave(newTags, recordSlideIndex)
+                                    }}
+                                  />
+                                ) : (
+                                  <span className="patch-dash">—</span>
+                                )}
+                                <span className="patch-content" title={element?.text || ''}>
+                                  {element?.text?.substring(0, 40) || t.originalText?.substring(0, 40) || '—'}
+                                </span>
+                                <span className="patch-max">{t.maxChars || '—'}</span>
+                              </div>
                             )
-                            setTags(newTags)
-                            triggerSave(newTags, recordSlideIndex)
-                          }}
-                          title="Check to have AI generate this value"
-                        />
-                        <input 
-                          className="patch-hint-input"
-                          defaultValue={t.hint || ''}
-                          placeholder={element?.text || ''}
-                          onChange={(e) => {
-                            const newTags = tags.map(tag => 
-                              tag.elementId === t.elementId 
-                                ? { ...tag, hint: e.target.value }
-                                : tag
-                            )
-                            setTags(newTags)
-                            triggerSave(newTags, recordSlideIndex)
-                          }}
-                        />
-                        <span className="patch-max">{t.maxChars || '—'}</span>
-                      </div>
-                    )
-                  })
+                          })}
+                        </div>
+                      )}
+                    </>
+                  )
                 })()}
               </div>
               
@@ -765,8 +789,14 @@ function App() {
                               textAlign: elem.textAlign || 'left',
                               justifyContent: elem.textAlign === 'center' ? 'center' : elem.textAlign === 'right' ? 'flex-end' : 'flex-start',
                               opacity: isTagged ? 0.7 : 1,
+                              outline: highlightedElement === elem.id ? '3px solid #73AA87' : 'none',
+                              boxShadow: highlightedElement === elem.id ? '0 0 0 4px #73AA87, 0 4px 12px rgba(115, 170, 135, 0.4)' : 'none',
+                              zIndex: highlightedElement === elem.id ? 10 : 1,
+                              backgroundColor: highlightedElement === elem.id ? 'rgba(115, 170, 135, 0.5)' : 'rgba(255,255,255,0.85)',
                             }}
                             onClick={() => handleElementClick(elem)}
+                            onMouseEnter={() => isTagged && setHighlightedElement(elem.id)}
+                            onMouseLeave={() => setHighlightedElement(null)}
                             title={elem.text}
                           >
                             {isTagged ? `{{${tags.find(t => t.elementId === elem.id).key}}}` : elem.text.substring(0, 60)}

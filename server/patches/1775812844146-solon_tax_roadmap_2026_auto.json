@@ -1,13 +1,13 @@
 {
-  "id": 1775810407100,
+  "id": 1775812844146,
   "name": "solon_tax_roadmap_2026_auto",
   "pptxFile": "solon_tax_roadmap_2026.pptx",
-  "createdAt": "2026-04-10T08:40:07.100Z",
+  "createdAt": "2026-04-10T09:20:44.146Z",
   "tags": [
     {
       "elementId": "slide1-elem2",
       "key": "solon_tax_product_roadmap_2026",
-      "hint": "Some header about the weather today",
+      "hint": "Some header about danish tax",
       "slideIndex": 1,
       "originalText": "Solon Tax Product Roadmap 2026",
       "maxChars": 36,
@@ -16,11 +16,11 @@
     {
       "elementId": "slide1-elem3",
       "key": "feature_catalog_for_steerco",
-      "hint": "Feature Catalog for SteerCo",
+      "hint": "subtitle about danish tax",
       "slideIndex": 1,
       "originalText": "Feature Catalog for SteerCo",
       "maxChars": 22,
-      "autoGenerate": false
+      "autoGenerate": true
     },
     {
       "elementId": "slide1-elem4",
@@ -366,5 +366,5 @@
     }
   ],
   "recordSlideIndex": [],
-  "updatedAt": "2026-04-10T08:40:30.044Z"
+  "updatedAt": "2026-04-10T09:21:36.935Z"
 }
