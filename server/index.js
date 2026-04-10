@@ -258,32 +258,27 @@ app.post('/api/generate-pptx', (req, res) => {
       };
     });
     
-    // Generate slides from JSON data by structure_type
-    // Group initiative details under their parent group slides
+    // Generate slides from JSON data by structure_type, preserving raw instance for matching
     Object.entries(slidesData).forEach(([dataKey, instances]) => {
       if (!Array.isArray(instances) || instances.length === 0) return;
-      
+
       instances.forEach((instance, instanceIdx) => {
         const st = instance.structure_type;
         const template = structureTypeToTemplate[st];
-        
+
         if (template) {
           const slideContent = replacePlaceholders(template.content, jsonData, instance, tags, template.slideIndex);
-          
-          // Try to extract group identifier for grouping logic
-          const groupKey = instance.group || instance.group_name || instance.core_revenue_management || null;
-          
           generatedSlides.push({
             slideIndex: template.slideIndex,
             instanceIndex: instanceIdx + 1,
             structureType: st,
-            groupKey: groupKey,
+            instanceData: instance,   // retained for field-value matching at sort time
             content: slideContent
           });
         }
       });
     });
-    
+
     // Also include static slides (non-repeatable)
     const repeatableSet = new Set((repeatableSlides || []).map(r => r.slideIndex));
     const staticData = jsonData.static || jsonData;
@@ -297,30 +292,66 @@ app.post('/api/generate-pptx', (req, res) => {
         });
       }
     }
-    
-    // Sort slides: group parent slides followed by their child detail slides
+
+    // Interleave repeatable slides by parent-child relationship
     const staticSlides = generatedSlides.filter(g => g.instanceIndex === null);
     const repeatableSlidesList = generatedSlides.filter(g => g.instanceIndex !== null);
-    
-    // Separate parent (group) and child (detail) slides
-    // Sort repeatable slides by structureType to identify which is parent vs child
-    const structureTypes = [...new Set(repeatableSlidesList.map(s => s.structureType))];
-    const parentType = structureTypes[0]; // First type is parent (group)
-    const childType = structureTypes[1]; // Second type is child (detail)
-    
-    const parentSlides = repeatableSlidesList.filter(s => s.structureType === parentType);
-    const childSlides = repeatableSlidesList.filter(s => s.structureType === childType);
-    
-    // Build interleaved output: parent + its children, then next parent + its children
+
+    // Determine tier order from template slideIndex (lower = parent, higher = child)
+    const tierOrder = [...new Set(
+      (repeatableSlides || [])
+        .slice()
+        .sort((a, b) => a.slideIndex - b.slideIndex)
+        .map(r => r.structureType || `slide_${r.slideIndex}`)
+    )];
+
+    // Extract all string field values from an instance for matching
+    const stringValues = (instance) => new Set(
+      Object.values(instance).filter(v => typeof v === 'string' && v.trim() !== '')
+    );
+
+    // Build tier buckets in template slide order
+    const tierBuckets = tierOrder.map(st => repeatableSlidesList.filter(s => s.structureType === st));
+
     const sortedRepeatable = [];
-    parentSlides.forEach(parent => {
-      sortedRepeatable.push(parent);
-      // Find all children with matching groupKey
-      const children = childSlides.filter(child => child.groupKey === parent.groupKey);
-      sortedRepeatable.push(...children);
-    });
-    
-    // Combine: static slides + interleaved repeatable slides
+    const placed = new Set();
+
+    if (tierBuckets.length <= 1) {
+      // Single structure type — no interleaving needed
+      sortedRepeatable.push(...(tierBuckets[0] || []));
+    } else {
+      const parentBucket = tierBuckets[0];
+      const childBuckets = tierBuckets.slice(1);
+
+      parentBucket.forEach(parent => {
+        sortedRepeatable.push(parent);
+        placed.add(parent);
+
+        const parentValues = stringValues(parent.instanceData);
+
+        // For each child tier (in slideIndex order), emit matched children
+        childBuckets.forEach(childBucket => {
+          childBucket.forEach(child => {
+            if (placed.has(child)) return;
+            const childValues = stringValues(child.instanceData);
+            const linked = [...childValues].some(v => parentValues.has(v));
+            if (linked) {
+              sortedRepeatable.push(child);
+              placed.add(child);
+            }
+          });
+        });
+      });
+
+      // Append any children not matched to a parent (orphans) in tier order
+      tierBuckets.slice(1).forEach(childBucket => {
+        childBucket.forEach(child => {
+          if (!placed.has(child)) sortedRepeatable.push(child);
+        });
+      });
+    }
+
+    // Combine: static slides first, then interleaved repeatable slides
     const finalSortedSlides = [...staticSlides, ...sortedRepeatable];
     
     // Handle slide numbering for PPTX
