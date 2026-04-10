@@ -259,6 +259,7 @@ app.post('/api/generate-pptx', (req, res) => {
     });
     
     // Generate slides from JSON data by structure_type
+    // Group initiative details under their parent group slides
     Object.entries(slidesData).forEach(([dataKey, instances]) => {
       if (!Array.isArray(instances) || instances.length === 0) return;
       
@@ -268,10 +269,15 @@ app.post('/api/generate-pptx', (req, res) => {
         
         if (template) {
           const slideContent = replacePlaceholders(template.content, jsonData, instance, tags, template.slideIndex);
+          
+          // Try to extract group identifier for grouping logic
+          const groupKey = instance.group || instance.group_name || instance.core_revenue_management || null;
+          
           generatedSlides.push({
             slideIndex: template.slideIndex,
             instanceIndex: instanceIdx + 1,
             structureType: st,
+            groupKey: groupKey,
             content: slideContent
           });
         }
@@ -291,6 +297,31 @@ app.post('/api/generate-pptx', (req, res) => {
         });
       }
     }
+    
+    // Sort slides: group parent slides followed by their child detail slides
+    const staticSlides = generatedSlides.filter(g => g.instanceIndex === null);
+    const repeatableSlidesList = generatedSlides.filter(g => g.instanceIndex !== null);
+    
+    // Separate parent (group) and child (detail) slides
+    // Sort repeatable slides by structureType to identify which is parent vs child
+    const structureTypes = [...new Set(repeatableSlidesList.map(s => s.structureType))];
+    const parentType = structureTypes[0]; // First type is parent (group)
+    const childType = structureTypes[1]; // Second type is child (detail)
+    
+    const parentSlides = repeatableSlidesList.filter(s => s.structureType === parentType);
+    const childSlides = repeatableSlidesList.filter(s => s.structureType === childType);
+    
+    // Build interleaved output: parent + its children, then next parent + its children
+    const sortedRepeatable = [];
+    parentSlides.forEach(parent => {
+      sortedRepeatable.push(parent);
+      // Find all children with matching groupKey
+      const children = childSlides.filter(child => child.groupKey === parent.groupKey);
+      sortedRepeatable.push(...children);
+    });
+    
+    // Combine: static slides + interleaved repeatable slides
+    const finalSortedSlides = [...staticSlides, ...sortedRepeatable];
     
     // Handle slide numbering for PPTX
     // Remove original slides and replace with generated slides only
@@ -313,15 +344,8 @@ app.post('/api/generate-pptx', (req, res) => {
       }
     });
 
-    // Add generated slides
-    const sortedGenerated = [...generatedSlides].sort((a, b) => {
-      // Static slides first by slideIndex
-      if (a.instanceIndex === null && b.instanceIndex !== null) return -1;
-      if (a.instanceIndex !== null && b.instanceIndex === null) return 1;
-      if (a.instanceIndex === null) return a.slideIndex - b.slideIndex;
-      // Repeatable slides by their order in generatedSlides (which is by structure_type order)
-      return generatedSlides.indexOf(a) - generatedSlides.indexOf(b);
-    });
+    // Use the final sorted slides with interleaved ordering
+    const sortedGenerated = finalSortedSlides;
 
     // Add all generated slides starting from slide1.xml, plus their _rels files
     sortedGenerated.forEach((gs, idx) => {
@@ -425,8 +449,8 @@ app.post('/api/generate-pptx', (req, res) => {
     });
     
     // Also add static slides to preview
-    const staticSlides = generatedSlides.filter(g => !repeatableSet.has(g.slideIndex));
-    staticSlides.forEach(gs => {
+    const staticSlideData = generatedSlides.filter(g => !repeatableSet.has(g.slideIndex));
+    staticSlideData.forEach(gs => {
       if (!previewData.find(p => p.slideNumber === gs.slideIndex && p.instanceIndex === null)) {
         let elements = { elements: [] };
         try {

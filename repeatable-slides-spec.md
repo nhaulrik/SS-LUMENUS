@@ -304,6 +304,52 @@ Repeatable slide configuration (slideIndex, structureType, customPrompt) must be
 - Each instance MUST include `"structure_type"` field matching the array key
 - `"slides"` key contains only repeatable slide arrays
 
+## Slide Ordering
+
+When generating output slides, instances must be **grouped by parent-child relationships** rather than all instances of one type appearing consecutively.
+
+### Grouping Logic
+
+1. **Parent-child relationship**: Initiative detail slides should reference their parent group via a field (e.g., `group` or `group_name`)
+2. **Interleaved output**: For each group slide, immediately follow it with all its associated initiative detail slides before moving to the next group
+
+### Example
+
+Input JSON:
+```json
+{
+  "slides": {
+    "initiative_group_summary": [
+      { "structure_type": "initiative_group_summary", "group_name": "Core Revenue Mgmt", ... },
+      { "structure_type": "initiative_group_summary", "group_name": "Tax Admin", ... },
+      { "structure_type": "initiative_group_summary", "group_name": "Compliance", ... }
+    ],
+    "initiative_detail": [
+      { "structure_type": "initiative_detail", "name": "Taxpayer Reg", "group": "Core Revenue Mgmt", ... },
+      { "structure_type": "initiative_detail", "name": "Filing & Returns", "group": "Core Revenue Mgmt", ... },
+      { "structure_type": "initiative_detail", "name": "Payment Mgmt", "group": "Tax Admin", ... },
+      { "structure_type": "initiative_detail", "name": "Audit & Review", "group": "Compliance", ... }
+    ]
+  }
+}
+```
+
+Output slide order (correct):
+- Slide 1: Group: Core Revenue Mgmt
+- Slide 2: Initiative: Taxpayer Reg (group: Core Revenue Mgmt)
+- Slide 3: Initiative: Filing & Returns (group: Core Revenue Mgmt)
+- Slide 4: Group: Tax Admin
+- Slide 5: Initiative: Payment Mgmt (group: Tax Admin)
+- Slide 6: Group: Compliance
+- Slide 7: Initiative: Audit & Review (group: Compliance)
+
+### Implementation Notes
+
+- The AI recipe should include a field that links initiatives to their parent group
+- During generation, build a map of group → initiatives
+- Output slides in order: group1, [initiatives for group1], group2, [initiatives for group2], ...
+- Static slides (if any) appear first before any repeatable slides
+
 ## PPTX Generation Behavior
 
 When generating the output PPTX:
@@ -322,14 +368,18 @@ When generating the output PPTX:
 
 Input PPTX: 3 slides (1 static, 2 repeatable templates)
 
-JSON with 5 group summaries and 8 initiative details:
+JSON with 3 groups and 4 initiatives linked by group field:
 
-Output PPTX: 1 + 5 + 8 = 14 slides
+Output PPTX: 1 + 3 + 4 = 8 slides
 
-Slide order:
+Slide order (interleaved by group):
 - Slide 1: Static content (Slide 1 from template)
-- Slides 2-6: Group Summary instances (using Slide 2 template)
-- Slides 7-14: Initiative Detail instances (using Slide 3 template)
+- Slide 2: Group 1 (Core Revenue Mgmt)
+- Slides 3-4: Initiatives for Group 1
+- Slide 5: Group 2 (Tax Admin)
+- Slide 6: Initiative for Group 2
+- Slide 7: Group 3 (Compliance)
+- Slide 8: Initiative for Group 3
 
 ## Future Enhancements (Out of Scope)
 
