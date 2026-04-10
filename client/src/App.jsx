@@ -107,7 +107,7 @@ function App() {
   
   // Tags state
   const [tags, setTags] = useState([])
-  const [repeatableSlides, setRepeatableSlides] = useState([]) // [{ slideIndex, customPrompt }]
+  const [repeatableSlides, setRepeatableSlides] = useState([]) // [{ slideIndex, customPrompt, structureType }]
 
   const toggleRecordSlide = (slideIndex) => {
     setRepeatableSlides(prev => {
@@ -115,13 +115,19 @@ function App() {
       if (exists) {
         return prev.filter(r => r.slideIndex !== slideIndex)
       }
-      return [...prev, { slideIndex, customPrompt: '' }]
+      return [...prev, { slideIndex, customPrompt: '', structureType: '' }]
     })
   }
 
   const updateRepeatablePrompt = (slideIndex, customPrompt) => {
     setRepeatableSlides(prev => 
       prev.map(r => r.slideIndex === slideIndex ? { ...r, customPrompt } : r)
+    )
+  }
+
+  const updateRepeatableStructureType = (slideIndex, structureType) => {
+    setRepeatableSlides(prev => 
+      prev.map(r => r.slideIndex === slideIndex ? { ...r, structureType } : r)
     )
   }
 
@@ -417,11 +423,13 @@ function App() {
     const missingFields = []
     
     const generateOnlyTags = tags.filter(t => t.autoGenerate)
+    const repeatableSet = new Set(repeatableSlides.map(r => r.slideIndex))
     
-    // Validate static fields (non-repeatable slides)
-    const staticTags = generateOnlyTags.filter(t => !repeatableSlides.find(r => r.slideIndex === t.slideIndex))
+    // Validate static fields (under "static" key)
+    const staticData = data.static || data
+    const staticTags = generateOnlyTags.filter(t => !repeatableSet.has(t.slideIndex))
     staticTags.forEach(tag => {
-      if (data[tag.key] !== undefined) {
+      if (staticData[tag.key] !== undefined) {
         foundFields.push(tag.key)
       } else {
         missingFields.push(tag.key)
@@ -431,7 +439,7 @@ function App() {
     // Validate repeatable slides
     const slidesData = data.slides || {}
     repeatableSlides.forEach(repeatable => {
-      const dataKey = `slide_${repeatable.slideIndex}`
+      const dataKey = repeatable.structureType || `slide_${repeatable.slideIndex}`
       const instances = slidesData[dataKey]
       
       if (!Array.isArray(instances) || instances.length === 0) {
@@ -439,8 +447,12 @@ function App() {
         return
       }
       
-      const slideTags = generateOnlyTags.filter(t => t.slideIndex === repeatable.slideIndex)
       instances.forEach((instance, idx) => {
+        if (!instance.structure_type) {
+          missingFields.push(`structure_type (${dataKey} instance ${idx + 1})`)
+        }
+        
+        const slideTags = generateOnlyTags.filter(t => t.slideIndex === repeatable.slideIndex)
         slideTags.forEach(tag => {
           if (instance[tag.key] !== undefined) {
             foundFields.push(`${tag.key} (${dataKey} instance ${idx + 1})`)
@@ -773,20 +785,48 @@ function App() {
                     <input 
                       type="checkbox" 
                       checked={!!getRepeatableConfig(currentSlide.index)}
-                      onChange={(e) => toggleRecordSlide(currentSlide.index)}
+                      onChange={(e) => {
+                        toggleRecordSlide(currentSlide.index)
+                        // Update save - remove or add new repeatable entry
+                        const newRepeatable = e.target.checked 
+                          ? [...repeatableSlides, { slideIndex: currentSlide.index, customPrompt: '', structureType: '' }]
+                          : repeatableSlides.filter(r => r.slideIndex !== currentSlide.index)
+                        setTimeout(() => triggerSave(tags, newRepeatable), 100)
+                      }}
                     />
                     <span>Repeatable</span>
                   </label>
                 </div>
                 {getRepeatableConfig(currentSlide.index) && (
-                  <div className="repeatable-prompt">
-                    <label>Custom prompt for this slide:</label>
-                    <textarea
-                      placeholder="Describe what instances to generate (e.g., 'List 5 major car manufacturers with revenue and HQ')"
-                      value={getRepeatableConfig(currentSlide.index).customPrompt}
-                      onChange={(e) => updateRepeatablePrompt(currentSlide.index, e.target.value)}
-                      rows={3}
-                    />
+                  <div className="repeatable-config">
+                    <div className="form-group">
+                      <label>Structure Type (unique identifier for this slide type)</label>
+                      <input 
+                        type="text"
+                        placeholder="e.g., group_summary, initiative_detail"
+                        value={getRepeatableConfig(currentSlide.index).structureType || ''}
+                        onChange={(e) => {
+                          updateRepeatableStructureType(currentSlide.index, e.target.value)
+                          triggerSave(tags, repeatableSlides.map(r => 
+                            r.slideIndex === currentSlide.index ? { ...r, structureType: e.target.value } : r
+                          ))
+                        }}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Custom prompt for instances:</label>
+                      <textarea
+                        placeholder="Describe what instances to generate (e.g., 'List 5 major car manufacturers with revenue and HQ')"
+                        value={getRepeatableConfig(currentSlide.index).customPrompt}
+                        onChange={(e) => {
+                          updateRepeatablePrompt(currentSlide.index, e.target.value)
+                          triggerSave(tags, repeatableSlides.map(r => 
+                            r.slideIndex === currentSlide.index ? { ...r, customPrompt: e.target.value } : r
+                          ))
+                        }}
+                        rows={3}
+                      />
+                    </div>
                   </div>
                 )}
                 <div className="slide-preview">

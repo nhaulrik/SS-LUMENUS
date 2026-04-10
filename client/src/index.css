@@ -636,7 +636,7 @@ header p {
   color: var(--accent-primary);
 }
 
-.repeatable-prompt {
+.repeatable-config {
   margin-bottom: var(--space-md);
   padding: var(--space-md);
   background: var(--bg-secondary);
@@ -644,14 +644,23 @@ header p {
   border: 1px solid var(--border-default);
 }
 
-.repeatable-prompt label {
+.repeatable-config .form-group {
+  margin-bottom: var(--space-md);
+}
+
+.repeatable-config .form-group:last-child {
+  margin-bottom: 0;
+}
+
+.repeatable-config label {
   display: block;
   font-size: 0.85rem;
   color: var(--text-secondary);
   margin-bottom: var(--space-sm);
 }
 
-.repeatable-prompt textarea {
+.repeatable-config input,
+.repeatable-config textarea {
   width: 100%;
   padding: var(--space-sm);
   background: var(--bg-tertiary);
@@ -663,7 +672,8 @@ header p {
   font-family: inherit;
 }
 
-.repeatable-prompt textarea:focus {
+.repeatable-config input:focus,
+.repeatable-config textarea:focus {
   outline: none;
   border-color: var(--accent-primary);
 }
@@ -935,6 +945,8 @@ header p {
   grid-template-columns: 1fr 1fr;
   gap: var(--space-xl);
   align-items: start;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .recipe-panel,
@@ -942,6 +954,8 @@ header p {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .recipe-panel h3,
@@ -995,6 +1009,7 @@ header p {
 .json-input {
   width: 100%;
   min-height: 380px;
+  max-height: 450px;
   background: var(--bg-primary);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
@@ -1004,6 +1019,7 @@ header p {
   font-size: 0.9rem;
   resize: vertical;
   line-height: 1.6;
+  overflow-y: auto;
 }
 
 .json-input:focus {

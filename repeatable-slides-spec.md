@@ -262,6 +262,48 @@ Each repeatable slide has its own set of tagged fields. The recipe includes all 
 - For each structure type, generate N slides (one per instance)
 - Maintain order based on instance array order in JSON
 
+## Persistence
+
+Repeatable slide configuration (slideIndex, structureType, customPrompt) must be saved to and loaded from patches:
+
+1. **Saving**: When any repeatable field changes (toggle, structure type, custom prompt), trigger save to server
+2. **Loading**: When a patch is applied or auto-matched, restore full repeatableSlides array
+3. **Auto-match**: When PPTX is loaded, auto-apply patch if pptxFile matches
+
+### Expected JSON Response Format
+
+```json
+{
+  "static": {
+    "core_revenue_management": "Revenue Mgmt",
+    "group_summary__roadmap_initiative_overview": "Group Summary"
+  },
+  "slides": {
+    "group_summary": [
+      {
+        "structure_type": "group_summary",
+        "group_name": "Core Revenue Management",
+        "summary": "Tax revenue collection and management"
+      }
+    ],
+    "initiative_detail": [
+      {
+        "structure_type": "initiative_detail",
+        "name": "Registration",
+        "owner": "Team A",
+        "timeline": "Q2"
+      }
+    ]
+  }
+}
+```
+
+### Key Changes from Original Spec
+- Static (non-repeatable) fields are under `"static"` key, not root level
+- Repeatable slides use user-defined `structureType` as array key (e.g., "group_summary")
+- Each instance MUST include `"structure_type"` field matching the array key
+- `"slides"` key contains only repeatable slide arrays
+
 ## Future Enhancements (Out of Scope)
 
 - Nested/referenced instances (e.g., initiatives grouped under their parent group)

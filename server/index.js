@@ -62,62 +62,68 @@ app.post('/api/generate-recipe', (req, res) => {
     // Get fields for each repeatable slide
     const repeatableFields = (repeatableSlides || []).map(r => ({
       slideIndex: r.slideIndex,
+      structureType: r.structureType || `slide_${r.slideIndex}`,
       customPrompt: r.customPrompt || '',
       fields: tags.filter(t => t.slideIndex === r.slideIndex)
     }));
     
     // Collect static generate fields
-    const staticGenerateFields = staticFields.filter(t => t.autoGenerate).map(t => t.key);
-    const staticHints = {};
-    staticFields.filter(t => t.autoGenerate && t.hint).forEach(t => {
-      staticHints[t.key] = t.maxChars ? `${t.hint}, max ${t.maxChars} chars` : t.hint;
-    });
+    const staticGenerateFieldsList = staticFields.filter(t => t.autoGenerate);
     
     let recipe = `INSTRUCTIONS:
 - Return ONLY valid JSON, no explanations or markdown
-- Strictly follow the JSON structure below
 - Use EXACT key names as provided - do NOT abbreviate or modify key names
 
-JSON STRUCTURE:\n{\n`;
+GENERATE THE FOLLOWING DATA:
+
+1. STATIC FIELDS (non-repeatable slides) - generate actual values:
+{
+  "static": {
+`;
     
     // Static fields section
-    if (staticGenerateFields.length > 0) {
-      recipe += `  "_instructions": {\n`;
-      recipe += `    "generate_fields": ${JSON.stringify(staticGenerateFields)},\n`;
-      recipe += `    "hints": ${JSON.stringify(staticHints)}\n`;
-      recipe += `  },\n`;
+    if (staticGenerateFieldsList.length > 0) {
+      staticGenerateFieldsList.forEach(tag => {
+        const hint = tag.hint || `value for ${tag.key}`;
+        recipe += `    "${tag.key}": "${hint}"${tag.maxChars ? ` (max ${tag.maxChars} chars)` : ''},\n`;
+      });
     }
+    
+    recipe += `  },\n`;
     
     // Repeatable slides section
     if (repeatableFields.length > 0) {
       recipe += `  "slides": {\n`;
       
       repeatableFields.forEach((rf, idx) => {
-        const dataKey = `slide_${rf.slideIndex}`;
+        const dataKey = rf.structureType;
         const isLast = idx === repeatableFields.length - 1;
         
         // Generate fields for this repeatable slide
-        const slideGenerateFields = rf.fields.filter(t => t.autoGenerate).map(t => t.key);
-        const slideHints = {};
-        rf.fields.filter(t => t.autoGenerate && t.hint).forEach(t => {
-          slideHints[t.key] = t.maxChars ? `${t.hint}, max ${t.maxChars} chars` : t.hint;
-        });
+        const slideGenerateFields = rf.fields.filter(t => t.autoGenerate);
         
         recipe += `    "${dataKey}": [\n`;
+        
+        // Show example instance with structure_type
+        recipe += `      // Example: generate ${rf.customPrompt || 'instances of this slide type'}\n`;
         recipe += `      {\n`;
-        recipe += `        "_instructions": {\n`;
-        recipe += `          "prompt": ${JSON.stringify(rf.customPrompt)},\n`;
-        recipe += `          "generate_fields": ${JSON.stringify(slideGenerateFields)},\n`;
-        recipe += `          "hints": ${JSON.stringify(slideHints)}\n`;
-        recipe += `        }\n`;
+        recipe += `        "structure_type": "${rf.structureType}",\n`;
+        
+        slideGenerateFields.forEach(tag => {
+          const hint = tag.hint || `value for ${tag.key}`;
+          recipe += `        "${tag.key}": "${hint}"${tag.maxChars ? ` (max ${tag.maxChars} chars)` : ''},\n`;
+        });
+        
         recipe += `      }\n`;
         recipe += `    ]${isLast ? '' : ','}\n`;
       });
       
       recipe += `  }\n`;
+    } else {
+      recipe += `  "slides": {}\n`;
     }
     
-    recipe += `}`;
+    recipe += `}\n\nIMPORTANT: For static fields, provide actual generated values. For repeatable slides, generate an array of instances - each with "structure_type" field matching the key name.`;
     
     res.json({ ok: true, recipe });
   } catch (err) {
@@ -148,10 +154,11 @@ app.post('/api/validate-json', (req, res) => {
     const generateOnlyTags = tags.filter(t => t.autoGenerate);
     const repeatableSet = new Set((repeatableSlides || []).map(r => r.slideIndex));
     
-    // Validate static fields
+    // Validate static fields (now under "static" key)
+    const staticData = data.static || data;
     const staticTags = generateOnlyTags.filter(t => !repeatableSet.has(t.slideIndex));
     staticTags.forEach(tag => {
-      if (data[tag.key] !== undefined) {
+      if (staticData[tag.key] !== undefined) {
         foundFields.push(tag.key);
       } else {
         missingFields.push(tag.key);
@@ -161,7 +168,7 @@ app.post('/api/validate-json', (req, res) => {
     // Validate repeatable slides
     const slidesData = data.slides || {};
     (repeatableSlides || []).forEach(repeatable => {
-      const dataKey = `slide_${repeatable.slideIndex}`;
+      const dataKey = repeatable.structureType || `slide_${repeatable.slideIndex}`;
       const instances = slidesData[dataKey];
       
       if (!Array.isArray(instances) || instances.length === 0) {
@@ -169,8 +176,12 @@ app.post('/api/validate-json', (req, res) => {
         return;
       }
       
-      const slideTags = generateOnlyTags.filter(t => t.slideIndex === repeatable.slideIndex);
       instances.forEach((instance, idx) => {
+        if (!instance.structure_type) {
+          missingFields.push(`structure_type (${dataKey} instance ${idx + 1})`);
+        }
+        
+        const slideTags = generateOnlyTags.filter(t => t.slideIndex === repeatable.slideIndex);
         slideTags.forEach(tag => {
           if (instance[tag.key] !== undefined) {
             foundFields.push(`${tag.key} (${dataKey} instance ${idx + 1})`);
@@ -236,38 +247,43 @@ app.post('/api/generate-pptx', (req, res) => {
     // Build output slides
     const generatedSlides = [];
     const slidesData = jsonData.slides || {};
-    const repeatableSet = new Set((repeatableSlides || []).map(r => r.slideIndex));
     
-    for (let slideIdx = 0; slideIdx < sortedEntries.length; slideIdx++) {
-      const slideNum = slideIdx + 1;
-      const content = baseContent[slideNum];
+    // Build structure type to slide template mapping
+    const structureTypeToTemplate = {};
+    (repeatableSlides || []).forEach(r => {
+      const st = r.structureType || `slide_${r.slideIndex}`;
+      structureTypeToTemplate[st] = {
+        slideIndex: r.slideIndex,
+        content: baseContent[r.slideIndex]
+      };
+    });
+    
+    // Generate slides from JSON data by structure_type
+    Object.entries(slidesData).forEach(([dataKey, instances]) => {
+      if (!Array.isArray(instances) || instances.length === 0) return;
       
-      // Check if this is a repeatable slide
-      if (repeatableSet.has(slideNum)) {
-        const dataKey = `slide_${slideNum}`;
-        const instances = slidesData[dataKey];
+      instances.forEach((instance, instanceIdx) => {
+        const st = instance.structure_type;
+        const template = structureTypeToTemplate[st];
         
-        if (Array.isArray(instances) && instances.length > 0) {
-          // Generate one slide per instance
-          instances.forEach((instance, instanceIdx) => {
-            const slideContent = replacePlaceholders(content, jsonData, instance, tags, slideNum);
-            generatedSlides.push({
-              slideIndex: slideNum,
-              instanceIndex: instanceIdx + 1,
-              content: slideContent
-            });
-          });
-        } else {
-          // No instances - still generate one with placeholder values
+        if (template) {
+          const slideContent = replacePlaceholders(template.content, jsonData, instance, tags, template.slideIndex);
           generatedSlides.push({
-            slideIndex: slideNum,
-            instanceIndex: null,
-            content
+            slideIndex: template.slideIndex,
+            instanceIndex: instanceIdx + 1,
+            structureType: st,
+            content: slideContent
           });
         }
-      } else {
-        // Static slide - generate once with root level data
-        const slideContent = replacePlaceholders(content, jsonData, null, tags, slideNum);
+      });
+    });
+    
+    // Also include static slides (non-repeatable)
+    const repeatableSet = new Set((repeatableSlides || []).map(r => r.slideIndex));
+    const staticData = jsonData.static || jsonData;
+    for (let slideNum = 1; slideNum <= sortedEntries.length; slideNum++) {
+      if (!repeatableSet.has(slideNum)) {
+        const slideContent = replacePlaceholders(baseContent[slideNum], staticData, null, tags, slideNum);
         generatedSlides.push({
           slideIndex: slideNum,
           instanceIndex: null,
@@ -276,19 +292,28 @@ app.post('/api/generate-pptx', (req, res) => {
       }
     }
     
-    // Replace content in zip
-    const outputEntries = sortedEntries.map((entry, idx) => {
-      const slideNum = idx + 1;
-      const gen = generatedSlides.find(g => g.slideIndex === slideNum && g.instanceIndex === 1)
-        || generatedSlides.find(g => g.slideIndex === slideNum && g.instanceIndex === null);
-      const content = gen ? gen.content : (baseContent[slideNum] || entry.getData().toString('utf8'));
-      return { entry, content };
+    // Handle slide numbering for PPTX - need to rename slide files
+    // First, remove all existing slides from zip
+    const allEntries = zip.getEntries();
+    allEntries.forEach(entry => {
+        if (entry.entryName.match(/^ppt\/slides\/slide\d+\.xml$/)) {
+          zip.deleteEntry(entry.entryName);
+        }
     });
     
-    outputEntries.forEach(({ entry, content }) => {
-      if (content && entry) {
-        entry.setData(Buffer.from(content, 'utf8'));
-      }
+    // Add generated slides with proper numbering
+    const sortedGenerated = [...generatedSlides].sort((a, b) => {
+      // Static slides first by slideIndex
+      if (a.instanceIndex === null && b.instanceIndex !== null) return -1;
+      if (a.instanceIndex !== null && b.instanceIndex === null) return 1;
+      if (a.instanceIndex === null) return a.slideIndex - b.slideIndex;
+      // Repeatable slides by their order in generatedSlides (which is by structure_type order)
+      return generatedSlides.indexOf(a) - generatedSlides.indexOf(b);
+    });
+    
+    sortedGenerated.forEach((gs, idx) => {
+      const slideXml = `ppt/slides/slide${idx + 1}.xml`;
+      zip.addFile(slideXml, Buffer.from(gs.content, 'utf8'));
     });
     
     // Generate preview data
