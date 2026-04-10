@@ -286,15 +286,15 @@
   ],
   "repeatableSlides": [
     {
-      "slideIndex": 2,
-      "customPrompt": "I expect an instance of this slide for all initiative groups",
-      "structureType": "initiative group"
+      "slideIndex": 3,
+      "customPrompt": "",
+      "structureType": ""
     },
     {
-      "slideIndex": 3,
-      "customPrompt": "I expect an instance of this slide for all initiatives under each group",
-      "structureType": "initiative detail"
+      "slideIndex": 2,
+      "customPrompt": "",
+      "structureType": ""
     }
   ],
-  "updatedAt": "2026-04-10T13:47:23.643Z"
+  "updatedAt": "2026-04-10T14:37:53.138Z"
 }

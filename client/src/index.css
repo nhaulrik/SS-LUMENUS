@@ -583,7 +583,6 @@ header p {
 
 .tag-slide-btn.record {
   border-color: var(--accent-primary);
-  border-style: dashed;
 }
 
 .tag-slide-num {
@@ -795,6 +794,7 @@ header p {
   bottom: 0;
   z-index: 10;
   pointer-events: none;
+  aspect-ratio: 16/9;
 }
 
 .overlay-element {
@@ -803,6 +803,7 @@ header p {
   pointer-events: auto;
   border-radius: 2px;
   transition: all var(--transition-fast);
+  transform: translateZ(0);
 }
 
 /* Default tagged state - no highlight, just clickable */
