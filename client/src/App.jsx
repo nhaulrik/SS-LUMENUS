@@ -72,6 +72,26 @@ function SlidePreview({ slide, size = 'normal' }) {
   )
 }
 
+// Header component
+const AppHeader = ({ title, subtitle }) => (
+  <header>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div>
+        <h1>{title}</h1>
+        {subtitle && <p>{subtitle}</p>}
+      </div>
+      <a 
+        href="/docs.html" 
+        target="_blank" 
+        className="docs-link"
+        title="Open Documentation"
+      >
+        ⬡ Docs
+      </a>
+    </div>
+  </header>
+)
+
 // ============================================================
 // Main App Component
 // ============================================================
@@ -452,10 +472,7 @@ function App() {
   if (step === 'upload') {
     return (
       <div className="app">
-        <header>
-          <h1>Solon Slide Studio</h1>
-          <p>Upload a PPTX, tag elements, generate recipe, create presentation</p>
-        </header>
+        <AppHeader title="Solon Slide Studio" subtitle="Upload a PPTX, tag elements, generate recipe, create presentation" />
         <Breadcrumbs />
         
         <div className={`step-content ${stepAnimClass}`}>
@@ -494,10 +511,7 @@ function App() {
     
     return (
       <div className="app">
-        <header>
-          <h1>Tag Elements</h1>
-          <p>Click on text elements to tag them as placeholders</p>
-        </header>
+        <AppHeader title="Tag Elements" subtitle="Click on text elements to tag them as placeholders" />
         <Breadcrumbs />
         
         <div className={`step-content ${stepAnimClass}`}>
@@ -761,10 +775,7 @@ function App() {
   if (step === 'recipe') {
     return (
       <div className="app">
-        <header>
-          <h1>Recipe + JSON</h1>
-          <p>Copy the recipe prompt for the AI, then paste the JSON response</p>
-        </header>
+        <AppHeader title="Recipe + JSON" subtitle="Copy the recipe prompt for the AI, then paste the JSON response" />
         <Breadcrumbs />
         
         <div className={`step-content ${stepAnimClass}`}>
@@ -823,10 +834,7 @@ function App() {
     
     return (
       <div className="app">
-        <header>
-          <h1>Preview</h1>
-          <p>Review your generated slides, use ← → arrow keys to navigate</p>
-        </header>
+        <AppHeader title="Preview" subtitle="Review your generated slides, use ← → arrow keys to navigate" />
         <Breadcrumbs />
         
         <div className={`step-content ${stepAnimClass}`}>
