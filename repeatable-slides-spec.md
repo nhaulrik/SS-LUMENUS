@@ -40,7 +40,22 @@ Slide 8: structure 3 - Instance 5 (e.g., "Audit Logging Capability")
 
 ## Data Model
 
-### User Configuration (in UI)
+### Patch Object
+
+```javascript
+patch = {
+  id: 123,
+  name: "My Patch",
+  pptxFile: "sample.pptx",
+  tags: [...],                    // Tagged elements
+  repeatableSlides: [...],       // Repeatable slide config
+  globalPrompt: "Generate a professional presentation with...",  // AI guidance
+  createdAt: "2024-01-01T00:00:00Z",
+  updatedAt: "2024-01-01T00:00:00Z"
+}
+```
+
+### Repeatable Slides Configuration
 
 ```javascript
 repeatableSlides = [

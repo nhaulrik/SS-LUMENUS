@@ -173,6 +173,7 @@ function App() {
   const [patches, setPatches] = useState([])
   const [currentPatch, setCurrentPatch] = useState(null)
   const [patchName, setPatchName] = useState('')
+  const [globalPrompt, setGlobalPrompt] = useState('')
 
   // Load patches from server
   useEffect(() => {
@@ -195,22 +196,24 @@ function App() {
   const lastSavedPatchRef = useRef(null)
   const saveTimeoutRef = useRef(null)
   
-  const triggerSave = useCallback((newTags, newRecordSlide) => {
+  const triggerSave = useCallback((newTags, newRecordSlide, newGlobalPrompt) => {
     if (!currentPatch) return
+    
+    const promptToSave = newGlobalPrompt !== undefined ? newGlobalPrompt : globalPrompt
     
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current)
     }
     
     saveTimeoutRef.current = setTimeout(() => {
-      const currentData = JSON.stringify({ tags: newTags, repeatableSlides: newRecordSlide })
+      const currentData = JSON.stringify({ tags: newTags, repeatableSlides: newRecordSlide, globalPrompt: promptToSave })
       
       if (currentData !== lastSavedPatchRef.current) {
         lastSavedPatchRef.current = currentData
         
         const updated = patches.map(p => 
           p.id === currentPatch 
-            ? { ...p, tags: newTags, repeatableSlides: newRecordSlide, updatedAt: new Date().toISOString() }
+            ? { ...p, tags: newTags, repeatableSlides: newRecordSlide, globalPrompt: promptToSave, updatedAt: new Date().toISOString() }
             : p
         )
         setPatches(updated)
@@ -233,7 +236,8 @@ function App() {
         setRepeatableSlides(existingPatch.repeatableSlides || [])
         setCurrentPatch(existingPatch.id)
         setPatchName(existingPatch.name)
-        lastSavedPatchRef.current = JSON.stringify({ tags: existingPatch.tags, repeatableSlides: existingPatch.repeatableSlides })
+        setGlobalPrompt(existingPatch.globalPrompt || '')
+        lastSavedPatchRef.current = JSON.stringify({ tags: existingPatch.tags, repeatableSlides: existingPatch.repeatableSlides || [], globalPrompt: existingPatch.globalPrompt || '' })
         return
       }
       
@@ -258,7 +262,7 @@ function App() {
         setTags(autoTags)
         
         // Initialize ref to prevent immediate re-save
-        lastSavedPatchRef.current = JSON.stringify({ tags: autoTags, repeatableSlides: [] })
+        lastSavedPatchRef.current = JSON.stringify({ tags: autoTags, repeatableSlides: [], globalPrompt: '' })
         
         // Auto-create and save a patch only if no existing patch
         const patchName = templateFile?.fileName ? templateFile.fileName.replace('.pptx', '') + '_auto' : 'auto_patch'
@@ -268,11 +272,13 @@ function App() {
           pptxFile: templateFile?.fileName || '',
           createdAt: new Date().toISOString(),
           tags: autoTags,
-          repeatableSlides: []
+          repeatableSlides: [],
+          globalPrompt: ''
         }
         setPatches(prev => [...prev, newPatch])
         setCurrentPatch(newPatch.id)
         setPatchName(patchName)
+        setGlobalPrompt('')
         savePatchToServer(newPatch)
       }
     }
@@ -291,6 +297,8 @@ function App() {
       setRepeatableSlides(patch.repeatableSlides || [])
       setCurrentPatch(patch.id)
       setPatchName(patch.name)
+      setGlobalPrompt(patch.globalPrompt || '')
+      lastSavedPatchRef.current = JSON.stringify({ tags: patch.tags, repeatableSlides: patch.repeatableSlides || [], globalPrompt: patch.globalPrompt || '' })
     }
   }, [patches])
 
@@ -304,8 +312,9 @@ function App() {
         setRepeatableSlides(matchingPatch.repeatableSlides || [])
         setCurrentPatch(matchingPatch.id)
         setPatchName(matchingPatch.name)
+        setGlobalPrompt(matchingPatch.globalPrompt || '')
         // Initialize ref to prevent re-saving the loaded patch
-        lastSavedPatchRef.current = JSON.stringify({ tags: matchingPatch.tags, repeatableSlides: matchingPatch.repeatableSlides })
+        lastSavedPatchRef.current = JSON.stringify({ tags: matchingPatch.tags, repeatableSlides: matchingPatch.repeatableSlides, globalPrompt: matchingPatch.globalPrompt || '' })
       }
     }
   }, [templateFile, patches])
@@ -422,7 +431,7 @@ function App() {
     const response = await fetch('/api/generate-recipe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tags, repeatableSlides })
+      body: JSON.stringify({ tags, repeatableSlides, globalPrompt })
     })
     
     const result = await response.json()
@@ -430,7 +439,7 @@ function App() {
       setRecipe(result.recipe)
       setStep('recipe')
     }
-  }, [tags, repeatableSlides])
+  }, [tags, repeatableSlides, globalPrompt])
 
   // Validate JSON
   const validateJson = useCallback((value = null) => {
@@ -703,11 +712,29 @@ function App() {
                         setPatches(updated)
                         setCurrentPatch(null)
                         setPatchName('')
+                        setGlobalPrompt('')
                       }}
                     >
                       Delete
                     </button>
                   )}
+                </div>
+              )}
+              
+              {/* Global prompt textarea */}
+              {currentPatch && (
+                <div className="global-prompt-section">
+                  <label className="global-prompt-label">Global Prompt (guidance for AI)</label>
+                  <textarea
+                    className="global-prompt-input"
+                    value={globalPrompt}
+                    onChange={(e) => {
+                      setGlobalPrompt(e.target.value)
+                      triggerSave(tags, repeatableSlides, e.target.value)
+                    }}
+                    placeholder="Add overall guidance for the AI (e.g., 'Generate a professional presentation with clear structure')"
+                    rows={3}
+                  />
                 </div>
               )}
               

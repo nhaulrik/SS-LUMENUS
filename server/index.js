@@ -53,7 +53,12 @@ app.post('/api/upload-pptx', (req, res) => {
 // UC-04: Generate recipe
 app.post('/api/generate-recipe', (req, res) => {
   try {
-    const { tags, repeatableSlides } = req.body;
+    const { tags, repeatableSlides, globalPrompt } = req.body;
+    
+    // Build global prompt section if provided
+    const globalPromptSection = globalPrompt 
+      ? `GLOBAL GUIDANCE:\n${globalPrompt}\n\n`
+      : '';
     
     // Separate static fields (non-repeatable slides) from repeatable slide fields
     const repeatableSlideIndices = new Set((repeatableSlides || []).map(r => r.slideIndex));
@@ -74,18 +79,20 @@ app.post('/api/generate-recipe', (req, res) => {
 - Return ONLY valid JSON, no explanations or markdown
 - Use EXACT key names as provided - do NOT abbreviate or modify key names
 
-GENERATE THE FOLLOWING DATA:
+${globalPromptSection}GENERATE THE FOLLOWING DATA:
 
 1. STATIC FIELDS (non-repeatable slides) - generate actual values:
 {
   "static": {
 `;
     
-    // Static fields section
-    if (staticGenerateFieldsList.length > 0) {
-      staticGenerateFieldsList.forEach(tag => {
+    // Static fields section - include maxChars for all static fields
+    if (staticFields.length > 0) {
+      staticFields.forEach(tag => {
         const hint = tag.hint || `value for ${tag.key}`;
-        recipe += `    "${tag.key}": "${hint}"${tag.maxChars ? ` (max ${tag.maxChars} chars)` : ''},\n`;
+        const maxCharsStr = tag.maxChars ? ` (max ${tag.maxChars} chars)` : '';
+        const autoGen = tag.autoGenerate ? '[AI]' : '';
+        recipe += `    "${tag.key}": "${hint}${maxCharsStr}"${autoGen ? ` ${autoGen}` : ''},\n`;
       });
     }
     
@@ -105,7 +112,7 @@ GENERATE THE FOLLOWING DATA:
         recipe += `    "${dataKey}": [\n`;
         
         // Show example instance with structure_type
-        recipe += `      // Example: generate ${rf.customPrompt || 'instances of this slide type'}\n`;
+        recipe += `      // CUSTOM PROMPT ${rf.customPrompt || 'instances of this slide type'}\n`;
         recipe += `      {\n`;
         recipe += `        "structure_type": "${rf.structureType}",\n`;
         
@@ -769,8 +776,17 @@ function extractSlideElements(xml, slideIndex) {
       }
     }
 
-    const area = bounds.w * bounds.h;
-    const maxChars = Math.floor(area * 5);
+    // Dynamic max chars calculation based on metric system
+    // Uses element dimensions (in inches) and font size (in points)
+    // Average char width ~0.55x font size, line height ~1.2x font size
+    // 1 inch = 72 points
+    const avgCharWidth = (fontSize || 12) * 0.55;
+    const lineHeight = (fontSize || 12) * 1.2;
+    const pointsPerInch = 72;
+    
+    const charsPerLine = Math.max(1, Math.floor((bounds?.w || 1) * pointsPerInch / avgCharWidth));
+    const lines = Math.max(1, Math.floor((bounds?.h || 0.1) * pointsPerInch / lineHeight));
+    const maxChars = charsPerLine * lines;
 
     slide.elements.push({
       type: 'text',
