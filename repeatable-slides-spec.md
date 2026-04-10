@@ -304,6 +304,33 @@ Repeatable slide configuration (slideIndex, structureType, customPrompt) must be
 - Each instance MUST include `"structure_type"` field matching the array key
 - `"slides"` key contains only repeatable slide arrays
 
+## PPTX Generation Behavior
+
+When generating the output PPTX:
+
+1. **Extract templates**: Load all slide XML from input PPTX
+2. **Map structure types**: Build mapping from `structureType` to slide template
+3. **Generate instances**: For each structure type, create N slides (one per instance in JSON array)
+4. **Generate static slides**: Include non-repeatable slides once with static data
+5. **Reconstruct PPTX**:
+   - Remove original slide XML files
+   - Add new slide XML files numbered sequentially (slide1.xml, slide2.xml, ...)
+   - Update `ppt/presentation.xml` with new slide count and IDs
+   - Update `ppt/_rels/presentation.xml.rels` with new slide relationships
+
+### Example
+
+Input PPTX: 3 slides (1 static, 2 repeatable templates)
+
+JSON with 5 group summaries and 8 initiative details:
+
+Output PPTX: 1 + 5 + 8 = 14 slides
+
+Slide order:
+- Slide 1: Static content (Slide 1 from template)
+- Slides 2-6: Group Summary instances (using Slide 2 template)
+- Slides 7-14: Initiative Detail instances (using Slide 3 template)
+
 ## Future Enhancements (Out of Scope)
 
 - Nested/referenced instances (e.g., initiatives grouped under their parent group)

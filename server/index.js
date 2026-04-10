@@ -292,16 +292,28 @@ app.post('/api/generate-pptx', (req, res) => {
       }
     }
     
-    // Handle slide numbering for PPTX - need to rename slide files
-    // First, remove all existing slides from zip
+    // Handle slide numbering for PPTX
+    // Remove original slides and replace with generated slides only
+
+    // Collect slide _rels templates before deletion so we can recreate them for generated slides
+    const slideRelsTemplates = {};
+    zip.getEntries()
+      .filter(e => e.entryName.match(/^ppt\/slides\/_rels\/slide\d+\.xml\.rels$/))
+      .forEach(e => {
+        const num = parseInt(e.entryName.match(/slide(\d+)\.xml\.rels/)[1]);
+        slideRelsTemplates[num] = e.getData().toString('utf8');
+      });
+
+    // Delete all original slide XMLs and their _rels files from zip
     const allEntries = zip.getEntries();
     allEntries.forEach(entry => {
-        if (entry.entryName.match(/^ppt\/slides\/slide\d+\.xml$/)) {
-          zip.deleteEntry(entry.entryName);
-        }
+      if (entry.entryName.match(/^ppt\/slides\/slide\d+\.xml$/) ||
+          entry.entryName.match(/^ppt\/slides\/_rels\/slide\d+\.xml\.rels$/)) {
+        zip.deleteEntry(entry.entryName);
+      }
     });
-    
-    // Add generated slides with proper numbering
+
+    // Add generated slides
     const sortedGenerated = [...generatedSlides].sort((a, b) => {
       // Static slides first by slideIndex
       if (a.instanceIndex === null && b.instanceIndex !== null) return -1;
@@ -310,11 +322,86 @@ app.post('/api/generate-pptx', (req, res) => {
       // Repeatable slides by their order in generatedSlides (which is by structure_type order)
       return generatedSlides.indexOf(a) - generatedSlides.indexOf(b);
     });
-    
+
+    // Add all generated slides starting from slide1.xml, plus their _rels files
     sortedGenerated.forEach((gs, idx) => {
-      const slideXml = `ppt/slides/slide${idx + 1}.xml`;
-      zip.addFile(slideXml, Buffer.from(gs.content, 'utf8'));
+      const slideNum = idx + 1;
+      const slideXml = `ppt/slides/slide${slideNum}.xml`;
+      // Escape & to &amp; in XML content
+      const escapedContent = (gs.content || '').replace(/&(?!(amp|lt|gt|apos|quot);)/g, '&amp;');
+      zip.addFile(slideXml, Buffer.from(escapedContent, 'utf8'));
+
+      // Create _rels file for this slide based on the source template slide's rels
+      const sourceRels = slideRelsTemplates[gs.slideIndex] || slideRelsTemplates[1] ||
+        `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/></Relationships>`;
+      // Strip notesSlide refs — we're not generating note slides for the expanded set
+      const cleanRels = sourceRels.replace(/<Relationship[^>]*notesSlide[^>]*\/>/g, '');
+      zip.addFile(`ppt/slides/_rels/slide${slideNum}.xml.rels`, Buffer.from(cleanRels, 'utf8'));
     });
+
+    // Update _rels/presentation.xml.rels: preserve non-slide relationships, replace slide ones
+    const relsEntry = zip.getEntries().find(e => e.entryName === 'ppt/_rels/presentation.xml.rels');
+    if (relsEntry) {
+      let relsXml = relsEntry.getData().toString('utf8');
+
+      // Remove only existing slide relationships (preserve slideMaster, theme, presProps, etc.)
+      relsXml = relsXml.replace(/<Relationship[^>]*\/officeDocument\/2006\/relationships\/slide"[^>]*\/>/g, '');
+
+      // Find max rId used by remaining relationships to avoid ID conflicts
+      const existingIds = [...relsXml.matchAll(/Id="rId(\d+)"/g)].map(m => parseInt(m[1]));
+      const maxRId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
+
+      // Build new slide relationships with non-conflicting IDs
+      const newSlideRels = sortedGenerated.map((_, idx) =>
+        `<Relationship Id="rId${maxRId + idx + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide${idx + 1}.xml"/>`
+      ).join('');
+
+      relsXml = relsXml.replace('</Relationships>', newSlideRels + '</Relationships>');
+      relsEntry.setData(Buffer.from(relsXml, 'utf8'));
+
+      // Update presentation.xml sldIdLst to use the matching rIds
+      const presentationEntry = zip.getEntries().find(e => e.entryName === 'ppt/presentation.xml');
+      if (presentationEntry) {
+        let presentationXml = presentationEntry.getData().toString('utf8');
+        const slideIds = sortedGenerated.map((_, idx) =>
+          `<p:sldId id="${256 + idx}" r:id="rId${maxRId + idx + 1}"/>`
+        ).join('');
+        presentationXml = presentationXml.replace(
+          /<p:sldIdLst[^>]*>[\s\S]*?<\/p:sldIdLst>/,
+          `<p:sldIdLst>${slideIds}</p:sldIdLst>`
+        );
+        presentationEntry.setData(Buffer.from(presentationXml, 'utf8'));
+      }
+    }
+    
+    // Update [Content_Types].xml to include all new slides
+    const contentTypesEntry = zip.getEntries().find(e => e.entryName === '[Content_Types].xml');
+    if (contentTypesEntry) {
+      let contentTypesXml = contentTypesEntry.getData().toString('utf8');
+      
+      // FIX 1: Remove all existing slide overrides first to avoid duplicates
+      contentTypesXml = contentTypesXml.replace(/<Override PartName="\/ppt\/slides\/slide\d+\.xml"[^>]*\/>/g, '');
+      
+      // FIX 2: Use correct ContentType — slide+xml not slide.main+xml
+      const slideOverrides = [];
+      for (let i = 1; i <= sortedGenerated.length; i++) {
+        slideOverrides.push(`<Override PartName="/ppt/slides/slide${i}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`);
+      }
+      
+      // FIX 3: Use correct negative lookahead regex to find a non-slide Override to insert after,
+      // instead of the broken character-by-character approach that could insert outside </Types>
+      const lastOverrideMatch = contentTypesXml.match(/<Override PartName="(?!\/ppt\/slides\/)[^"]*"[^>]*\/>/g);
+      if (lastOverrideMatch) {
+        const lastOverride = lastOverrideMatch[lastOverrideMatch.length - 1];
+        const lastIndex = contentTypesXml.lastIndexOf(lastOverride);
+        contentTypesXml = contentTypesXml.slice(0, lastIndex + lastOverride.length) + '\n' + slideOverrides.join('\n') + contentTypesXml.slice(lastIndex + lastOverride.length);
+      } else {
+        // Fallback: insert before closing </Types> tag to guarantee valid XML
+        contentTypesXml = contentTypesXml.replace('</Types>', slideOverrides.join('\n') + '\n</Types>');
+      }
+      
+      contentTypesEntry.setData(Buffer.from(contentTypesXml, 'utf8'));
+    }
     
     // Generate preview data
     const previewData = generatedSlides.map(gs => {
@@ -584,6 +671,13 @@ function getPresetColor(name) {
 function replacePlaceholders(content, jsonData, recordData, tags, slideIndex, recordSlideIndex) {
   const slideTags = tags.filter(t => t.slideIndex === slideIndex);
   
+  const escapeXml = (str) => {
+    if (!str) return '';
+    return str.replace(/&(?!(amp|lt|gt|apos|quot);)/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;');
+  };
+  
   const findValue = (key) => {
     const source = recordData || jsonData;
     if (source[key] !== undefined) return source[key];
@@ -604,9 +698,9 @@ function replacePlaceholders(content, jsonData, recordData, tags, slideIndex, re
     if (tag) {
       if (tag.autoGenerate) {
         const value = findValue(tag.key);
-        return `<a:t>${value || ''}</a:t>`;
+        return `<a:t>${escapeXml(value) || ''}</a:t>`;
       } else {
-        return `<a:t>${tag.originalText || ''}</a:t>`;
+        return `<a:t>${escapeXml(tag.originalText) || ''}</a:t>`;
       }
     }
     

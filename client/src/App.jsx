@@ -1002,15 +1002,25 @@ function App() {
             
             <div className="json-panel">
               <h3>JSON Response</h3>
-              <textarea 
-                className={`json-input ${validation?.valid === false ? 'has-error' : ''}`}
-                value={jsonInput}
-                onChange={(e) => {
-                  setJsonInput(e.target.value)
-                  setTimeout(() => validateJson(e.target.value), 300)
-                }}
-                placeholder='{"title": "My Presentation", "records": [...]}'
-              />
+              <div className="json-input-wrapper">
+                <button 
+                  className="copy-btn" 
+                  onClick={() => {
+                    navigator.clipboard.writeText(jsonInput)
+                    alert('Copied!')
+                  }}
+                  title="Copy to clipboard"
+                >⧉</button>
+                <textarea 
+                  className={`json-input ${validation?.valid === false ? 'has-error' : ''}`}
+                  value={jsonInput}
+                  onChange={(e) => {
+                    setJsonInput(e.target.value)
+                    setTimeout(() => validateJson(e.target.value), 300)
+                  }}
+                  placeholder='{"static": {...}, "slides": {...}}'
+                />
+              </div>
               
               {validation && validation.valid === false && (
                 <div className="validation-status invalid">

@@ -983,6 +983,12 @@ header p {
   position: relative;
 }
 
+.json-input-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
 .copy-btn {
   position: absolute;
   top: var(--space-sm);
