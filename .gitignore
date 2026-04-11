@@ -10,6 +10,7 @@ server/temp/
 server/output/
 server/patches/
 server/patch-chains/
+server/e2e-data/
 output/
 
 # Debug / scratch files that should never be committed

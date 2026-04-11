@@ -193,10 +193,10 @@ export default function TagStep({
                 return (
                   <>
                     <div className="patch-table-header">
-                      <span style={{ width: '40px' }}>AI</span>
+                      <span>AI</span>
+                      <span>Key</span>
                       <span>Hint</span>
-                      <span>Content</span>
-                      <span style={{ width: '40px' }}>Max</span>
+                      <span>Max</span>
                     </div>
 
                     {slideTags.length === 0 ? (
@@ -206,21 +206,24 @@ export default function TagStep({
                     ) : (
                       <div className="patch-table-body">
                         {slideTags.map(t => {
-                          const slide   = slides.find(s => s.index === t.slideIndex)
-                          const element = slide?.elements.find(e => e.id === t.elementId)
                           return (
                             <div
                               key={t.elementId}
                               className="patch-row"
+                              data-key={t.key}
                               onMouseEnter={() => setHighlightedElement(t.elementId)}
                               onMouseLeave={() => setHighlightedElement(null)}
                               onClick={() => setHighlightedElement(t.elementId)}
                               style={{
-                                cursor: 'pointer',
+                                cursor: 'default',
                                 background: highlightedElement === t.elementId ? 'rgba(255, 195, 0, 0.2)' : undefined
                               }}
                             >
-                              <label className="toggle-switch">
+                              {/* AI toggle */}
+                              <label
+                                className="toggle-switch"
+                                onClick={e => e.stopPropagation()}
+                              >
                                 <input
                                   type="checkbox"
                                   checked={t.autoGenerate ?? false}
@@ -237,11 +240,30 @@ export default function TagStep({
                                 <span className="toggle-slider"></span>
                               </label>
 
+                              {/* Key — always visible, inline editable */}
+                              <input
+                                className="patch-key-input"
+                                value={t.key}
+                                title={t.key}
+                                onClick={e => e.stopPropagation()}
+                                onChange={e => {
+                                  const newTags = tags.map(tag =>
+                                    tag.elementId === t.elementId
+                                      ? { ...tag, key: e.target.value }
+                                      : tag
+                                  )
+                                  setTags(newTags)
+                                  triggerSave(newTags, repeatableSlides)
+                                }}
+                              />
+
+                              {/* Hint — visible only when AI on */}
                               {t.autoGenerate ? (
                                 <input
                                   className="patch-hint-input"
-                                  defaultValue={t.hint || ''}
+                                  value={t.hint || ''}
                                   placeholder="Enter hint for AI..."
+                                  onClick={e => e.stopPropagation()}
                                   onChange={e => {
                                     const newTags = tags.map(tag =>
                                       tag.elementId === t.elementId
@@ -256,10 +278,25 @@ export default function TagStep({
                                 <span className="patch-dash">—</span>
                               )}
 
-                              <span className="patch-content" title={element?.text || ''}>
-                                {element?.text?.substring(0, 40) || t.originalText?.substring(0, 40) || '—'}
-                              </span>
-                              <span className="patch-max">{t.maxChars || '—'}</span>
+                              {/* Max chars — always visible, inline editable */}
+                              <input
+                                className="patch-max-input"
+                                type="number"
+                                value={t.maxChars ?? ''}
+                                placeholder="—"
+                                min={1}
+                                onClick={e => e.stopPropagation()}
+                                onChange={e => {
+                                  const parsed = e.target.value ? parseInt(e.target.value, 10) : null
+                                  const newTags = tags.map(tag =>
+                                    tag.elementId === t.elementId
+                                      ? { ...tag, maxChars: parsed }
+                                      : tag
+                                  )
+                                  setTags(newTags)
+                                  triggerSave(newTags, repeatableSlides)
+                                }}
+                              />
                             </div>
                           )
                         })}
@@ -362,6 +399,7 @@ export default function TagStep({
                               onMouseEnter={() => isTagged && setHighlightedElement(elem.id)}
                               onMouseLeave={() => setHighlightedElement(null)}
                               title={isTagged ? tags.find(t => t.elementId === elem.id)?.key : elem.text}
+                              data-text={elem.text}
                             />
                           )
                         })}

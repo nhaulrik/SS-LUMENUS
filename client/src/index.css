@@ -452,7 +452,7 @@ header p {
 
 .patch-table-header {
   display: grid;
-  grid-template-columns: 40px 1fr 1fr 40px;
+  grid-template-columns: 40px 1fr 1fr 60px;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
   background: var(--bg-tertiary);
@@ -464,7 +464,7 @@ header p {
 
 .patch-row {
   display: grid;
-  grid-template-columns: 40px 1fr 1fr 40px;
+  grid-template-columns: 40px 1fr 1fr 60px;
   gap: var(--space-sm);
   padding: var(--space-sm) var(--space-md);
   background: var(--bg-primary);
@@ -477,45 +477,47 @@ header p {
   background: var(--bg-tertiary);
 }
 
-.patch-key {
-  color: var(--error);
-  font-family: monospace;
-}
-
-.patch-hint-input {
+/* Shared base for all three inline inputs */
+.patch-key-input,
+.patch-hint-input,
+.patch-max-input {
   background: transparent;
   border: 1px solid transparent;
-  color: var(--text-secondary);
   font-size: 0.85rem;
   padding: 4px 8px;
   border-radius: 4px;
   width: 100%;
+  font-family: inherit;
 }
-
-.patch-hint-input:hover {
-  border-color: var(--border-default);
-}
-
-.patch-hint-input:focus {
+.patch-key-input:hover,
+.patch-hint-input:hover,
+.patch-max-input:hover  { border-color: var(--border-default); }
+.patch-key-input:focus,
+.patch-hint-input:focus,
+.patch-max-input:focus  {
   outline: none;
   border-color: var(--accent-primary);
   background: var(--bg-secondary);
   color: var(--text-primary);
 }
 
-.patch-max {
+/* Key — monospace, accent red */
+.patch-key-input {
+  color: var(--error);
+  font-family: monospace;
+}
+
+/* Hint — muted */
+.patch-hint-input { color: var(--text-secondary); }
+
+/* Max — right-aligned, accent green; hide browser spinner arrows */
+.patch-max-input {
   color: var(--accent-primary);
   text-align: right;
 }
-
-.patch-content {
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: block;
-}
+.patch-max-input::-webkit-inner-spin-button,
+.patch-max-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.patch-max-input[type=number]               { -moz-appearance: textfield; }
 
 .patch-dash {
   color: var(--text-muted);

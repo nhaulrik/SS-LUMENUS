@@ -53,6 +53,7 @@ export default function TagModal({ tagModal, tags, onSave, onClose, onDelete }) 
         <div className="form-group">
           <label>Placeholder name (key)</label>
           <input
+            data-testid="modal-key"
             type="text"
             value={key}
             onChange={e => setKey(e.target.value)}
@@ -74,6 +75,7 @@ export default function TagModal({ tagModal, tags, onSave, onClose, onDelete }) 
         <div className="form-group">
           <label>{hintLabel}</label>
           <input
+            data-testid="modal-hint"
             type="text"
             value={hint}
             onChange={e => setHint(e.target.value)}
@@ -86,6 +88,7 @@ export default function TagModal({ tagModal, tags, onSave, onClose, onDelete }) 
         <div className="form-group">
           <label>Max characters {calcMax > 0 ? `(calculated: ${calcMax})` : ''}</label>
           <input
+            data-testid="modal-maxchars"
             type="number"
             value={maxChars}
             onChange={e => setMaxChars(e.target.value)}
@@ -97,6 +100,7 @@ export default function TagModal({ tagModal, tags, onSave, onClose, onDelete }) 
         <div className="form-group">
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
             <input
+              data-testid="modal-ai"
               type="checkbox"
               checked={autoGenerate}
               onChange={e => setAutoGenerate(e.target.checked)}
