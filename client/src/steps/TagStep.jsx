@@ -189,7 +189,9 @@ export default function TagStep({
             <div className="patch-table">
               {(() => {
                 const currentSlideNum = slides[selectedSlide]?.index
-                const slideTags = tags.filter(t => t.slideIndex === currentSlideNum)
+                const slideTags = tags
+                  .filter(t => t.slideIndex === currentSlideNum)
+                  .sort((a, b) => a.elementId.localeCompare(b.elementId))
                 return (
                   <>
                     <div className="patch-table-header">

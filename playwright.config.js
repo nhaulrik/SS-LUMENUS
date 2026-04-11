@@ -25,13 +25,13 @@ export default defineConfig({
     {
       command: 'cross-env PATCHES_DIR=server/e2e-data/patches CHAINS_DIR=server/e2e-data/chains TEMP_DIR=server/e2e-data/temp OUTPUT_DIR=server/e2e-data/output npm run server',
       url: 'http://localhost:3001/api/patches',
-      reuseExistingServer: false,
+      reuseExistingServer: true,
       timeout: 15_000
     },
     {
       command: 'npm run client',
       url: 'http://localhost:5173',
-      reuseExistingServer: false,
+      reuseExistingServer: true,
       timeout: 30_000
     }
   ]

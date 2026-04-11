@@ -14,7 +14,7 @@ export function buildRecipe(tags, repeatableSlides, globalPrompt) {
   const globalPromptSection = globalPrompt ? `GLOBAL GUIDANCE:\n${globalPrompt}\n\n` : '';
 
   const repeatableSlideIndices = new Set((repeatableSlides || []).map(r => r.slideIndex));
-  const allStaticFields = tags.filter(t => !repeatableSlideIndices.has(t.slideIndex));
+  const allStaticFields = tags.filter(t => !repeatableSlideIndices.has(t.slideIndex) && t.autoGenerate);
   const sharedKeys = detectSharedKeys(tags, repeatableSlideIndices);
 
   const staticFields    = allStaticFields.filter(t => !sharedKeys.has(t.key));
@@ -23,33 +23,35 @@ export function buildRecipe(tags, repeatableSlides, globalPrompt) {
     slideIndex:    r.slideIndex,
     structureType: r.structureType || `slide_${r.slideIndex}`,
     customPrompt:  r.customPrompt || '',
-    fields:        tags.filter(t => t.slideIndex === r.slideIndex)
-  }));
+    fields:        tags.filter(t => t.slideIndex === r.slideIndex && t.autoGenerate)
+  })).filter(r => r.fields.length > 0);
 
   let recipe = `INSTRUCTIONS:
 - Return ONLY valid JSON, no explanations or markdown
 - Use EXACT key names as provided - do NOT abbreviate or modify key names
 
 ${globalPromptSection}GENERATE THE FOLLOWING DATA:
+`;
 
-1. STATIC FIELDS (one value per field):
+  let sectionNum = 1;
+
+  if (staticFields.length > 0) {
+    recipe += `\n${sectionNum}. STATIC FIELDS (one value per field):
 {
   "static": {
 `;
-
-  staticFields.forEach(tag => {
-    const hint        = tag.hint || `value for ${tag.key}`;
-    const maxCharsStr = tag.maxChars ? ` (max ${tag.maxChars} chars)` : '';
-    const autoGen     = tag.autoGenerate ? ' [AI]' : '';
-    recipe += `    "${tag.key}": "${hint}${maxCharsStr}"${autoGen},\n`;
-  });
-
-  recipe += `  },\n`;
+    staticFields.forEach(tag => {
+      const hint = tag.hint || `value for ${tag.key}`;
+      const maxCharsStr = tag.maxChars ? ` (max ${tag.maxChars} chars)` : '';
+      recipe += `    "${tag.key}": "${hint}${maxCharsStr}",\n`;
+    });
+    recipe += `  },\n`;
+    sectionNum++;
+  }
 
   if (contextualFields.length > 0) {
-    recipe += `\n2. CONTEXTUAL FIELDS (same field type, slide-specific content — generate one value per slide):\n`;
+    recipe += `\n${sectionNum}. CONTEXTUAL FIELDS (same field type, slide-specific content — generate one value per slide):\n`;
     recipe += `"contextual": [\n`;
-    recipe += `  // Each entry: { "slide_index": N, "field_key": "generated value" }\n`;
 
     const byKey = {};
     contextualFields.forEach(t => {
@@ -58,12 +60,10 @@ ${globalPromptSection}GENERATE THE FOLLOWING DATA:
     });
 
     Object.entries(byKey).forEach(([key, fieldTags]) => {
-      recipe += `\n  // Field: "${key}" — generate a distinct value for each slide below\n`;
       fieldTags
-        .filter(t => t.autoGenerate)
         .sort((a, b) => a.slideIndex - b.slideIndex)
         .forEach(tag => {
-          const hint        = tag.hint || `value for ${key} on slide ${tag.slideIndex}`;
+          const hint = tag.hint || `value for ${key} on slide ${tag.slideIndex}`;
           const maxCharsStr = tag.maxChars ? ` (max ${tag.maxChars} chars)` : '';
           recipe += `  { "slide_index": ${tag.slideIndex}, "${key}": "Slide ${tag.slideIndex} context: ${hint}${maxCharsStr}" },\n`;
         });
@@ -72,31 +72,32 @@ ${globalPromptSection}GENERATE THE FOLLOWING DATA:
     recipe += `]\n`;
   }
 
-  const slidesSection = contextualFields.length > 0 ? '\n3.' : '\n2.';
-  if (repeatableFields.length > 0) {
-    recipe += `${slidesSection} REPEATABLE SLIDES (generate an array of instances for each slide type):\n`;
+  const hasContextual = contextualFields.length > 0;
+  const hasRepeatable = repeatableFields.length > 0;
+  
+  if (hasRepeatable) {
+    recipe += `\n${sectionNum}. REPEATABLE SLIDES (generate an array of instances for each slide type):\n`;
     recipe += `"slides": {\n`;
 
     repeatableFields.forEach((rf, idx) => {
       const dataKey   = rf.structureType;
       const isLast    = idx === repeatableFields.length - 1;
-      const genFields = rf.fields.filter(t => t.autoGenerate);
+      const genFields = rf.fields;
 
       recipe += `  "${dataKey}": [\n`;
-      recipe += `    // CUSTOM PROMPT: ${rf.customPrompt || 'instances of this slide type'}\n`;
       recipe += `    {\n`;
+      if (rf.customPrompt) recipe += `      "custom_prompt": "${rf.customPrompt}",\n`;
       recipe += `      "structure_type": "${rf.structureType}",\n`;
       genFields.forEach(tag => {
         const hint = tag.hint || `value for ${tag.key}`;
-        recipe += `      "${tag.key}": "${hint}"${tag.maxChars ? ` (max ${tag.maxChars} chars)` : ''},\n`;
+        const maxCharsStr = tag.maxChars ? ` (max ${tag.maxChars} chars)` : '';
+        recipe += `      "${tag.key}": "${hint}${maxCharsStr}",\n`;
       });
       recipe += `    }\n`;
       recipe += `  ]${isLast ? '' : ','}\n`;
     });
 
     recipe += `}\n`;
-  } else {
-    recipe += `\n`;
   }
 
   recipe += `\nIMPORTANT:\n- static: one value per key\n- contextual: one array entry per slide, each with "slide_index" and the field value\n- slides: array of instances, each with "structure_type" field`;

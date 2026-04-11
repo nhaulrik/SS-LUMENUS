@@ -38,6 +38,7 @@ export const SEL = {
   modalKey:         '[data-testid="modal-key"]',
   modalHint:        '[data-testid="modal-hint"]',
   modalAI:          '[data-testid="modal-ai"]',
+  modalMax:         '[data-testid="modal-maxchars"]',
   modalSave:        '[data-testid="modal-save"]',
 
   // Patch table — rows
