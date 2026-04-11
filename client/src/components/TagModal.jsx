@@ -118,6 +118,7 @@ export default function TagModal({ tagModal, tags, onSave, onClose, onDelete }) 
             <button className="btn btn-danger" onClick={onDelete}>Delete</button>
           )}
           <button
+            data-testid="modal-save"
             className="btn btn-primary"
             onClick={handleSave}
             disabled={!trimmedKey || isDuplicateOnSlide}

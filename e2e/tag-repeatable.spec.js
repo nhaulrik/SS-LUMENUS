@@ -22,6 +22,11 @@ test.describe('Repeatable slide configuration', () => {
 
   test('checking the Repeatable toggle reveals the config section', async ({ uploadedPage: page }) => {
     await selectSlide(page, 2);
+    // Toggle twice to reset state if coming from previous test
+    const isChecked = await page.locator(SEL.repeatableToggle).isChecked();
+    if (isChecked) {
+      await page.locator(SEL.repeatableToggle).uncheck();
+    }
     await expect(page.locator('.repeatable-config')).not.toBeVisible();
     await page.locator(SEL.repeatableToggle).check();
     await expect(page.locator('.repeatable-config')).toBeVisible();

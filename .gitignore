@@ -22,6 +22,11 @@ test-*.json
 .env
 .env.local
 
+# Playwright test outputs
+test-results/
+playwright-report/
+trace.zip
+
 # OS / editor
 .DS_Store
 Thumbs.db

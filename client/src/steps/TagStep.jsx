@@ -222,6 +222,7 @@ export default function TagStep({
                               {/* AI toggle */}
                               <label
                                 className="toggle-switch"
+                                data-key={t.key}
                                 onClick={e => e.stopPropagation()}
                               >
                                 <input

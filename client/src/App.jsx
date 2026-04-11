@@ -105,7 +105,7 @@ export default function App() {
 
   // ── Auto-load / create patch when entering Tag step ───────────
   useEffect(() => {
-    if (step !== 'tag' || slides.length === 0 || tags.length > 0) return
+    if (step !== 'tag' || slides.length === 0) return
     if (chainId) return  // inside a chain — start fresh
 
     const existing = patches.find(p => p.pptxFile === templateFile?.fileName)
@@ -120,12 +120,7 @@ export default function App() {
       return
     }
 
-    const autoTags = mergeTagsWithSlides([], slides)
-    if (autoTags.length === 0) return
-
-    setTags(autoTags)
-    lastSavedPatchRef.current = JSON.stringify({ tags: autoTags, repeatableSlides: [], globalPrompt: '' })
-
+    // Don't auto-tag - only create patch skeleton, user adds tags manually
     const autoPatchName = templateFile?.fileName
       ? templateFile.fileName.replace('.pptx', '') + '_auto'
       : 'auto_patch'
@@ -134,7 +129,7 @@ export default function App() {
       name: autoPatchName,
       pptxFile: templateFile?.fileName || '',
       createdAt: new Date().toISOString(),
-      tags: autoTags,
+      tags: [],
       repeatableSlides: [],
       globalPrompt: ''
     }
@@ -142,7 +137,8 @@ export default function App() {
     setCurrentPatch(newPatch.id)
     setPatchName(autoPatchName)
     savePatchToServer(newPatch)
-  }, [step, slides, tags.length, templateFile, patches, chainId, savePatchToServer])
+    lastSavedPatchRef.current = JSON.stringify({ tags: [], repeatableSlides: [], globalPrompt: '' })
+  }, [step, slides, templateFile, patches, chainId, savePatchToServer])
 
   // ── Auto-match patch when a PPTX is loaded ────────────────────
   useEffect(() => {

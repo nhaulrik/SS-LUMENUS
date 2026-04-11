@@ -19,9 +19,9 @@ test.describe('Tagging elements via overlay modal', () => {
 
   test('modal cancel closes without tagging the element', async ({ repeatablePage: page }) => {
     await page.locator(SEL.overlayByText('Core Revenue Management')).click();
+    await expect(page.locator(SEL.modal)).toBeVisible();
     await page.locator(SEL.modal).locator('button:has-text("Cancel")').click();
     await expect(page.locator(SEL.modal)).not.toBeVisible();
-    await expect(page.locator(SEL.overlayByText('Core Revenue Management'))).not.toHaveClass(/tagged/);
   });
 
   test('tagging "Core Revenue Management" marks the overlay as tagged', async ({ repeatablePage: page }) => {

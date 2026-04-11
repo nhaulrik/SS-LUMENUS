@@ -35,10 +35,10 @@ export const SEL = {
 
   // Tag modal
   modal:            '.modal-content',
-  modalKey:         '.modal-content input[placeholder="e.g., product_name"]',
-  modalHint:        '.modal-content .form-group:nth-child(2) input',
-  modalAI:          '.modal-content input[type="checkbox"]',
-  modalSave:        '.modal-content .btn-primary',
+  modalKey:         '[data-testid="modal-key"]',
+  modalHint:        '[data-testid="modal-hint"]',
+  modalAI:          '[data-testid="modal-ai"]',
+  modalSave:        '[data-testid="modal-save"]',
 
   // Patch table — rows
   patchRows:        '.patch-table-body .patch-row',
@@ -48,13 +48,6 @@ export const SEL = {
   patchKeyInput:    '.patch-key-input',
   hintInput:        '.patch-hint-input',
   patchMaxInput:    '.patch-max-input',
-
-  // Tag modal (used for initial tagging from slide overlay only)
-  modal:            '.modal-content',
-  modalKey:         '.modal-content input[placeholder="e.g., product_name"]',
-  modalHint:        '.modal-content .form-group:nth-child(2) input',
-  modalAI:          '.modal-content input[type="checkbox"]',
-  modalSave:        '.modal-content .btn-primary',
 
   // Actions
   generateRecipe:   'button:has-text("Generate Recipe")',
