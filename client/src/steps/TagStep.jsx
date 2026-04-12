@@ -5,7 +5,7 @@ import SlidePreview from '../components/SlidePreview.jsx'
 import TagModal from '../components/TagModal.jsx'
 import PropagateModal from '../components/PropagateModal.jsx'
 import PatchHistoryTimeline from '../components/PatchHistoryTimeline.jsx'
-import { maxElementOrder } from '../utils/tagUtils.js'
+import { maxElementOrder, keyGen } from '../utils/tagUtils.js'
 
 const SLIDE_WIDTH  = 10
 const SLIDE_HEIGHT = 5.625
@@ -79,6 +79,9 @@ export default function TagStep({
   const propagationsByKey = new Map(propagations.map(p => [p.key, p]))
 
   const currentSlide = slides[selectedSlide]
+
+  // Check if key matches auto-generated key from originalText
+  const isOriginalKey = (tag) => tag.key === keyGen(tag.originalText || '')
 
   // ── Repeatable slide helpers ───────────────────────────────────
   const getRepeatableConfig = (slideIndex) =>
@@ -258,7 +261,7 @@ export default function TagStep({
                           return (
                             <div
                               key={t.elementId}
-                              className="patch-row"
+                              className={`patch-row ${isOriginalKey(t) ? 'key-original' : 'key-user-defined'}`}
                               data-key={t.key}
                               onMouseEnter={() => setHighlightedElement(t.elementId)}
                               onMouseLeave={() => setHighlightedElement(null)}

@@ -486,6 +486,15 @@ header p {
   background: var(--bg-tertiary);
 }
 
+/* Key type distinction: original (auto-generated) vs user-defined */
+.patch-row.key-original .patch-key-input {
+  color: var(--text-muted);
+}
+
+.patch-row.key-user-defined .patch-key-input {
+  color: var(--success);
+}
+
 .patch-row-main {
   display: grid;
   grid-template-columns: 40px 1fr 52px;
