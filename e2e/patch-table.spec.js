@@ -28,18 +28,20 @@ test.describe('Patch table — AI toggle', () => {
     await expect(page.locator('.patch-row[data-key="initiative_group_subheader"] input[type="checkbox"]')).toBeChecked();
   });
 
-  test('disabling AI on a row hides the hint input for that row', async ({ taggedPage: page }) => {
+  test('disabling AI on a row dims the hint for that row', async ({ taggedPage: page }) => {
     await page.locator('.patch-row[data-key="initiative_group"] .toggle-switch').click();
-    // Only second row still has a hint input
-    await expect(page.locator('.patch-row[data-key="initiative_group_subheader"] .patch-hint-input')).toHaveCount(1);
+    // Hint row becomes inactive (dimmed) when AI is off
+    await expect(page.locator('.patch-row[data-key="initiative_group"] .patch-row-hint')).toHaveClass(/patch-row-hint--inactive/);
+    // The other row is unaffected
+    await expect(page.locator('.patch-row[data-key="initiative_group_subheader"] .patch-row-hint')).not.toHaveClass(/patch-row-hint--inactive/);
   });
 
-  test('re-enabling AI on a row shows the hint input again', async ({ taggedPage: page }) => {
+  test('re-enabling AI on a row restores the hint for that row', async ({ taggedPage: page }) => {
     const toggle = page.locator('.patch-row[data-key="initiative_group"] .toggle-switch');
     await toggle.click();
-    await expect(page.locator('.patch-row[data-key="initiative_group_subheader"] .patch-hint-input')).toHaveCount(1);
+    await expect(page.locator('.patch-row[data-key="initiative_group"] .patch-row-hint')).toHaveClass(/patch-row-hint--inactive/);
     await toggle.click();
-    await expect(page.locator('.patch-row .patch-hint-input')).toHaveCount(2);
+    await expect(page.locator('.patch-row[data-key="initiative_group"] .patch-row-hint')).not.toHaveClass(/patch-row-hint--inactive/);
   });
 });
 
@@ -81,8 +83,8 @@ test.describe('Patch table — inline key editing', () => {
 
 test.describe('Patch table — inline hint editing', () => {
   test('hint inputs are pre-filled when AI is on', async ({ taggedPage: page }) => {
-    await expect(page.locator(SEL.hintInput).first()).toHaveValue('Title of the initiative group');
-    await expect(page.locator(SEL.hintInput).nth(1)).toHaveValue('subheader of initiative group');
+    await expect(page.locator('.patch-row[data-key="initiative_group"] .patch-hint-input')).toHaveValue('Title of the initiative group');
+    await expect(page.locator('.patch-row[data-key="initiative_group_subheader"] .patch-hint-input')).toHaveValue('subheader of initiative group');
   });
 
   test('editing the hint inline updates the value without opening a modal', async ({ taggedPage: page }) => {

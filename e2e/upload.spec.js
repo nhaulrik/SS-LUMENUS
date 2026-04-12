@@ -29,8 +29,8 @@ test.describe('Upload step', () => {
     await page.setInputFiles(SEL.fileInput, FIXTURE_PPTX);
     await page.waitForSelector('.tag-slide-btn');
     const thumbs = page.locator('.tag-slide-btn');
-    // sample.pptx has 3 slides
-    await expect(thumbs).toHaveCount(3);
+    // sample.pptx has 4 slides (slide 3 is a duplicate of slide 2)
+    await expect(thumbs).toHaveCount(4);
   });
 
   test('breadcrumb advances to the Tag step after upload', async ({ page }) => {

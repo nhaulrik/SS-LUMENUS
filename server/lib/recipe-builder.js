@@ -44,12 +44,20 @@ ${globalPromptSection}GENERATE THE FOLLOWING DATA:
 
   let sectionNum = 1;
 
-  if (staticFields.length > 0) {
+  // Non-unique shared keys appear once per key (not once per slide).
+  const seenStaticKeys = new Set();
+  const dedupedStaticFields = staticFields.filter(t => {
+    if (seenStaticKeys.has(t.key)) return false;
+    seenStaticKeys.add(t.key);
+    return true;
+  });
+
+  if (dedupedStaticFields.length > 0) {
     recipe += `\n${sectionNum}. STATIC FIELDS (one value per field):
 {
   "static": {
 `;
-    staticFields.forEach(tag => {
+    dedupedStaticFields.forEach(tag => {
       const hint = tag.hint || `value for ${tag.key}`;
       const maxCharsStr = tag.maxChars ? ` (max ${tag.maxChars} chars)` : '';
       recipe += `    "${tag.key}": "${hint}${maxCharsStr}",\n`;

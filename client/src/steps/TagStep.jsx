@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import AppHeader from '../components/AppHeader.jsx'
 import Breadcrumbs from '../components/Breadcrumbs.jsx'
 import SlidePreview from '../components/SlidePreview.jsx'
 import TagModal from '../components/TagModal.jsx'
 import PropagateModal from '../components/PropagateModal.jsx'
+import { maxElementOrder } from '../utils/tagUtils.js'
 
 const SLIDE_WIDTH  = 10
 const SLIDE_HEIGHT = 5.625
@@ -45,6 +46,12 @@ export default function TagStep({
   const [propagateModal,     setPropagateModal]     = useState(null) // key string | null
   const [renameConfirm,      setRenameConfirm]      = useState(null) // { elementId, oldKey, newKey } | null
 
+  // Tracks the key and its shared-status captured at focus time.
+  // Cannot use the rendered `sharedKeys` closure in onBlur because onChange
+  // updates the key in state (and thus sharedKeys) before blur fires.
+  const focusedKeyRef       = useRef(null)
+  const focusedKeyWasShared = useRef(false)
+
   // ── Shared key detection ───────────────────────────────────────
   const repeatableSet = new Set(repeatableSlides.map(r => r.slideIndex))
   const allStaticTags = tags.filter(t => !repeatableSet.has(t.slideIndex))
@@ -56,6 +63,7 @@ export default function TagStep({
   const sharedKeys = new Set(
     Object.entries(keyToSlides).filter(([, s]) => s.length > 1).map(([k]) => k)
   )
+  const propagationsByKey = new Map(propagations.map(p => [p.key, p]))
 
   const currentSlide = slides[selectedSlide]
 
@@ -96,6 +104,9 @@ export default function TagStep({
 
   const handleSaveTag = (key, hint, maxChars, autoGenerate) => {
     if (!tagModal) return
+    const existingTag = tags.find(t => t.elementId === tagModal.element.id)
+    const existingOrder = existingTag?.elementOrder
+    const maxOrder = maxElementOrder(tags)
     const newTags = [
       ...tags.filter(t => t.elementId !== tagModal.element.id),
       {
@@ -105,7 +116,8 @@ export default function TagStep({
         slideIndex:   tagModal.slideIndex,
         originalText: tagModal.element.text,
         maxChars,
-        autoGenerate: autoGenerate ?? false
+        autoGenerate: autoGenerate ?? false,
+        elementOrder: existingOrder ?? maxOrder + 1
       }
     ]
     setTags(newTags)
@@ -210,13 +222,12 @@ export default function TagStep({
                 const currentSlideNum = slides[selectedSlide]?.index
                 const slideTags = tags
                   .filter(t => t.slideIndex === currentSlideNum)
-                  .sort((a, b) => a.elementId.localeCompare(b.elementId))
+                  .sort((a, b) => (a.elementOrder ?? 0) - (b.elementOrder ?? 0))
                 return (
                   <>
                     <div className="patch-table-header">
                       <span>AI</span>
                       <span>Key</span>
-                      <span>Hint</span>
                       <span>Max</span>
                     </div>
 
@@ -240,72 +251,96 @@ export default function TagStep({
                                 background: highlightedElement === t.elementId ? 'rgba(255, 195, 0, 0.2)' : undefined
                               }}
                             >
-                              {/* AI toggle */}
-                              <label
-                                className="toggle-switch"
-                                data-key={t.key}
-                                onClick={e => e.stopPropagation()}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={t.autoGenerate ?? false}
-                                  onChange={e => {
-                                    const newTags = tags.map(tag =>
-                                      tag.elementId === t.elementId
-                                        ? { ...tag, autoGenerate: e.target.checked }
-                                        : tag
-                                    )
-                                    setTags(newTags)
-                                    triggerSave(newTags, repeatableSlides)
-                                  }}
-                                />
-                                <span className="toggle-slider"></span>
-                              </label>
-
-                              {/* Key — always visible, inline editable */}
-                              <div className="patch-key-cell">
-                                <input
-                                  className="patch-key-input"
-                                  value={t.key}
-                                  title={t.key}
+                              {/* Row 1: AI toggle | Key + propagate icon | Max */}
+                              <div className="patch-row-main">
+                                <label
+                                  className="toggle-switch"
+                                  data-key={t.key}
                                   onClick={e => e.stopPropagation()}
-                                  onFocus={e => { e.target.dataset.originalKey = t.key }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={t.autoGenerate ?? false}
+                                    onChange={e => {
+                                      const newTags = tags.map(tag =>
+                                        tag.elementId === t.elementId
+                                          ? { ...tag, autoGenerate: e.target.checked }
+                                          : tag
+                                      )
+                                      setTags(newTags)
+                                      triggerSave(newTags, repeatableSlides)
+                                    }}
+                                  />
+                                  <span className="toggle-slider"></span>
+                                </label>
+
+                                <div className="patch-key-cell">
+                                  <input
+                                    className="patch-key-input"
+                                    value={t.key}
+                                    title={t.key}
+                                    onClick={e => e.stopPropagation()}
+                                    onFocus={() => {
+                                      focusedKeyRef.current       = t.key
+                                      focusedKeyWasShared.current = sharedKeys.has(t.key)
+                                    }}
+                                    onChange={e => {
+                                      const newTags = tags.map(tag =>
+                                        tag.elementId === t.elementId
+                                          ? { ...tag, key: e.target.value }
+                                          : tag
+                                      )
+                                      setTags(newTags)
+                                      triggerSave(newTags, repeatableSlides)
+                                    }}
+                                    onBlur={e => {
+                                      const originalKey = focusedKeyRef.current
+                                      const newKey      = e.target.value
+                                      if (!originalKey || newKey === originalKey) return
+                                      if (focusedKeyWasShared.current) {
+                                        setRenameConfirm({ elementId: t.elementId, oldKey: originalKey, newKey })
+                                      }
+                                    }}
+                                  />
+                                  {sharedKeys.has(t.key) && (
+                                    <button
+                                      className={`propagate-icon${propagationsByKey.has(t.key) ? ' propagate-icon--active' : ''}`}
+                                      title={`This key is used on ${keyToSlides[t.key].length} slide(s). Click to configure propagation.`}
+                                      onClick={e => { e.stopPropagation(); setPropagateModal(t.key) }}
+                                    >⇔</button>
+                                  )}
+                                </div>
+
+                                <input
+                                  className="patch-max-input"
+                                  type="number"
+                                  value={t.maxChars ?? ''}
+                                  placeholder="—"
+                                  min={1}
+                                  onClick={e => e.stopPropagation()}
                                   onChange={e => {
-                                    // Update only this tag while typing
+                                    const parsed = e.target.value ? parseInt(e.target.value, 10) : null
                                     const newTags = tags.map(tag =>
                                       tag.elementId === t.elementId
-                                        ? { ...tag, key: e.target.value }
+                                        ? { ...tag, maxChars: parsed }
                                         : tag
                                     )
                                     setTags(newTags)
                                     triggerSave(newTags, repeatableSlides)
                                   }}
-                                  onBlur={e => {
-                                    const originalKey = e.target.dataset.originalKey
-                                    const newKey      = e.target.value
-                                    if (newKey === originalKey) return
-                                    // Only prompt when the original key was shared
-                                    if (originalKey && sharedKeys.has(originalKey)) {
-                                      setRenameConfirm({ elementId: t.elementId, oldKey: originalKey, newKey })
-                                    }
-                                  }}
                                 />
-                                {sharedKeys.has(t.key) && (
-                                  <button
-                                    className="propagate-icon"
-                                    title={`This key is used on ${keyToSlides[t.key].length} slide(s). Click to configure propagation.`}
-                                    onClick={e => { e.stopPropagation(); setPropagateModal(t.key) }}
-                                  >⇔</button>
-                                )}
                               </div>
 
-                              {/* Hint — visible only when AI on */}
-                              {t.autoGenerate ? (
+                              {/* Row 2: Hint — always visible, dimmed when AI is off */}
+                              <div className={`patch-row-hint${t.autoGenerate ? '' : ' patch-row-hint--inactive'}`}>
+                                <span className="patch-hint-label">Hint</span>
                                 <input
                                   className="patch-hint-input"
                                   value={t.hint || ''}
-                                  placeholder="Enter hint for AI..."
+                                  placeholder={t.autoGenerate ? 'Describe what the AI should write here...' : 'Enable AI to use this hint'}
                                   onClick={e => e.stopPropagation()}
+                                  onFocus={() => setHighlightedElement(t.elementId)}
+                                  onBlur={() => setHighlightedElement(null)}
                                   onChange={e => {
                                     const newTags = tags.map(tag =>
                                       tag.elementId === t.elementId
@@ -316,29 +351,7 @@ export default function TagStep({
                                     triggerSave(newTags, repeatableSlides)
                                   }}
                                 />
-                              ) : (
-                                <span className="patch-dash">—</span>
-                              )}
-
-                              {/* Max chars — always visible, inline editable */}
-                              <input
-                                className="patch-max-input"
-                                type="number"
-                                value={t.maxChars ?? ''}
-                                placeholder="—"
-                                min={1}
-                                onClick={e => e.stopPropagation()}
-                                onChange={e => {
-                                  const parsed = e.target.value ? parseInt(e.target.value, 10) : null
-                                  const newTags = tags.map(tag =>
-                                    tag.elementId === t.elementId
-                                      ? { ...tag, maxChars: parsed }
-                                      : tag
-                                  )
-                                  setTags(newTags)
-                                  triggerSave(newTags, repeatableSlides)
-                                }}
-                              />
+                              </div>
                             </div>
                           )
                         })}
@@ -503,12 +516,12 @@ export default function TagStep({
           <PropagateModal
             sharedKey={propagateModal}
             slideList={keyToSlides[propagateModal] ?? []}
-            allKeysOnSlide={
-              tags
-                .filter(t => t.slideIndex === slides[selectedSlide]?.index)
-                .map(t => t.key)
+            currentSlideElements={
+              tags.filter(t =>
+                t.slideIndex === slides[selectedSlide]?.index && t.key !== propagateModal
+              )
             }
-            currentConfig={propagations.find(p => p.key === propagateModal) ?? null}
+            currentConfig={propagationsByKey.get(propagateModal) ?? null}
             onSave={config => onSavePropagation(propagateModal, config)}
             onClose={() => setPropagateModal(null)}
           />

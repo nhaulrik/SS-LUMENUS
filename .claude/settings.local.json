@@ -10,7 +10,12 @@
       "Bash(node parse-sample.mjs)",
       "Bash(npm list:*)",
       "Bash(node -e \"import\\('./server/pptx-utils.js'\\).then\\(async m => { const {default: admZip} = await import\\('adm-zip'\\); const {default: fs} = await import\\('fs'\\); const buf = fs.readFileSync\\('sample.pptx'\\); const zip = new admZip\\(buf\\); const slides = m.parseSlides\\(zip\\); const s2 = slides.find\\(s=>s.index===2\\); s2.elements.filter\\(e=>e.type==='text'\\).forEach\\(e=>console.log\\(JSON.stringify\\({id:e.id,text:e.text.substring\\(0,50\\),bounds:e.bounds}\\)\\)\\); }\\)\")",
-      "Bash(npx playwright:*)"
+      "Bash(npx playwright:*)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('slides:', len\\(d.get\\('slides', d.get\\('patches', []\\)\\)\\), 'keys:', list\\(d.keys\\(\\)\\)[:10]\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); slides = set\\(t['slideIndex'] for t in d.get\\('tags',[]\\)\\); print\\('slide indexes in tags:', sorted\\(slides\\)\\); print\\('tags count:', len\\(d.get\\('tags',[]\\)\\)\\);print\\('pptxFile:', d.get\\('pptxFile',''\\)\\)\")",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); slides = set\\(t['slideIndex'] for t in d.get\\('tags',[]\\)\\); print\\('slide indexes:', sorted\\(slides\\)\\); print\\('tags count:', len\\(d.get\\('tags',[]\\)\\)\\);print\\('pptxFile:', d.get\\('pptxFile',''\\)\\)\")",
+      "Bash(tee /tmp/propagate-results.txt)",
+      "Bash(echo \"EXIT:$?\")"
     ]
   }
 }

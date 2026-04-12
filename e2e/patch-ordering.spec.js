@@ -69,7 +69,7 @@ test.describe('Patch entry ordering', () => {
 
     // Get keys on slide 2
     const slide2Rows = await page.locator('.patch-row').all();
-    const slide2Keys = await Promise.all(slide2Rows.map(r => 
+    const slide2Keys = await Promise.all(slide2Rows.map(r =>
       r.locator('.patch-key-input').inputValue()
     ));
 
@@ -79,11 +79,32 @@ test.describe('Patch entry ordering', () => {
 
     // Get keys on slide 2 again
     const slide2RowsAfter = await page.locator('.patch-row').all();
-    const slide2KeysAfter = await Promise.all(slide2RowsAfter.map(r => 
+    const slide2KeysAfter = await Promise.all(slide2RowsAfter.map(r =>
       r.locator('.patch-key-input').inputValue()
     ));
 
     // Order should be the same
     expect(slide2KeysAfter).toEqual(slide2Keys);
+  });
+
+  test('slide 3 (duplicate of slide 2) has the same element order as slide 2', async ({ page }) => {
+    await doUpload(page);
+
+    await selectSlide(page, 2);
+    const slide2Rows = await page.locator('.patch-row').all();
+    const slide2Keys = await Promise.all(slide2Rows.map(r =>
+      r.locator('.patch-key-input').inputValue()
+    ));
+
+    await selectSlide(page, 3);
+    const slide3Rows = await page.locator('.patch-row').all();
+    const slide3Keys = await Promise.all(slide3Rows.map(r =>
+      r.locator('.patch-key-input').inputValue()
+    ));
+
+    // Same number of elements
+    expect(slide3Keys).toHaveLength(slide2Keys.length);
+    // Same ordering — both slides share identical structure
+    expect(slide3Keys).toEqual(slide2Keys);
   });
 });

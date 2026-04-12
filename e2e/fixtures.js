@@ -51,12 +51,17 @@ export const SEL = {
   patchMaxInput:    '.patch-max-input',
 
   // Propagation
-  propagateIcon:        '.propagate-icon',
-  propagateModal:       '.propagate-modal',
-  propagateModeNonUniq: '[data-testid="mode-non-unique"]',
-  propagateModeUnique:  '[data-testid="mode-unique"]',
-  propagateLinkedKey:   '[data-testid="linked-key-select"]',
-  propagateSave:        '[data-testid="propagate-save"]',
+  propagateIcon:           '.propagate-icon',
+  propagateIconActive:     '.propagate-icon--active',
+  propagateModal:          '.propagate-modal',
+  propagateModeNonUniq:    '[data-testid="mode-non-unique"]',
+  propagateModeUnique:     '[data-testid="mode-unique"]',
+  // Unique mode — click-to-pick context element
+  propagatePickPrompt:     '[data-testid="propagate-pick-prompt"]',
+  propagatePickOverlay:    '.propagate-pick-overlay',           // slide overlay enters pick mode
+  propagateContextDisplay: '[data-testid="propagate-context-display"]', // shows selected key label
+  propagateUniqueSection:  '.propagate-unique-section',         // wrapper for the unique sub-UI
+  propagateSave:           '[data-testid="propagate-save"]',
 
   // Actions
   generateRecipe:   'button:has-text("Generate Recipe")',
@@ -69,6 +74,11 @@ export const SEL = {
 
 /** Upload the fixture PPTX and wait for the Tag step to appear. */
 export async function doUpload(page) {
+  // Clear server-side patch state so this test starts from a clean slate.
+  // Without this, a patch saved by a previous test (same PPTX filename) is
+  // auto-loaded by the app, contaminating tags and propagation config.
+  // Use the absolute API URL to avoid Vite proxy IPv6 resolution issues on Windows.
+  await page.request.delete('http://localhost:3001/api/patches');
   await page.goto('/');
   await page.setInputFiles(SEL.fileInput, FIXTURE_PPTX);
   // Wait for slide thumbnails to appear — confirms we're in the Tag step
@@ -111,9 +121,11 @@ export async function tagElement(page, { originalText, key, hint, ai = true }) {
 
   await page.locator(SEL.modalSave).click();
   await page.waitForSelector(SEL.modal, { state: 'detached' });
+  // Debounce is 1000ms; wait for the save to flush before the test proceeds.
+  await page.waitForTimeout(1500);
 }
 
-// ─── Fixture definitions ──────────────────────────────────────────────────────
+// ─── Fixture definitions ──────────────────────────────────────────────────
 
 export const test = base.extend({
   /** App is on the Tag step with sample.pptx loaded. */
@@ -155,15 +167,16 @@ export const test = base.extend({
   },
 
   /**
-   * "Netcompany" is tagged with the same key on slide 1 and slide 3 (both non-repeatable).
-   * This gives a naturally shared key ready for propagation tests.
+   * "initiative_group" is tagged on slides 2 and 3.
+   * Both are non-repeatable slides, so propagation icon appears.
+   * Slide 3 is the duplicate of slide 2 in sample.pptx.
    */
   propagatedPage: async ({ page }, use) => {
     await doUpload(page);
-    await selectSlide(page, 1);
-    await tagElement(page, { originalText: 'Netcompany', key: 'netcompany', hint: 'Company name', ai: true });
+    await selectSlide(page, 2);
+    await tagElement(page, { originalText: 'Core Revenue Management', key: 'initiative_group', hint: 'Title of the initiative group', ai: true });
     await selectSlide(page, 3);
-    await tagElement(page, { originalText: 'Netcompany', key: 'netcompany', hint: 'Company name', ai: true });
+    await tagElement(page, { originalText: 'Core Revenue Management', key: 'initiative_group', hint: 'Title of the initiative group', ai: true });
     await use(page);
   }
 });

@@ -6,6 +6,11 @@ export function keyGen(text) {
   return text.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') || 'field'
 }
 
+/** Return the highest elementOrder value in a tag array, or -1 if empty. */
+export function maxElementOrder(tags) {
+  return tags.reduce((max, t) => Math.max(max, t.elementOrder ?? 0), -1)
+}
+
 /**
  * Merge an existing set of tags (from a saved patch) with elements from
  * freshly-uploaded slides. Elements that already have a tag are kept as-is;
@@ -19,8 +24,9 @@ export function mergeTagsWithSlides(existingTags, slides) {
   const existingIds = new Set(existingTags.map(t => t.elementId))
   const newTags = []
 
+  let globalElementOrder = maxElementOrder(existingTags) + 1
   slides.forEach(slide => {
-    slide.elements.forEach(elem => {
+    slide.elements.forEach((elem, idx) => {
       if (elem.text && elem.text.trim() && !existingIds.has(elem.id)) {
         newTags.push({
           elementId: elem.id,
@@ -29,7 +35,8 @@ export function mergeTagsWithSlides(existingTags, slides) {
           slideIndex: slide.index,
           originalText: elem.text,
           maxChars: elem.maxChars,
-          autoGenerate: false
+          autoGenerate: false,
+          elementOrder: globalElementOrder++
         })
       }
     })

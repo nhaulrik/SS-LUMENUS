@@ -38,6 +38,17 @@ router.post('/patches', (req, res) => {
   }
 });
 
+// ── Delete all patches (E2E test isolation) ───────────────────────────────────
+router.delete('/patches', (_req, res) => {
+  try {
+    const files = fs.readdirSync(PATCHES_DIR).filter(f => f.endsWith('.json'));
+    files.forEach(f => fs.unlinkSync(path.join(PATCHES_DIR, f)));
+    res.json({ ok: true, deleted: files.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Delete patch ───────────────────────────────────────────────────────────────
 router.delete('/patches/:id', (req, res) => {
   try {

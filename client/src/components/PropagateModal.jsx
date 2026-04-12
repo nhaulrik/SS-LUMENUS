@@ -4,25 +4,24 @@ import { useState } from 'react'
  * Modal for configuring how a shared key is propagated across slides.
  *
  * Props:
- *   sharedKey       – the key being configured (string)
- *   slideList       – array of slide indices where this key exists (number[])
- *   allKeysOnSlide  – all keys available on the current slide, for the context dropdown (string[])
- *   currentConfig   – existing PropagationConfig | null
- *   onSave(config)  – called with { mode, linkedKey? } or null to clear
- *   onClose()       – called to dismiss without saving
+ *   sharedKey             – the key being configured (string)
+ *   slideList             – array of slide indices where this key exists (number[])
+ *   currentSlideElements  – tags on the current slide excluding sharedKey itself
+ *                           used to populate the click-to-pick context list
+ *   currentConfig         – existing PropagationConfig | null
+ *   onSave(config)        – called with { mode, linkedKey? } or null to clear
+ *   onClose()             – called to dismiss without saving
  */
 export default function PropagateModal({
   sharedKey,
   slideList,
-  allKeysOnSlide,
+  currentSlideElements = [],
   currentConfig,
   onSave,
   onClose
 }) {
-  const [mode,      setMode]      = useState(currentConfig?.mode      ?? null)
-  const [linkedKey, setLinkedKey] = useState(currentConfig?.linkedKey ?? '')
-
-  const contextKeys = allKeysOnSlide.filter(k => k !== sharedKey)
+  const [mode,        setMode]        = useState(currentConfig?.mode      ?? null)
+  const [linkedKey,   setLinkedKey]   = useState(currentConfig?.linkedKey ?? '')
 
   const handleSave = () => {
     if (!mode) {
@@ -51,7 +50,7 @@ export default function PropagateModal({
               name="propagate-mode"
               data-testid="mode-non-unique"
               checked={mode === 'non-unique'}
-              onChange={() => setMode('non-unique')}
+              onChange={() => { setMode('non-unique'); setLinkedKey('') }}
             />
             <span>
               <strong>Non-unique</strong> — same AI-generated content on all slides with this key
@@ -67,35 +66,49 @@ export default function PropagateModal({
               onChange={() => setMode('unique')}
             />
             <span>
-              <strong>Unique</strong> — different AI content per slide, informed by another field
+              <strong>Unique</strong> — different AI content per slide, informed by another element
             </span>
           </label>
-
-          {mode === 'unique' && (
-            <div className="propagate-linked-key">
-              <label htmlFor="linked-key-select">Context field key:</label>
-              <select
-                id="linked-key-select"
-                data-testid="linked-key-select"
-                value={linkedKey}
-                onChange={e => setLinkedKey(e.target.value)}
-              >
-                <option value="">— choose a field —</option>
-                {contextKeys.map(k => (
-                  <option key={k} value={k}>{k}</option>
-                ))}
-              </select>
-              <p className="propagate-linked-hint">
-                The AI will use each slide&rsquo;s value of this field as context when generating &ldquo;{sharedKey}&rdquo;.
-              </p>
-            </div>
-          )}
         </div>
+
+        {mode === 'unique' && (
+          <div className="propagate-unique-section">
+            <p className="propagate-pick-prompt" data-testid="propagate-pick-prompt">
+              Click an element below to use as context when generating &ldquo;{sharedKey}&rdquo; for each slide.
+            </p>
+
+            <div className="propagate-pick-overlay" data-testid="propagate-pick-overlay">
+              {currentSlideElements.length === 0 ? (
+                <p className="propagate-pick-empty">
+                  No other tagged elements on this slide to use as context.
+                </p>
+              ) : (
+                currentSlideElements.map(elem => (
+                  <button
+                    key={elem.elementId}
+                    className={`overlay-element propagate-pick-item${linkedKey === elem.key ? ' propagate-pick-item--selected' : ''}`}
+                    data-text={elem.originalText}
+                    onClick={() => setLinkedKey(elem.key)}
+                  >
+                    <span className="propagate-pick-item-text">{elem.originalText}</span>
+                    <span className="propagate-pick-item-key">{elem.key}</span>
+                  </button>
+                ))
+              )}
+            </div>
+
+            {linkedKey && (
+              <p className="propagate-context-display" data-testid="propagate-context-display">
+                Context: <strong>{linkedKey}</strong>
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="propagate-clear">
           <button
             className="btn-link"
-            onClick={() => setMode(null)}
+            onClick={() => { setMode(null); setLinkedKey('') }}
             disabled={mode === null}
           >
             Clear (revert to auto-detect)
