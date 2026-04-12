@@ -1395,7 +1395,7 @@ header p {
 .propagate-pick-overlay {
   display: flex;
   flex-direction: column;
-  max-height: 200px;
+  max-height: 400px;
   min-height: 2rem;
   overflow-y: auto;
   overflow-x: hidden;
@@ -1419,6 +1419,7 @@ header p {
   top: 0;
   background: var(--bg-tertiary);
   z-index: 1;
+  flex-shrink: 0;
 }
 
 .propagate-pick-header span:first-child {
@@ -1452,7 +1453,7 @@ header p {
   font-size: 0.85rem;
   box-sizing: border-box;
   align-items: start;
-  overflow: hidden;
+  flex-shrink: 0;
 }
 
 .propagate-pick-item:last-child {
@@ -1697,6 +1698,286 @@ header p {
   line-height: 1;
 }
 .toast__close:hover { opacity: 1; }
+
+/* ============================================================
+   Patch History Timeline (UC11 – UC14)
+   ============================================================ */
+.patch-history {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: var(--space-md);
+}
+
+.patch-history-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.patch-history-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex: 1;
+}
+
+.patch-history-badge {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* Timeline dot strip */
+.patch-history-dots {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: var(--space-md);
+  padding: var(--space-xs) 0;
+}
+
+.patch-history-dot-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.patch-history-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--border-default);
+  background: var(--bg-tertiary);
+  cursor: pointer;
+  padding: 0;
+  transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.patch-history-dot:hover {
+  border-color: var(--accent-primary);
+  transform: scale(1.2);
+}
+
+.patch-history-dot.current {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  cursor: default;
+  transform: scale(1.3);
+}
+
+.patch-history-dot-line {
+  width: 20px;
+  height: 2px;
+  background: var(--border-subtle);
+  flex-shrink: 0;
+}
+
+/* Round cards */
+.patch-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.patch-history-round {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  transition: border-color var(--transition-fast);
+}
+
+.patch-history-round.current {
+  border-color: var(--accent-muted);
+  background: color-mix(in srgb, var(--accent-primary) 6%, var(--bg-tertiary));
+}
+
+.patch-history-round-top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: 2px;
+}
+
+.patch-history-name {
+  flex: 1;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.patch-history-current-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  background: var(--accent-muted);
+  color: var(--accent-primary);
+  padding: 1px 6px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.patch-history-time {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.patch-history-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: var(--space-xs);
+}
+
+.patch-history-actions {
+  display: flex;
+  gap: var(--space-xs);
+  align-items: center;
+}
+
+.patch-history-btn {
+  background: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+  line-height: 1.4;
+}
+
+.patch-history-btn:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.patch-history-name-input {
+  flex: 1;
+  background: var(--bg-elevated);
+  border: 1px solid var(--accent-muted);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  padding: 2px 6px;
+  outline: none;
+  min-width: 0;
+}
+
+/* ============================================================
+   Generated Preview in Tag Step (UC6, UC7)
+   ============================================================ */
+.tag-step-preview {
+  margin-top: var(--space-lg);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  animation: fadeIn 0.3s ease;
+}
+
+.tag-step-preview-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.tag-step-preview-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.tag-step-preview-count {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.tag-step-preview-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.tag-step-preview-nav-btn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), color var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tag-step-preview-nav-btn:hover:not(:disabled) {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.tag-step-preview-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.tag-step-preview-nav-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  min-width: 40px;
+  text-align: center;
+}
+
+.tag-step-preview-body {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-md);
+  align-items: start;
+}
+
+.tag-step-preview-main {
+  container-type: inline-size;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+
+.tag-step-preview-main .slide-preview-canvas {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+.tag-step-preview-thumbs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
 
 /* ============================================================
    Form notices (inside TagModal — replaces imperative DOM)

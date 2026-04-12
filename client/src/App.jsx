@@ -40,7 +40,10 @@ export default function App() {
   const saveTimeoutRef    = useRef(null)
 
   // ── Chain state ────────────────────────────────────────────────
-  const [chainId, setChainId] = useState(null)
+  const [chainId,             setChainId]             = useState(null)
+  const [chainRounds,         setChainRounds]         = useState([])
+  const [currentRoundId,      setCurrentRoundId]      = useState(null)
+  const [restoredBaseRoundId, setRestoredBaseRoundId] = useState(null)
 
   // ── Recipe / generation ────────────────────────────────────────
   const [recipe,             setRecipe]             = useState('')
@@ -48,6 +51,7 @@ export default function App() {
   const [validation,         setValidation]         = useState(null)
   const [previewData,        setPreviewData]        = useState([])
   const [selectedPreviewIdx, setSelectedPreviewIdx] = useState(0)
+  const [tagPreviewIdx,      setTagPreviewIdx]      = useState(0)
 
   // ── Global toast notification ──────────────────────────────────
   const [toast, setToast] = useState(null)
@@ -68,6 +72,9 @@ export default function App() {
       .then(data => setPatches(data || []))
       .catch(() => setPatches([]))
   }, [])
+
+  // chainRounds is managed purely via local state updates (no server sync needed —
+  // chainId is not persisted across page reloads, so there is no catch-up scenario).
 
   // ── Patch save helpers ─────────────────────────────────────────
   const savePatchToServer = useCallback(async (patch) => {
@@ -108,7 +115,7 @@ export default function App() {
   // ── Auto-load / create patch when entering Tag step ───────────
   useEffect(() => {
     if (step !== 'tag' || slides.length === 0) return
-    if (chainId) return  // inside a chain — start fresh
+    if (chainId) return  // inside a chain — preserve existing state
 
     const existing = patches.find(p => p.pptxFile === templateFile?.fileName)
     if (existing) {
@@ -148,6 +155,8 @@ export default function App() {
   // ── Auto-match patch when a PPTX is loaded ────────────────────
   useEffect(() => {
     if (!templateFile?.fileName || patches.length === 0 || slides.length === 0) return
+    if (chainId) return  // Don't auto-load patch when in chain mode
+
     const match = patches.find(p => p.pptxFile === templateFile.fileName)
     if (!match) return
 
@@ -159,7 +168,7 @@ export default function App() {
     setPatchName(match.name)
     setGlobalPrompt(match.globalPrompt || '')
     lastSavedPatchRef.current = JSON.stringify({ tags: merged, repeatableSlides: match.repeatableSlides || [], globalPrompt: match.globalPrompt || '', propagations: match.propagations || [] })
-  }, [templateFile, patches, slides])
+  }, [templateFile, patches, slides, chainId])
 
   // ── Apply a saved patch ────────────────────────────────────────
   const handleApplyPatch = useCallback((patchId) => {
@@ -269,7 +278,7 @@ export default function App() {
       if (!res.ok) throw new Error(`Server error ${res.status}`)
       const result = await res.json()
       setRecipe(result.recipe)
-      navigateTo('recipe')  // was setStep('recipe') — bug fixed
+      navigateTo('recipe')
     } catch (err) {
       setToast({ message: 'Failed to generate recipe: ' + err.message, type: 'error' })
     }
@@ -294,7 +303,7 @@ export default function App() {
     }
   }, [templateFile, tags, jsonInput, repeatableSlides, navigateTo])
 
-  // ── Apply patch round and reset to Tag step ────────────────────
+  // ── Apply patch round and return to Tag step (UC1-UC10) ────────
   const applyPatchAndContinue = useCallback(async () => {
     try {
       const jsonData = JSON.parse(jsonInput)
@@ -316,7 +325,13 @@ export default function App() {
       const applyRes = await fetch(`/api/patch-chains/${activeChainId}/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tags, jsonData, repeatableSlides })
+        body: JSON.stringify({
+          tags,
+          jsonData,
+          repeatableSlides,
+          propagations,
+          baseRoundId: restoredBaseRoundId  // null = use last applied (default)
+        })
       })
       if (!applyRes.ok) throw new Error(`Apply failed (${applyRes.status})`)
       const applyResult = await applyRes.json()
@@ -333,21 +348,88 @@ export default function App() {
       const parseResult = await parseRes.json()
       if (!parseResult.ok) throw new Error(parseResult.error)
 
+      // UC2, UC3, UC4, UC8: Preserve tags (merged with new slides) and propagations
+      const mergedTags = mergeTagsWithSlides(tags, parseResult.slides)
+
       setTemplateFile({ filePath: parseResult.filePath, slides: parseResult.slides, fileName: templateFile.fileName })
       setSlides(parseResult.slides)
-      setTags([])
-      setRepeatableSlides([])
+      setTags(mergedTags)                          // preserved + merged (UC2/UC3/UC4)
+      setRepeatableSlides([])                      // reset (UC5)
+      // propagations preserved — not reset (UC8)
       setRecipe('')
       setJsonInput('')
       setValidation(null)
-      setPreviewData([])
-      setSelectedPreviewIdx(0)
-      setCurrentPatch(null)
+      setPreviewData(applyResult.previewData)      // set from apply response (UC6)
+      setTagPreviewIdx(0)
+      setRestoredBaseRoundId(null)
+
+      // Update chain rounds list
+      setChainRounds(prev => {
+        const without = prev.filter(r => r.id !== applyResult.round.id)
+        return [...without, applyResult.round]
+      })
+      setCurrentRoundId(applyResult.roundId)
+
       navigateTo('tag')
     } catch (err) {
       setToast({ message: 'Patch failed: ' + err.message, type: 'error' })
     }
-  }, [chainId, templateFile, tags, jsonInput, repeatableSlides, navigateTo])
+  }, [chainId, templateFile, tags, jsonInput, repeatableSlides, propagations, restoredBaseRoundId, navigateTo])
+
+  // ── Restore state from a previous patch round (UC11) ──────────
+  const handleRestoreRound = useCallback(async (roundId) => {
+    if (!chainId) return
+    try {
+      const res = await fetch(`/api/patch-chains/${chainId}/patches/${roundId}`)
+      if (!res.ok) throw new Error(`Fetch round failed (${res.status})`)
+      const data = await res.json()
+      if (!data.ok) throw new Error(data.error)
+
+      const { round, slides: roundSlides, filePath } = data
+      const mergedTags = mergeTagsWithSlides(round.tags || [], roundSlides)
+
+      setTemplateFile(prev => ({ ...prev, filePath, slides: roundSlides }))
+      setSlides(roundSlides)
+      setTags(mergedTags)
+      setPropagations(round.propagations || [])
+      setRepeatableSlides([])
+      setRecipe('')
+      setJsonInput('')
+      setValidation(null)
+      setRestoredBaseRoundId(roundId)
+      setCurrentRoundId(roundId)
+
+      // Build pseudo-previewData from the round's slides for display (UC6)
+      const restoredPreview = roundSlides.map((s, idx) => ({
+        slideNumber:   idx + 1,
+        instanceIndex: null,
+        content:       null,
+        elements:      s.elements,
+        background:    s.background,
+        sampleText:    []
+      }))
+      setPreviewData(restoredPreview)
+      setTagPreviewIdx(0)
+
+      setToast({ message: `Restored to "${round.name}"`, type: 'success' })
+    } catch (err) {
+      setToast({ message: 'Restore failed: ' + err.message, type: 'error' })
+    }
+  }, [chainId])
+
+  // ── Rename a chain round (UC14) ────────────────────────────────
+  const handleRenameRound = useCallback(async (roundId, name) => {
+    if (!chainId) return
+    try {
+      const res = await fetch(`/api/patch-chains/${chainId}/patches/${roundId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name })
+      })
+      if (!res.ok) throw new Error('Rename failed')
+      setChainRounds(prev => prev.map(r => r.id === roundId ? { ...r, name } : r))
+    } catch { /* best-effort */ }
+  }, [chainId])
 
   // ── Generate final file download ───────────────────────────────
   const generateFinalFile = useCallback(async () => {
@@ -358,12 +440,12 @@ export default function App() {
         const res = await fetch(`/api/patch-chains/${chainId}/apply`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tags, jsonData, repeatableSlides })
+          body: JSON.stringify({ tags, jsonData, repeatableSlides, propagations })
         })
         if (!res.ok) throw new Error(`Apply failed (${res.status})`)
         const result = await res.json()
         if (!result.ok) throw new Error(result.error)
-        triggerDownload(result.downloadUrl)  // was window.location.href — bug fixed
+        triggerDownload(result.downloadUrl)
       } else {
         const res = await fetch('/api/generate-pptx', {
           method: 'POST',
@@ -373,12 +455,12 @@ export default function App() {
         if (!res.ok) throw new Error(`Generate failed (${res.status})`)
         const result = await res.json()
         if (!result.ok) throw new Error(result.error || 'Generate failed')
-        triggerDownload(result.downloadUrl)  // was window.location.href — bug fixed
+        triggerDownload(result.downloadUrl)
       }
     } catch (err) {
       setToast({ message: 'Download failed: ' + err.message, type: 'error' })
     }
-  }, [chainId, templateFile, tags, jsonInput, repeatableSlides])
+  }, [chainId, templateFile, tags, jsonInput, repeatableSlides, propagations])
 
   // ── Step routing ───────────────────────────────────────────────
   const sharedProps = { step, canNavigateTo, navigateTo, stepAnimClass }
@@ -421,6 +503,14 @@ export default function App() {
           onDeletePatch={handleDeletePatch}
           onGenerateRecipe={handleGenerateRecipe}
           setToast={setToast}
+          chainId={chainId}
+          chainRounds={chainRounds}
+          currentRoundId={currentRoundId}
+          onRestoreRound={handleRestoreRound}
+          onRenameRound={handleRenameRound}
+          previewData={previewData}
+          tagPreviewIdx={tagPreviewIdx}
+          setTagPreviewIdx={setTagPreviewIdx}
         />
       </>
     )

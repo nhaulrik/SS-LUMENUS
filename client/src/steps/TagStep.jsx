@@ -4,6 +4,7 @@ import Breadcrumbs from '../components/Breadcrumbs.jsx'
 import SlidePreview from '../components/SlidePreview.jsx'
 import TagModal from '../components/TagModal.jsx'
 import PropagateModal from '../components/PropagateModal.jsx'
+import PatchHistoryTimeline from '../components/PatchHistoryTimeline.jsx'
 import { maxElementOrder } from '../utils/tagUtils.js'
 
 const SLIDE_WIDTH  = 10
@@ -39,7 +40,17 @@ export default function TagStep({
   // Actions
   onGenerateRecipe,
   // Toast
-  setToast
+  setToast,
+  // Chain history
+  chainId,
+  chainRounds,
+  currentRoundId,
+  onRestoreRound,
+  onRenameRound,
+  // Generated preview (UC6, UC7)
+  previewData,
+  tagPreviewIdx,
+  setTagPreviewIdx,
 }) {
   // Internal state — not needed outside this step
   const [selectedSlide,      setSelectedSlide]      = useState(0)
@@ -136,6 +147,9 @@ export default function TagStep({
   }
 
   const taggedElementIds = tags.map(t => t.elementId)
+
+  const hasPreview = previewData && previewData.length > 0
+  const hasHistory = chainId && chainRounds && chainRounds.length > 0
 
   return (
     <div className="app">
@@ -398,6 +412,19 @@ export default function TagStep({
             >
               Generate Recipe
             </button>
+
+            {/* Patch history timeline (UC11–UC14) */}
+            {hasHistory && (
+              <div style={{ marginTop: 'var(--space-lg)' }}>
+                <PatchHistoryTimeline
+                  chainId={chainId}
+                  rounds={chainRounds}
+                  currentRoundId={currentRoundId}
+                  onRestore={onRestoreRound}
+                  onRename={onRenameRound}
+                />
+              </div>
+            )}
           </div>
 
           {/* Right – Large slide preview */}
@@ -498,6 +525,55 @@ export default function TagStep({
             </div>
           </div>
         </div>
+
+        {/* Generated Preview (UC6, UC7) — shown after applying a patch or restoring */}
+        {hasPreview && (
+          <div className="tag-step-preview">
+            <div className="tag-step-preview-header">
+              <h3>Generated Preview</h3>
+              <span className="tag-step-preview-count">{previewData.length} slide{previewData.length !== 1 ? 's' : ''}</span>
+              <div className="tag-step-preview-nav">
+                <button
+                  className="tag-step-preview-nav-btn"
+                  onClick={() => setTagPreviewIdx(i => Math.max(0, i - 1))}
+                  disabled={tagPreviewIdx === 0}
+                >←</button>
+                <span className="tag-step-preview-nav-label">
+                  {tagPreviewIdx + 1} / {previewData.length}
+                </span>
+                <button
+                  className="tag-step-preview-nav-btn"
+                  onClick={() => setTagPreviewIdx(i => Math.min(previewData.length - 1, i + 1))}
+                  disabled={tagPreviewIdx === previewData.length - 1}
+                >→</button>
+              </div>
+            </div>
+            <div className="tag-step-preview-body">
+              <div className="tag-step-preview-main">
+                {previewData[tagPreviewIdx] && (
+                  <SlidePreview slide={previewData[tagPreviewIdx]} size="normal" />
+                )}
+              </div>
+              <div className="tag-step-preview-thumbs">
+                {previewData.map((slide, idx) => (
+                  <div
+                    key={idx}
+                    className={`preview-thumb ${tagPreviewIdx === idx ? 'active' : ''}`}
+                    onClick={() => setTagPreviewIdx(idx)}
+                  >
+                    <div className="preview-thumb-num">{slide.slideNumber}</div>
+                    <div className="preview-thumb-body">
+                      <SlidePreview slide={slide} size="small" />
+                    </div>
+                    {slide.instanceIndex && (
+                      <div className="preview-thumb-badge">{slide.instanceIndex}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {tagModal && (
           <TagModal

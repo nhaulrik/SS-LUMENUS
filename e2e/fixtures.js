@@ -7,14 +7,44 @@
  *   uploadedPage    — sample.pptx uploaded, app is on the Tag step
  *   repeatablePage  — slide 2 selected, marked repeatable, structure type + prompt filled
  *   taggedPage      — both target elements on slide 2 tagged with correct keys/hints/AI on
+ *   appliedPatchPage — taggedPage + full apply flow completed, back on Tag step
  */
 
-import { test as base } from '@playwright/test';
+import { test as base, expect } from '@playwright/test';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const FIXTURE_PPTX = path.resolve(__dirname, 'fixtures/sample.pptx');
+
+// ─── JSON payloads used across the apply-patch tests ─────────────────────────
+
+/**
+ * JSON for the taggedPage fixture (slide 2 repeatable, structure "Initiatie Group").
+ * Used for the first patch apply.
+ */
+export const REPEATABLE_JSON = {
+  slides: {
+    'Initiatie Group': [
+      {
+        structure_type:               'Initiatie Group',
+        initiative_group:             'Test Initiative Group',
+        initiative_group_subheader:   'Test Subheader'
+      }
+    ]
+  }
+}
+
+/**
+ * JSON for a second apply after repeatableSlides has been cleared.
+ * initiative_group and initiative_group_subheader are now static fields.
+ */
+export const STATIC_JSON = {
+  static: {
+    initiative_group:           'Updated Group Round 2',
+    initiative_group_subheader: 'Updated Subheader Round 2'
+  }
+}
 
 // ─── Selectors (single source of truth for the whole suite) ──────────────────
 
@@ -56,29 +86,50 @@ export const SEL = {
   propagateModal:          '.propagate-modal',
   propagateModeNonUniq:    '[data-testid="mode-non-unique"]',
   propagateModeUnique:     '[data-testid="mode-unique"]',
-  // Unique mode — click-to-pick context element
   propagatePickPrompt:     '[data-testid="propagate-pick-prompt"]',
-  propagatePickOverlay:    '.propagate-pick-overlay',           // slide overlay enters pick mode
-  propagateContextDisplay: '[data-testid="propagate-context-display"]', // shows selected key label
-  propagateUniqueSection:  '.propagate-unique-section',         // wrapper for the unique sub-UI
+  propagatePickOverlay:    '.propagate-pick-overlay',
+  propagateContextDisplay: '[data-testid="propagate-context-display"]',
+  propagateUniqueSection:  '.propagate-unique-section',
   propagateSave:           '[data-testid="propagate-save"]',
 
   // Actions
   generateRecipe:   'button:has-text("Generate Recipe")',
 
   // Recipe step
-  recipeArea:       '.recipe-area'
+  recipeArea:       '.recipe-area',
+  jsonInput:        '.json-input',
+  previewGenerate:  'button:has-text("Preview & Generate")',
+
+  // Preview step
+  previewLarge:     '.preview-large',
+  applyPatchBtn:    'button:has-text("Apply Patch & Continue")',
+
+  // Tag step — generated preview panel (UC6)
+  tagStepPreview:       '.tag-step-preview',
+  tagStepPreviewMain:   '.tag-step-preview-main',
+  tagStepPreviewThumbs: '.tag-step-preview-thumbs',
+  tagPreviewNavBtn:     '.tag-step-preview-nav-btn',
+  tagPreviewNavLabel:   '.tag-step-preview-nav-label',
+
+  // Patch history timeline (UC11–UC14)
+  patchHistory:         '.patch-history',
+  historyRound:         '.patch-history-round',
+  historyCurrentRound:  '.patch-history-round.current',
+  historyRoundName:     '.patch-history-name',
+  historyBtn:           '.patch-history-btn',
+  historyRestoreBtn:    '.patch-history-btn:has-text("Restore")',
+  historyDownloadBtn:   'a.patch-history-btn[download]',
+  historyRenameBtn:     '.patch-history-btn:has-text("✎")',
+  historyNameInput:     '.patch-history-name-input',
 };
 
 // ─── Shared action helpers ────────────────────────────────────────────────────
 
 /** Upload the fixture PPTX and wait for the Tag step to appear. */
 export async function doUpload(page) {
-  // Clear server-side patch state so this test starts from a clean slate.
-  // Without this, a patch saved by a previous test (same PPTX filename) is
-  // auto-loaded by the app, contaminating tags and propagation config.
-  // Use the absolute API URL to avoid Vite proxy IPv6 resolution issues on Windows.
+  // Clear server-side patch and chain state so each test starts from a clean slate.
   await page.request.delete('http://localhost:3001/api/patches');
+  await page.request.delete('http://localhost:3001/api/patch-chains');
   await page.goto('/');
   await page.setInputFiles(SEL.fileInput, FIXTURE_PPTX);
   // Wait for slide thumbnails to appear — confirms we're in the Tag step
@@ -123,6 +174,42 @@ export async function tagElement(page, { originalText, key, hint, ai = true }) {
   await page.waitForSelector(SEL.modal, { state: 'detached' });
   // Debounce is 1000ms; wait for the save to flush before the test proceeds.
   await page.waitForTimeout(1500);
+}
+
+/**
+ * Complete the full "Generate Recipe → fill JSON → Preview → Apply Patch & Continue" flow.
+ * The caller must already be on the Tag step with tags configured.
+ *
+ * @param {import('@playwright/test').Page} page
+ * @param {object} json  - The JSON object to paste into the JSON Response textarea
+ * @returns {import('@playwright/test').Download} - The triggered download
+ */
+export async function doFullApply(page, json) {
+  // 1. Generate recipe → Recipe step
+  await page.locator(SEL.generateRecipe).click();
+  await page.waitForSelector(SEL.recipeArea);
+
+  // 2. Fill JSON
+  await page.locator(SEL.jsonInput).fill(JSON.stringify(json));
+
+  // 3. Wait for server-side validation to pass (debounce 300ms + round-trip)
+  await expect(page.locator(SEL.previewGenerate)).toBeEnabled({ timeout: 8000 });
+
+  // 4. Preview → Preview step
+  await page.locator(SEL.previewGenerate).click();
+  await page.waitForSelector(SEL.previewLarge);
+
+  // 5. Apply Patch & Continue → triggers download + navigates back to Tag step
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.locator(SEL.applyPatchBtn).click()
+  ]);
+
+  // Wait for Tag step carousel — the apply flow (chain create + PPTX build + parse) can
+  // take several seconds, so use a generous timeout here.
+  await page.waitForSelector('.tag-slides .tag-slide-btn', { timeout: 90_000 });
+
+  return download;
 }
 
 // ─── Fixture definitions ──────────────────────────────────────────────────
@@ -178,7 +265,33 @@ export const test = base.extend({
     await selectSlide(page, 3);
     await tagElement(page, { originalText: 'Core Revenue Management', key: 'initiative_group', hint: 'Title of the initiative group', ai: true });
     await use(page);
+  },
+
+  /**
+   * Full apply flow completed once.
+   * taggedPage + recipe generated + JSON filled + preview + Apply Patch & Continue.
+   * App is back on the Tag step with previewData set and one round in chain history.
+   */
+  appliedPatchPage: async ({ page }, use) => {
+    await doUpload(page);
+    await selectSlide(page, 2);
+    await configureRepeatable(page, {
+      structureType: 'Initiatie Group',
+      customPrompt:  'an instance for each initiative group'
+    });
+    await tagElement(page, {
+      originalText: 'Core Revenue Management',
+      key:          'initiative_group',
+      hint:         'Title of the initiative group'
+    });
+    await tagElement(page, {
+      originalText: 'Group Summary | Roadmap Initiative Overview',
+      key:          'initiative_group_subheader',
+      hint:         'subheader of initiative group'
+    });
+    await doFullApply(page, REPEATABLE_JSON);
+    await use(page);
   }
 });
 
-export { expect } from '@playwright/test';
+export { expect };

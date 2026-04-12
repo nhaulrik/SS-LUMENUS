@@ -51,6 +51,7 @@ export function mergeTagsWithSlides(existingTags, slides) {
 export function triggerDownload(url) {
   const a = document.createElement('a')
   a.href = url
+  a.download = ''   // force download, prevent browser navigation
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)

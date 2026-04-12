@@ -6,6 +6,7 @@ export default defineConfig({
   fullyParallel: false,
   retries: 0,
   workers: 1,
+  timeout: 120_000,   // fixture setup can chain multiple slow async operations
   reporter: [
     ['list'],
     ['html', { open: 'never' }]

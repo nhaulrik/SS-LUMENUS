@@ -35,11 +35,28 @@ router.post('/patch-chains', (req, res) => {
   }
 });
 
+// ── Get chain info (all rounds) ────────────────────────────────────────────────
+router.get('/patch-chains/:chainId', (req, res) => {
+  try {
+    const { chainId } = req.params;
+    const chainDir = path.join(CHAINS_DIR, chainId);
+    if (!isInsideDir(chainDir, RESOLVED_CHAINS_DIR)) {
+      return res.status(403).json({ error: 'Invalid chain id' });
+    }
+    const chainPath = path.join(chainDir, 'chain.json');
+    if (!fs.existsSync(chainPath)) return res.status(404).json({ error: 'Chain not found' });
+    const chain = JSON.parse(fs.readFileSync(chainPath, 'utf8'));
+    res.json({ ok: true, chain });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Apply patch round ──────────────────────────────────────────────────────────
 router.post('/patch-chains/:chainId/apply', (req, res) => {
   try {
     const { chainId } = req.params;
-    const { tags, jsonData, repeatableSlides, roundName, focus } = req.body;
+    const { tags, jsonData, repeatableSlides, roundName, focus, propagations, baseRoundId } = req.body;
 
     const chainDir = path.join(CHAINS_DIR, chainId);
     if (!isInsideDir(chainDir, RESOLVED_CHAINS_DIR)) {
@@ -52,9 +69,19 @@ router.post('/patch-chains/:chainId/apply', (req, res) => {
     const chain         = JSON.parse(fs.readFileSync(chainPath, 'utf8'));
     const appliedRounds = chain.rounds.filter(r => r.status === 'applied');
     const appliedCount  = appliedRounds.length;
-    const baseFile      = appliedCount === 0 ? 'original.pptx' : appliedRounds.at(-1).outputFile;
-    const basePath      = path.join(chainDir, baseFile);
 
+    // Determine base file: use explicit baseRoundId if provided (for restore/branch),
+    // otherwise use the last applied round's output (or the original for the first round).
+    let baseFile;
+    if (baseRoundId) {
+      const baseRound = chain.rounds.find(r => r.id === baseRoundId);
+      if (!baseRound) return res.status(400).json({ error: `Base round not found: ${baseRoundId}` });
+      baseFile = baseRound.outputFile;
+    } else {
+      baseFile = appliedCount === 0 ? 'original.pptx' : appliedRounds.at(-1).outputFile;
+    }
+
+    const basePath = path.join(chainDir, baseFile);
     if (!fs.existsSync(basePath)) return res.status(400).json({ error: `Base file not found: ${baseFile}` });
 
     const originalBase = path.basename(chain.pptxFileName, '.pptx');
@@ -65,15 +92,16 @@ router.post('/patch-chains/:chainId/apply', (req, res) => {
     zip.writeZip(outputPath);
 
     const round = {
-      id:              `round-${appliedCount + 1}`,
-      name:            roundName || `Patch ${appliedCount + 1}`,
-      focus:           focus || 'mixed',
-      status:          'applied',
+      id:               `round-${appliedCount + 1}`,
+      name:             roundName || `Patch ${appliedCount + 1}`,
+      focus:            focus || 'mixed',
+      status:           'applied',
       baseFile,
       outputFile,
-      tags:            tags || [],
+      tags:             tags || [],
       repeatableSlides: repeatableSlides || [],
-      appliedAt:       new Date().toISOString()
+      propagations:     propagations || [],
+      appliedAt:        new Date().toISOString()
     };
     chain.rounds.push(round);
     chain.updatedAt = new Date().toISOString();
@@ -83,6 +111,7 @@ router.post('/patch-chains/:chainId/apply', (req, res) => {
       ok: true,
       chainId,
       roundId:      round.id,
+      round,
       outputFile,
       nextBasePath: outputPath,
       previewData,
@@ -93,7 +122,79 @@ router.post('/patch-chains/:chainId/apply', (req, res) => {
   }
 });
 
-// ── Download chain file ────────────────────────────────────────────────────────
+// ── Get specific round state (for restore) ─────────────────────────────────────
+router.get('/patch-chains/:chainId/patches/:roundId', (req, res) => {
+  try {
+    const { chainId, roundId } = req.params;
+    const chainDir = path.join(CHAINS_DIR, chainId);
+    if (!isInsideDir(chainDir, RESOLVED_CHAINS_DIR)) {
+      return res.status(403).json({ error: 'Invalid chain id' });
+    }
+    const chainPath = path.join(chainDir, 'chain.json');
+    if (!fs.existsSync(chainPath)) return res.status(404).json({ error: 'Chain not found' });
+
+    const chain = JSON.parse(fs.readFileSync(chainPath, 'utf8'));
+    const round = chain.rounds.find(r => r.id === roundId);
+    if (!round) return res.status(404).json({ error: 'Round not found' });
+
+    const outputPath = path.join(chainDir, round.outputFile);
+    if (!fs.existsSync(outputPath)) return res.status(404).json({ error: 'Output file not found' });
+
+    const zip    = new admZip(fs.readFileSync(outputPath));
+    const slides = parseSlides(zip);
+
+    res.json({ ok: true, round, slides, filePath: outputPath });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Rename round (UC14) ────────────────────────────────────────────────────────
+router.patch('/patch-chains/:chainId/patches/:roundId', (req, res) => {
+  try {
+    const { chainId, roundId } = req.params;
+    const { name } = req.body;
+    if (!name || typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+
+    const chainDir = path.join(CHAINS_DIR, chainId);
+    if (!isInsideDir(chainDir, RESOLVED_CHAINS_DIR)) {
+      return res.status(403).json({ error: 'Invalid chain id' });
+    }
+    const chainPath = path.join(chainDir, 'chain.json');
+    if (!fs.existsSync(chainPath)) return res.status(404).json({ error: 'Chain not found' });
+
+    const chain    = JSON.parse(fs.readFileSync(chainPath, 'utf8'));
+    const roundIdx = chain.rounds.findIndex(r => r.id === roundId);
+    if (roundIdx === -1) return res.status(404).json({ error: 'Round not found' });
+
+    chain.rounds[roundIdx].name = name.trim();
+    chain.updatedAt = new Date().toISOString();
+    fs.writeFileSync(chainPath, JSON.stringify(chain, null, 2));
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Delete all chains (E2E test cleanup only) ─────────────────────────────────
+router.delete('/patch-chains', (req, res) => {
+  try {
+    if (fs.existsSync(CHAINS_DIR)) {
+      for (const entry of fs.readdirSync(CHAINS_DIR)) {
+        const fullPath = path.join(CHAINS_DIR, entry);
+        fs.rmSync(fullPath, { recursive: true, force: true });
+      }
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Download chain file (UC9, UC13) ───────────────────────────────────────────
 router.get('/patch-chains/:chainId/download/:filename', (req, res) => {
   const candidate = path.resolve(CHAINS_DIR, req.params.chainId, req.params.filename);
   if (!isInsideDir(candidate, RESOLVED_CHAINS_DIR)) {
