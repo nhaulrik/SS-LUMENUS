@@ -217,6 +217,7 @@ export default function TagStep({
             )}
 
             {/* Tag table for current slide */}
+            <div className="patch-section-header">Slide Elements</div>
             <div className="patch-table">
               {(() => {
                 const currentSlideNum = slides[selectedSlide]?.index

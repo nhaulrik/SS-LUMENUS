@@ -361,6 +361,15 @@ header p {
   color: var(--text-primary);
 }
 
+.patch-section-header {
+  margin: var(--space-md) 0 var(--space-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 .patch-name-row {
   display: flex;
   gap: var(--space-sm);
