@@ -599,6 +599,18 @@ header p {
   background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
 }
 
+.propagate-icon-group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.propagate-slide-count {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
 .patch-dash {
   color: var(--text-muted);
   font-size: 0.85rem;

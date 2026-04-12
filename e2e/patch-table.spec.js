@@ -57,6 +57,19 @@ test.describe('Patch table — AI toggle', () => {
     await selectSlide(page, 3);
     await expect(page.locator('.patch-row[data-key="initiative_group"] input[type="checkbox"]')).not.toBeChecked();
   });
+
+  test('propagate icon is hidden when AI toggle is off', async ({ propagatedPage: page }) => {
+    await selectSlide(page, 2);
+    // Verify propagate icon is visible when AI is on
+    await expect(page.locator('.patch-row[data-key="initiative_group"] .propagate-icon')).toBeVisible();
+
+    // Turn AI off
+    await page.locator('.patch-row[data-key="initiative_group"] .toggle-switch').click();
+    await page.waitForTimeout(100);
+
+    // Propagate icon should be hidden
+    await expect(page.locator('.patch-row[data-key="initiative_group"] .propagate-icon')).not.toBeVisible();
+  });
 });
 
 // ── Inline key editing ────────────────────────────────────────────────────────

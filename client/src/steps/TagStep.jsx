@@ -37,7 +37,9 @@ export default function TagStep({
   navigateTo,
   stepAnimClass,
   // Actions
-  onGenerateRecipe
+  onGenerateRecipe,
+  // Toast
+  setToast
 }) {
   // Internal state — not needed outside this step
   const [selectedSlide,      setSelectedSlide]      = useState(0)
@@ -265,6 +267,10 @@ export default function TagStep({
                                     onChange={e => {
                                       const newChecked = e.target.checked
                                       if (sharedKeys.has(t.key)) {
+                                        const slideCount = keyToSlides[t.key]?.length || 0
+                                        if (newChecked && slideCount > 1) {
+                                          setToast({ message: `AI enabled for '${t.key}' on ${slideCount} slide(s)`, type: 'info' })
+                                        }
                                         const newTags = tags.map(tag =>
                                           tag.key === t.key
                                             ? { ...tag, autoGenerate: newChecked }
@@ -314,12 +320,15 @@ export default function TagStep({
                                       }
                                     }}
                                   />
-                                  {sharedKeys.has(t.key) && (
-                                    <button
-                                      className={`propagate-icon${propagationsByKey.has(t.key) ? ' propagate-icon--active' : ''}`}
-                                      title={`This key is used on ${keyToSlides[t.key].length} slide(s). Click to configure propagation.`}
-                                      onClick={e => { e.stopPropagation(); setPropagateModal(t.key) }}
-                                    >⇔</button>
+                                  {sharedKeys.has(t.key) && t.autoGenerate && (
+                                    <span className="propagate-icon-group">
+                                      <span className="propagate-slide-count">{keyToSlides[t.key].length} slides</span>
+                                      <button
+                                        className={`propagate-icon${propagationsByKey.has(t.key) ? ' propagate-icon--active' : ''}`}
+                                        title={`This key is used on ${keyToSlides[t.key].length} slide(s). Click to configure propagation.`}
+                                        onClick={e => { e.stopPropagation(); setPropagateModal(t.key) }}
+                                      >⇔</button>
+                                    </span>
                                   )}
                                 </div>
 
@@ -355,10 +364,15 @@ export default function TagStep({
                                     onFocus={() => setHighlightedElement(t.elementId)}
                                     onBlur={() => setHighlightedElement(null)}
                                     onChange={e => {
+                                      const newHint = e.target.value
+                                      const propagationConfig = propagationsByKey.get(t.key)
+                                      const isNonUnique = propagationConfig?.mode === 'non-unique'
                                       const newTags = tags.map(tag =>
-                                        tag.elementId === t.elementId
-                                          ? { ...tag, hint: e.target.value }
-                                          : tag
+                                        isNonUnique && tag.key === t.key
+                                          ? { ...tag, hint: newHint }
+                                          : tag.elementId === t.elementId
+                                            ? { ...tag, hint: newHint }
+                                            : tag
                                       )
                                       setTags(newTags)
                                       triggerSave(newTags, repeatableSlides)

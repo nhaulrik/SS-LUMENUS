@@ -339,6 +339,44 @@ test.describe('Non-unique propagation — recipe', () => {
     const matches = (text.match(/"initiative_group"/g) || []).length;
     expect(matches).toBe(1);
   });
+
+  test('non-unique: hint changes sync across all slides with the same key', async ({ propagatedPage: page }) => {
+    // Configure non-unique propagation
+    await selectSlide(page, 2);
+    await page.locator('.patch-row[data-key="initiative_group"] .propagate-icon').click();
+    await page.waitForSelector(SEL.propagateModal);
+    await page.locator(SEL.propagateModeNonUniq).check();
+    await page.locator(SEL.propagateSave).click();
+
+    // Change hint on slide 2
+    const hintInput = page.locator('.patch-row[data-key="initiative_group"] .patch-hint-input');
+    await hintInput.fill('Updated hint for all slides');
+    await page.waitForTimeout(100);
+
+    // Switch to slide 3 and verify hint is synced
+    await selectSlide(page, 3);
+    const slide3Hint = page.locator('.patch-row[data-key="initiative_group"] .patch-hint-input');
+    await expect(slide3Hint).toHaveValue('Updated hint for all slides');
+  });
+
+  test('non-unique: hint updated BEFORE propagation is configured DOES sync retroactively', async ({ propagatedPage: page }) => {
+    // Step 1: Update hint BEFORE configuring propagation
+    await selectSlide(page, 2);
+    const hintInput = page.locator('.patch-row[data-key="initiative_group"] .patch-hint-input');
+    await hintInput.fill('Hint typed before propagation');
+    await page.waitForTimeout(100);
+
+    // Step 2: Configure non-unique propagation AFTER hint was set
+    await page.locator('.patch-row[data-key="initiative_group"] .propagate-icon').click();
+    await page.waitForSelector(SEL.propagateModal);
+    await page.locator(SEL.propagateModeNonUniq).check();
+    await page.locator(SEL.propagateSave).click();
+
+    // Step 3: Check slide 3 - hint SHOULD be synced (propagation retroactively syncs existing hints)
+    await selectSlide(page, 3);
+    const slide3Hint = page.locator('.patch-row[data-key="initiative_group"] .patch-hint-input');
+    await expect(slide3Hint).toHaveValue('Hint typed before propagation');
+  });
 });
 
 // ── Recipe output — unique ────────────────────────────────────────────────────

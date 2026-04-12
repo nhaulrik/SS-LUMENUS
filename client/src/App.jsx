@@ -195,6 +195,23 @@ export default function App() {
       const next = config
         ? [...prev.filter(p => p.key !== key), { key, ...config }]
         : prev.filter(p => p.key !== key)
+
+      // When non-unique propagation is configured, sync hints across all elements with this key
+      if (config?.mode === 'non-unique') {
+        const tagsWithKey = tags.filter(t => t.key === key)
+        const sourceTag = tagsWithKey.find(t => t.hint)
+        if (sourceTag) {
+          const newTags = tags.map(tag =>
+            tag.key === key
+              ? { ...tag, hint: sourceTag.hint }
+              : tag
+          )
+          setTags(newTags)
+          triggerSave(newTags, repeatableSlides, undefined, next)
+          return next
+        }
+      }
+
       triggerSave(tags, repeatableSlides, undefined, next)
       return next
     })
@@ -403,6 +420,7 @@ export default function App() {
           onApplyPatch={handleApplyPatch}
           onDeletePatch={handleDeletePatch}
           onGenerateRecipe={handleGenerateRecipe}
+          setToast={setToast}
         />
       </>
     )
