@@ -6,7 +6,7 @@
  * No modal is opened from the table — all changes happen inline.
  */
 
-import { test, expect, SEL } from './fixtures.js';
+import { test, expect, SEL, selectSlide } from './fixtures.js';
 
 // ── Visibility ────────────────────────────────────────────────────────────────
 
@@ -42,6 +42,20 @@ test.describe('Patch table — AI toggle', () => {
     await expect(page.locator('.patch-row[data-key="initiative_group"] .patch-row-hint')).toHaveClass(/patch-row-hint--inactive/);
     await toggle.click();
     await expect(page.locator('.patch-row[data-key="initiative_group"] .patch-row-hint')).not.toHaveClass(/patch-row-hint--inactive/);
+  });
+
+  test('toggling AI on a shared key propagates to all slides', async ({ propagatedPage: page }) => {
+    await selectSlide(page, 2);
+    await expect(page.locator('.patch-row[data-key="initiative_group"] input[type="checkbox"]')).toBeChecked();
+    await selectSlide(page, 3);
+    await expect(page.locator('.patch-row[data-key="initiative_group"] input[type="checkbox"]')).toBeChecked();
+
+    await selectSlide(page, 2);
+    await page.locator('.patch-row[data-key="initiative_group"] .toggle-switch').click();
+    await page.waitForTimeout(100);
+
+    await selectSlide(page, 3);
+    await expect(page.locator('.patch-row[data-key="initiative_group"] input[type="checkbox"]')).not.toBeChecked();
   });
 });
 

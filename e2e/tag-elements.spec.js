@@ -11,6 +11,30 @@
 import { test, expect, SEL, tagElement } from './fixtures.js';
 
 test.describe('Tagging elements via overlay modal', () => {
+  test('hint row is hidden when AI toggle is off', async ({ repeatablePage: page }) => {
+    await tagElement(page, {
+      originalText: 'Core Revenue Management',
+      key:          'initiative_group',
+      hint:         'Title of the initiative group',
+      ai:           false
+    });
+
+    const hintInput = page.locator(SEL.patchRowByKey('initiative_group')).locator(SEL.hintInput);
+    await expect(hintInput).not.toBeVisible();
+  });
+
+  test('hint row is visible when AI toggle is on', async ({ repeatablePage: page }) => {
+    await tagElement(page, {
+      originalText: 'Core Revenue Management',
+      key:          'initiative_group',
+      hint:         'Title of the initiative group',
+      ai:           true
+    });
+
+    const hintInput = page.locator(SEL.patchRowByKey('initiative_group')).locator(SEL.hintInput);
+    await expect(hintInput).toBeVisible();
+  });
+
   test('clicking a slide element opens the tag modal', async ({ repeatablePage: page }) => {
     await page.locator(SEL.overlayByText('Core Revenue Management')).click();
     await expect(page.locator(SEL.modal)).toBeVisible();

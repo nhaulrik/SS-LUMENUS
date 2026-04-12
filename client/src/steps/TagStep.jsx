@@ -263,13 +263,24 @@ export default function TagStep({
                                     type="checkbox"
                                     checked={t.autoGenerate ?? false}
                                     onChange={e => {
-                                      const newTags = tags.map(tag =>
-                                        tag.elementId === t.elementId
-                                          ? { ...tag, autoGenerate: e.target.checked }
-                                          : tag
-                                      )
-                                      setTags(newTags)
-                                      triggerSave(newTags, repeatableSlides)
+                                      const newChecked = e.target.checked
+                                      if (sharedKeys.has(t.key)) {
+                                        const newTags = tags.map(tag =>
+                                          tag.key === t.key
+                                            ? { ...tag, autoGenerate: newChecked }
+                                            : tag
+                                        )
+                                        setTags(newTags)
+                                        triggerSave(newTags, repeatableSlides)
+                                      } else {
+                                        const newTags = tags.map(tag =>
+                                          tag.elementId === t.elementId
+                                            ? { ...tag, autoGenerate: newChecked }
+                                            : tag
+                                        )
+                                        setTags(newTags)
+                                        triggerSave(newTags, repeatableSlides)
+                                      }
                                     }}
                                   />
                                   <span className="toggle-slider"></span>
@@ -332,27 +343,29 @@ export default function TagStep({
                                 />
                               </div>
 
-                              {/* Row 2: Hint — always visible, dimmed when AI is off */}
-                              <div className={`patch-row-hint${t.autoGenerate ? '' : ' patch-row-hint--inactive'}`}>
-                                <span className="patch-hint-label">Hint</span>
-                                <input
-                                  className="patch-hint-input"
-                                  value={t.hint || ''}
-                                  placeholder={t.autoGenerate ? 'Describe what the AI should write here...' : 'Enable AI to use this hint'}
-                                  onClick={e => e.stopPropagation()}
-                                  onFocus={() => setHighlightedElement(t.elementId)}
-                                  onBlur={() => setHighlightedElement(null)}
-                                  onChange={e => {
-                                    const newTags = tags.map(tag =>
-                                      tag.elementId === t.elementId
-                                        ? { ...tag, hint: e.target.value }
-                                        : tag
-                                    )
-                                    setTags(newTags)
-                                    triggerSave(newTags, repeatableSlides)
-                                  }}
-                                />
-                              </div>
+                              {/* Row 2: Hint — only visible when AI is on */}
+                              {t.autoGenerate && (
+                                <div className="patch-row-hint">
+                                  <span className="patch-hint-label">Hint</span>
+                                  <input
+                                    className="patch-hint-input"
+                                    value={t.hint || ''}
+                                    placeholder="Describe what the AI should write here..."
+                                    onClick={e => e.stopPropagation()}
+                                    onFocus={() => setHighlightedElement(t.elementId)}
+                                    onBlur={() => setHighlightedElement(null)}
+                                    onChange={e => {
+                                      const newTags = tags.map(tag =>
+                                        tag.elementId === t.elementId
+                                          ? { ...tag, hint: e.target.value }
+                                          : tag
+                                      )
+                                      setTags(newTags)
+                                      triggerSave(newTags, repeatableSlides)
+                                    }}
+                                  />
+                                </div>
+                              )}
                             </div>
                           )
                         })}
