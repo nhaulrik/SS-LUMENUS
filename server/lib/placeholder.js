@@ -1,4 +1,4 @@
-// Strips date/project suffixes from fuzzy key matching (e.g. revenue_2024_solon â†’ revenue).
+// Strips date/project suffixes from fuzzy key matching (e.g. revenue_2024_solon -> revenue).
 const stripKeySuffix = (k) => k
   .replace(/_20\d{2}.*$/, '')
   .replace(/_session.*$/, '')
@@ -9,11 +9,22 @@ const stripKeySuffix = (k) => k
   .replace(/_solon.*$/, '');
 
 const escapeXml = (str) => {
-  if (!str) return '';
-  return str
+  if (str === null || str === undefined) return '';
+  // Coerce to string (AI may return numbers)
+  const s = String(str);
+  return s
+    // Newlines are not valid inside <a:t> in OOXML — replace with a space.
+    // Proper multi-line content would require <a:br/> between <a:r> runs,
+    // which is a more complex transformation not supported here.
+    .replace(/\r\n|\r|\n/g, ' ')
+    // Collapse multiple spaces that result from newline replacement
+    .replace(/  +/g, ' ')
+    // XML special characters
     .replace(/&(?!(amp|lt|gt|apos|quot);)/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .trim();
 };
 
 export function replacePlaceholders(content, jsonData, recordData, tags, slideIndex) {

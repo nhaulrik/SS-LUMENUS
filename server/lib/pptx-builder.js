@@ -3,6 +3,12 @@ import fs from 'fs';
 import { slideNumFrom, slideNumComparator, extractSlideElements } from './slide-parser.js';
 import { replacePlaceholders } from './placeholder.js';
 
+const escapeXml = (str) => {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/\r\n|\r|\n/g, ' ').replace(/&(?!(amp|lt|gt|apos|quot);)/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+};
+
+
 function injectChartData(zip, chartKey, chartData) {
   const chartEntries = zip.getEntries().filter(e => e.entryName.match(/^ppt\/charts\/chart\d+\.xml$/));
   if (chartEntries.length === 0) return;
@@ -13,7 +19,7 @@ function injectChartData(zip, chartKey, chartData) {
   if (chartData.title) {
     const titleMatch = chartXml.match(/<c:title>[\s\S]*?<c:tx>[\s\S]*?<c:rich>[\s\S]*?<a:t>([^<]*)<\/a:t>/);
     if (titleMatch) {
-      chartXml = chartXml.replace(titleMatch[0], titleMatch[0].replace(titleMatch[1], chartData.title));
+      chartXml = chartXml.replace(titleMatch[0], titleMatch[0].replace(titleMatch[1], escapeXml(chartData.title)));
     }
   }
   
@@ -22,7 +28,7 @@ function injectChartData(zip, chartKey, chartData) {
     if (strCacheMatch) {
       const ptCount = chartData.categories.length;
       const pts = chartData.categories.map((cat, i) => 
-        `<c:pt idx="${i}"><c:v>${cat}</c:v></c:pt>`
+        `<c:pt idx="${i}"><c:v>${escapeXml(cat)}</c:v></c:pt>`
       ).join('');
       const newStrCache = `<c:strCache><c:ptCount val="${ptCount}"/>${pts}</c:strCache>`;
       chartXml = chartXml.replace(strCacheMatch[0], newStrCache);
