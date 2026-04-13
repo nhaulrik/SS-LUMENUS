@@ -30,6 +30,7 @@ export default function PreviewStep({
   return (
     <div className="app">
       <AppHeader title="Preview" subtitle="Review your generated slides, use arrow keys to navigate" debugContext={debugContext} />
+      <Breadcrumbs step={step} canNavigateTo={canNavigateTo} navigateTo={navigateTo} />
 
       <div className={stepAnimClass}>
         <div className="preview-large">

@@ -56,6 +56,7 @@ export default function RecipeStep({
   return (
     <div className="app">
       <AppHeader title="Recipe + JSON" subtitle="Copy the recipe prompt for the AI, then paste the JSON response" debugContext={debugContext} />
+      <Breadcrumbs step={step} canNavigateTo={canNavigateTo} navigateTo={navigateTo} />
 
       <div className={stepAnimClass}>
         <div className="recipe-json-layout">
