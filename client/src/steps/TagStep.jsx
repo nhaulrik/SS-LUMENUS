@@ -56,6 +56,7 @@ export default function TagStep({
   const [propagateModal,     setPropagateModal]     = useState(null) // key string | null
   const [renameConfirm,      setRenameConfirm]      = useState(null) // { elementId, oldKey, newKey } | null
   const [mergeModal,         setMergeModal]         = useState(null) // { sourceTag } | null
+  const [keyCollisionWarning, setKeyCollisionWarning] = useState(null) // { elementId, originalKey, newKey, collidingTags } | null
 
   // Tracks the key and its shared-status captured at focus time.
   // Cannot use the rendered `sharedKeys` closure in onBlur because onChange
@@ -347,7 +348,7 @@ export default function TagStep({
 
                                 <div className="patch-key-cell">
                                   <input
-                                    className="patch-key-input"
+                                    className={`patch-key-input${tags.some(other => other.key === t.key && other.slideIndex === t.slideIndex && other.elementId !== t.elementId) ? " patch-key-input--error" : ""}`}
                                     value={t.key}
                                     title={t.key}
                                     onClick={e => e.stopPropagation()}
@@ -356,23 +357,42 @@ export default function TagStep({
                                       focusedKeyWasShared.current = sharedKeys.has(t.key)
                                     }}
                                     onChange={e => {
+                                      const newKey  = e.target.value
                                       const newTags = tags.map(tag =>
                                         tag.elementId === t.elementId
-                                          ? { ...tag, key: e.target.value }
+                                          ? { ...tag, key: newKey }
                                           : tag
                                       )
                                       setTags(newTags)
-                                      triggerSave(newTags, repeatableSlides)
+                                      // Only save if the new key doesn't collide with another element on the same slide
+                                      const sameSlideCollision = newKey.trim() !== '' && tags.some(
+                                        other => other.key === newKey && other.slideIndex === t.slideIndex && other.elementId !== t.elementId
+                                      )
+                                      if (!sameSlideCollision) triggerSave(newTags, repeatableSlides)
                                     }}
                                     onBlur={e => {
                                       const originalKey = focusedKeyRef.current
-                                      const newKey      = e.target.value
-                                      if (!originalKey || newKey === originalKey) return
+                                      const newKey      = e.target.value.trim()
+                                      if (!originalKey || newKey === originalKey || !newKey) return
+                                      // Case 1: key was already shared — existing rename-confirm flow
                                       if (focusedKeyWasShared.current) {
                                         setRenameConfirm({ elementId: t.elementId, oldKey: originalKey, newKey })
+                                        return
+                                      }
+                                      // Case 2: new key collides with an unrelated element on another slide
+                                      const collidingTags = tags.filter(
+                                        other => other.key === newKey && other.elementId !== t.elementId
+                                      )
+                                      if (collidingTags.length > 0) {
+                                        setKeyCollisionWarning({ elementId: t.elementId, originalKey, newKey, collidingTags })
                                       }
                                     }}
                                   />
+                                  {tags.some(other => other.key === t.key && other.slideIndex === t.slideIndex && other.elementId !== t.elementId) && (
+                                    <span className="key-collision-notice" data-testid="key-collision-same-slide">
+                                      Key already used on this slide
+                                    </span>
+                                  )}
                                   {sharedKeys.has(t.key) && t.autoGenerate && (
                                     <span className="propagate-icon-group">
                                       <span className="propagate-slide-count">{keyToSlides[t.key].length} slides</span>
@@ -617,6 +637,58 @@ export default function TagStep({
                   }}
                 >
                   All slides
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+
+        {keyCollisionWarning && (
+          <div className="modal-overlay" onClick={() => setKeyCollisionWarning(null)}>
+            <div className="modal-content key-collision-modal" onClick={e => e.stopPropagation()}>
+              <h3>Key already in use</h3>
+              <p>
+                <code className="propagate-key-pill">{keyCollisionWarning.newKey}</code> is already
+                used on {keyCollisionWarning.collidingTags.length} other element{keyCollisionWarning.collidingTags.length !== 1 ? 's' : ''}.
+                Sharing a key will make the AI generate one value for all of them,
+                which is usually not intended unless they represent the same field.
+              </p>
+              <div className="key-collision-list">
+                {keyCollisionWarning.collidingTags.map((ct, i) => (
+                  <div key={i} className="key-collision-item">
+                    <span className="key-collision-slide">Slide {ct.slideIndex}</span>
+                    <span className="key-collision-text">{ct.originalText || ct.hint || ct.key}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="modal-actions">
+                <button
+                  className="btn btn-secondary"
+                  data-testid="collision-revert"
+                  onClick={() => {
+                    const reverted = tags.map(tag =>
+                      tag.elementId === keyCollisionWarning.elementId
+                        ? { ...tag, key: keyCollisionWarning.originalKey }
+                        : tag
+                    )
+                    setTags(reverted)
+                    triggerSave(reverted, repeatableSlides)
+                    setKeyCollisionWarning(null)
+                  }}
+                >
+                  Revert to &ldquo;{keyCollisionWarning.originalKey}&rdquo;
+                </button>
+                <button
+                  className="btn btn-primary"
+                  data-testid="collision-keep"
+                  onClick={() => {
+                    // User acknowledges the collision — save as-is
+                    triggerSave(tags, repeatableSlides)
+                    setKeyCollisionWarning(null)
+                  }}
+                >
+                  Keep &ldquo;{keyCollisionWarning.newKey}&rdquo; anyway
                 </button>
               </div>
             </div>

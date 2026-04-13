@@ -587,6 +587,58 @@ header p {
   font-family: monospace;
 }
 
+/* Key collision — same-slide error state */
+.patch-key-input--error {
+  border-color: var(--error) !important;
+  background: rgba(232, 84, 74, 0.06) !important;
+  color: var(--error) !important;
+}
+
+.key-collision-notice {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--error);
+  margin-top: 2px;
+  padding-left: 2px;
+}
+
+/* Key collision warning modal */
+.key-collision-modal {
+  max-width: 520px;
+}
+
+.key-collision-list {
+  margin: var(--space-md) 0;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.key-collision-item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.85rem;
+}
+
+.key-collision-item:last-child { border-bottom: none; }
+
+.key-collision-slide {
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.key-collision-text {
+  color: var(--text-secondary);
+  word-break: break-word;
+  min-width: 0;
+}
+
 /* Hint â€” muted */
 .patch-hint-input { color: var(--text-secondary); }
 
