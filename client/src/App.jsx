@@ -621,8 +621,6 @@ export default function App() {
           onRestoreRound={handleRestoreRound}
           onRenameRound={handleRenameRound}
           previewData={previewData}
-          tagPreviewIdx={tagPreviewIdx}
-          setTagPreviewIdx={setTagPreviewIdx}
         />
       </>
     )

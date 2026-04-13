@@ -47,9 +47,6 @@ export default function TagStep({
   onRestoreRound,
   onRenameRound,
   // Generated preview (UC6, UC7)
-  previewData,
-  tagPreviewIdx,
-  setTagPreviewIdx,
   debugContext
 }) {
   // Internal state — not needed outside this step
@@ -188,7 +185,7 @@ export default function TagStep({
 
   const taggedElementIds = tags.map(t => t.elementId)
 
-  const hasPreview = previewData && previewData.length > 0
+
   const hasHistory = chainId && chainRounds && chainRounds.length > 0
 
   return (
@@ -584,54 +581,6 @@ export default function TagStep({
           </div>
         </div>
 
-        {/* Generated Preview (UC6, UC7) — shown after applying a patch or restoring */}
-        {hasPreview && (
-          <div className="tag-step-preview">
-            <div className="tag-step-preview-header">
-              <h3>Generated Preview</h3>
-              <span className="tag-step-preview-count">{previewData.length} slide{previewData.length !== 1 ? 's' : ''}</span>
-              <div className="tag-step-preview-nav">
-                <button
-                  className="tag-step-preview-nav-btn"
-                  onClick={() => setTagPreviewIdx(i => Math.max(0, i - 1))}
-                  disabled={tagPreviewIdx === 0}
-                >←</button>
-                <span className="tag-step-preview-nav-label">
-                  {tagPreviewIdx + 1} / {previewData.length}
-                </span>
-                <button
-                  className="tag-step-preview-nav-btn"
-                  onClick={() => setTagPreviewIdx(i => Math.min(previewData.length - 1, i + 1))}
-                  disabled={tagPreviewIdx === previewData.length - 1}
-                >→</button>
-              </div>
-            </div>
-            <div className="tag-step-preview-body">
-              <div className="tag-step-preview-main">
-                {previewData[tagPreviewIdx] && (
-                  <SlidePreview slide={previewData[tagPreviewIdx]} size="normal" />
-                )}
-              </div>
-              <div className="tag-step-preview-thumbs">
-                {previewData.map((slide, idx) => (
-                  <div
-                    key={idx}
-                    className={`preview-thumb ${tagPreviewIdx === idx ? 'active' : ''}`}
-                    onClick={() => setTagPreviewIdx(idx)}
-                  >
-                    <div className="preview-thumb-num">{slide.slideNumber}</div>
-                    <div className="preview-thumb-body">
-                      <SlidePreview slide={slide} size="small" />
-                    </div>
-                    {slide.instanceIndex && (
-                      <div className="preview-thumb-badge">{slide.instanceIndex}</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
 
         {tagModal && (
           <TagModal
