@@ -4,6 +4,7 @@ import Breadcrumbs from '../components/Breadcrumbs.jsx'
 import SlidePreview from '../components/SlidePreview.jsx'
 import TagModal from '../components/TagModal.jsx'
 import PropagateModal from '../components/PropagateModal.jsx'
+import MergeKeyModal from '../components/MergeKeyModal.jsx'
 import PatchHistoryTimeline from '../components/PatchHistoryTimeline.jsx'
 import { maxElementOrder, keyGen } from '../utils/tagUtils.js'
 
@@ -19,6 +20,7 @@ export default function TagStep({
   propagations,
   onSavePropagation,
   onRenameKeyAllSlides,
+  onMergeKey,
   // Patch state
   patches,
   currentPatch,
@@ -55,6 +57,7 @@ export default function TagStep({
   const [tagModal,           setTagModal]           = useState(null)
   const [propagateModal,     setPropagateModal]     = useState(null) // key string | null
   const [renameConfirm,      setRenameConfirm]      = useState(null) // { elementId, oldKey, newKey } | null
+  const [mergeModal,         setMergeModal]         = useState(null) // { sourceTag } | null
 
   // Tracks the key and its shared-status captured at focus time.
   // Cannot use the rendered `sharedKeys` closure in onBlur because onChange
@@ -74,6 +77,29 @@ export default function TagStep({
     Object.entries(keyToSlides).filter(([, s]) => s.length > 1).map(([k]) => k)
   )
   const propagationsByKey = new Map(propagations.map(p => [p.key, p]))
+
+  // ── Merge candidate detection (by shapeName across slides) ─────
+  // Build a map: shapeName → array of { tag, element, slideIndex }
+  // for all tagged text elements on non-repeatable slides.
+  const shapeNameToTagged = {}
+  slides.forEach(slide => {
+    if (repeatableSet.has(slide.index)) return
+    slide.elements.forEach(elem => {
+      if (!elem.shapeName) return
+      const tag = tags.find(t => t.elementId === elem.id)
+      if (!tag) return
+      if (!shapeNameToTagged[elem.shapeName]) shapeNameToTagged[elem.shapeName] = []
+      shapeNameToTagged[elem.shapeName].push({ tag, element: elem, slideIndex: slide.index })
+    })
+  })
+
+  // For a given tag, return candidates on other slides with the same shapeName
+  // but a different key. Only show the merge icon when candidates exist.
+  const getMergeCandidates = (tag, element) => {
+    if (!element?.shapeName) return []
+    const group = shapeNameToTagged[element.shapeName] || []
+    return group.filter(c => c.tag.elementId !== tag.elementId && c.tag.key !== tag.key)
+  }
 
   const currentSlide = slides[selectedSlide]
 
@@ -357,6 +383,19 @@ export default function TagStep({
                                       >⇔</button>
                                     </span>
                                   )}
+                                  {(() => {
+                                    const elem = currentSlide?.elements.find(e => e.id === t.elementId)
+                                    const mergeCandidates = getMergeCandidates(t, elem)
+                                    if (mergeCandidates.length === 0) return null
+                                    return (
+                                      <button
+                                        className="merge-icon"
+                                        data-testid="merge-icon"
+                                        title={`Same shape found on ${mergeCandidates.length} other slide(s) with different keys. Click to merge.`}
+                                        onClick={e => { e.stopPropagation(); setMergeModal({ sourceTag: t }) }}
+                                      >⇋</button>
+                                    )
+                                  })()}
                                 </div>
 
                                 <input
@@ -646,6 +685,21 @@ export default function TagStep({
             onClose={() => setPropagateModal(null)}
           />
         )}
+
+        {mergeModal && (() => {
+          const { sourceTag } = mergeModal
+          const sourceElem    = currentSlide?.elements.find(e => e.id === sourceTag.elementId)
+          const candidates    = getMergeCandidates(sourceTag, sourceElem)
+          if (candidates.length === 0) return null
+          return (
+            <MergeKeyModal
+              sourceTag={sourceTag}
+              candidates={candidates}
+              onMerge={targetElementIds => onMergeKey(sourceTag, targetElementIds)}
+              onClose={() => setMergeModal(null)}
+            />
+          )
+        })()}
       </div>
     </div>
   )

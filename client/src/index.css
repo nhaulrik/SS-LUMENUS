@@ -1450,6 +1450,143 @@ header p {
   margin-bottom: var(--space-sm);
 }
 
+/* ============================================================
+   Merge key icon + modal
+   ============================================================ */
+
+.merge-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin-left: var(--space-xs);
+  background: transparent;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  color: var(--accent-secondary, #f0a500);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast),
+              border-color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.merge-icon:hover {
+  background: rgba(240, 165, 0, 0.12);
+  border-color: var(--accent-secondary, #f0a500);
+  color: var(--accent-secondary, #f0a500);
+}
+
+/* ── Merge modal ── */
+
+.merge-modal {
+  max-width: 700px;
+  max-height: 90vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.merge-modal-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 var(--space-sm);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.merge-modal-description {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-md);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.merge-candidate-list {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: var(--space-md);
+}
+
+.merge-candidate-header {
+  display: grid;
+  grid-template-columns: auto 3rem minmax(0, 1fr) minmax(0, 1.5fr);
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-tertiary);
+  border-bottom: 2px solid var(--border-default);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-primary);
+  align-items: center;
+}
+
+.merge-select-all {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.merge-candidate-item {
+  display: grid;
+  grid-template-columns: auto 3rem minmax(0, 1fr) minmax(0, 1.5fr);
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  align-items: start;
+  font-size: 0.85rem;
+}
+
+.merge-candidate-item:last-child {
+  border-bottom: none;
+}
+
+.merge-candidate-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.merge-candidate-item--checked {
+  background: color-mix(in srgb, var(--accent-primary) 8%, var(--bg-primary));
+}
+
+.merge-col-slide {
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.merge-col-key {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.merge-col-text {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  word-break: break-word;
+  min-width: 0;
+}
+
+.merge-text-differs {
+  color: var(--warning, #f0a500);
+  font-size: 0.8rem;
+}
+
 
 /* ============================================================
    Scrollbar

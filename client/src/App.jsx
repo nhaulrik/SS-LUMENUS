@@ -243,6 +243,18 @@ export default function App() {
     })
   }, [tags, repeatableSlides, triggerSave])
 
+  // ── Merge elements from other slides into one shared key ───────
+  // targetElementIds: elementIds of tags on other slides to rename to sourceTag.key
+  const handleMergeKey = useCallback((sourceTag, targetElementIds) => {
+    const newTags = tags.map(tag =>
+      targetElementIds.includes(tag.elementId)
+        ? { ...tag, key: sourceTag.key, maxChars: sourceTag.maxChars }
+        : tag
+    )
+    setTags(newTags)
+    triggerSave(newTags, repeatableSlides, undefined, propagations)
+  }, [tags, repeatableSlides, propagations, triggerSave])
+
   // ── Rename a key across all slides ────────────────────────────
   const handleRenameKeyAllSlides = useCallback((oldKey, newKey) => {
     const newTags = tags.map(tag => tag.key === oldKey ? { ...tag, key: newKey } : tag)
@@ -509,6 +521,7 @@ export default function App() {
           propagations={propagations}
           onSavePropagation={handleSavePropagation}
           onRenameKeyAllSlides={handleRenameKeyAllSlides}
+          onMergeKey={handleMergeKey}
           patches={patches}
           currentPatch={currentPatch}
           patchName={patchName}
