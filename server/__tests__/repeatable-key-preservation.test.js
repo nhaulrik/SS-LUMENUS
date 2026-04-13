@@ -10,7 +10,7 @@ import { parseSlides } from "../lib/slide-parser.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE_PPTX = path.resolve(__dirname, "./fixtures/sample.pptx");
 
-let testDir, outputPath, previewData, parsedSlides, templateSlide2Elements;
+let testDir, outputPath, previewData, parsedSlides, templateSlide2Elements, round1Tags;
 
 const repeatableSlides = [{ slideIndex: 2, structureType: "initiative", customPrompt: "" }];
 const jsonData = {
@@ -25,10 +25,23 @@ const jsonData = {
 beforeAll(() => {
   testDir    = fs.mkdtempSync(path.join(os.tmpdir(), "solon-repkey-"));
   outputPath = path.join(testDir, "output.pptx");
+
   const templateZip    = new AdmZip(FIXTURE_PPTX);
   const templateSlides = parseSlides(templateZip);
   templateSlide2Elements = templateSlides.find(s => s.index === 2).elements;
-  const result = buildPptxZip(FIXTURE_PPTX, [], jsonData, repeatableSlides);
+
+  const titleElem = templateSlide2Elements.find(e => e.type === "text" && e.text === "Core Revenue Management");
+  const subElem   = templateSlide2Elements.find(e => e.type === "text" && e.text && e.text.includes("Group Summary"));
+  if (!titleElem || !subElem) throw new Error("Expected elements not found on slide 2");
+
+  // Pass tags with autoGenerate:true so the output PPTX contains AI values (Alpha/Beta Group)
+  // This simulates what round-1 output looks like
+  round1Tags = [
+    { elementId: titleElem.id, key: "initiative_group",           hint: "Title",     slideIndex: 2, originalText: titleElem.text, shapeName: titleElem.shapeName, maxChars: 30, autoGenerate: true, elementOrder: 1 },
+    { elementId: subElem.id,   key: "initiative_group_subheader", hint: "Subheader", slideIndex: 2, originalText: subElem.text,   shapeName: subElem.shapeName,   maxChars: 80, autoGenerate: true, elementOrder: 2 }
+  ];
+
+  const result = buildPptxZip(FIXTURE_PPTX, round1Tags, jsonData, repeatableSlides);
   previewData  = result.previewData;
   result.zip.writeZip(outputPath);
   parsedSlides = parseSlides(new AdmZip(outputPath));
@@ -36,15 +49,7 @@ beforeAll(() => {
 
 afterAll(() => { fs.rmSync(testDir, { recursive: true, force: true }); });
 
-function makeRound1Tags() {
-  const t = templateSlide2Elements.find(e => e.type === "text" && e.text === "Core Revenue Management");
-  const s = templateSlide2Elements.find(e => e.type === "text" && e.text && e.text.includes("Group Summary"));
-  if (!t || !s) throw new Error("Expected elements not found on slide 2");
-  return [
-    { elementId: t.id, key: "initiative_group",           hint: "Title",     slideIndex: 2, originalText: t.text, shapeName: t.shapeName, maxChars: 30, autoGenerate: true, elementOrder: 1 },
-    { elementId: s.id, key: "initiative_group_subheader", hint: "Subheader", slideIndex: 2, originalText: s.text, shapeName: s.shapeName, maxChars: 80, autoGenerate: true, elementOrder: 2 }
-  ];
-}
+function makeRound1Tags() { return round1Tags; }
 
 function mergeTagsPreservingClones(existingTags, slides, preview) {
   const byShapeName = {};
@@ -56,10 +61,11 @@ function mergeTagsPreservingClones(existingTags, slides, preview) {
   slides.forEach(slide => {
     const tplIdx = cloneMap[slide.index];
     if (!tplIdx) return;
-    slide.elements.forEach(elem => {
+    slide.elements.forEach((elem, elemIdx) => {
       const src = elem.shapeName && byShapeName[elem.shapeName];
       if (!src || src.slideIndex !== tplIdx) return;
-      synthetic.push({ ...src, elementId: elem.id, slideIndex: slide.index, autoGenerate: false });
+      // Use elem.text (current output PPTX text) as originalText, not src.originalText (template placeholder)
+      synthetic.push({ ...src, elementId: elem.id, slideIndex: slide.index, autoGenerate: false, originalText: elem.text ?? src.originalText });
       covered.add(elem.id);
     });
   });
@@ -158,14 +164,12 @@ describe("mergeTagsPreservingClones", () => {
   });
 
   it("REGRESSION: produces zero synthetic tags when tags have no shapeName (documents the pre-fix bug)", () => {
-    // Tags without shapeName = what handleSaveTag produced before the fix
     const tagsNoShape = makeRound1Tags().map(t => { const c = Object.assign({}, t); delete c.shapeName; return c; });
     const merged = mergeTagsPreservingClones(tagsNoShape, parsedSlides, previewData);
     const cloneNums = previewData.filter(p => p.instanceIndex !== null).map(p => p.slideNumber);
-    // Without shapeName the byShapeName map is empty so no synthetic tags are produced
     cloneNums.forEach(num => {
       const tag = merged.find(t => t.slideIndex === num && t.key === "initiative_group");
-      expect(tag).toBeUndefined(); // documents the bug - no match without shapeName
+      expect(tag).toBeUndefined();
     });
   });
 
@@ -174,6 +178,43 @@ describe("mergeTagsPreservingClones", () => {
       expect(t.shapeName).toBeDefined();
       expect(typeof t.shapeName).toBe("string");
       expect(t.shapeName.length).toBeGreaterThan(0);
+    });
+  });
+});
+
+describe("originalText update on synthetic tags", () => {
+  it("synthetic tags carry the current element text from the output PPTX, not the template placeholder", () => {
+    const merged = mergeTagsPreservingClones(makeRound1Tags(), parsedSlides, previewData);
+    const cloneNums = previewData.filter(p => p.instanceIndex !== null).map(p => p.slideNumber);
+
+    cloneNums.forEach(num => {
+      const slide = parsedSlides.find(s => s.index === num);
+      const tag = merged.find(t => t.slideIndex === num && t.key === "initiative_group");
+      expect(tag).toBeDefined();
+      const elem = slide.elements.find(e => e.id === tag.elementId);
+      expect(elem).toBeDefined();
+      // originalText must reflect the AI-generated value in the output PPTX
+      expect(tag.originalText).toBe(elem.text);
+      expect(tag.originalText).not.toBe(round1Tags[0].originalText);
+    });
+  });
+
+  it("recipe-builder receives correct context value (AI output, not template placeholder)", () => {
+    const merged = mergeTagsPreservingClones(makeRound1Tags(), parsedSlides, previewData);
+    const cloneNums = previewData.filter(p => p.instanceIndex !== null).map(p => p.slideNumber);
+
+    const values = cloneNums.map(num => {
+      const tag = merged.find(t => t.slideIndex === num && t.key === "initiative_group");
+      return tag?.originalText;
+    });
+
+    // Values should differ per slide (Alpha Group vs Beta Group)
+    const unique = new Set(values);
+    expect(unique.size).toBeGreaterThan(1);
+
+    // None should be the original template placeholder
+    values.forEach(v => {
+      expect(v).not.toBe("Core Revenue Management");
     });
   });
 });

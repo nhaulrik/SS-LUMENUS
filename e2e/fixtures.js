@@ -199,17 +199,10 @@ export async function doFullApply(page, json) {
   await page.locator(SEL.previewGenerate).click();
   await page.waitForSelector(SEL.previewLarge);
 
-  // 5. Apply Patch & Continue → triggers download + navigates back to Tag step
-  const [download] = await Promise.all([
-    page.waitForEvent('download'),
-    page.locator(SEL.applyPatchBtn).click()
-  ]);
+  // 5. Apply Patch & Continue -> navigates back to Tag step (no auto-download)
+  await page.locator(SEL.applyPatchBtn).click();
 
-  // Wait for Tag step carousel — the apply flow (chain create + PPTX build + parse) can
-  // take several seconds, so use a generous timeout here.
-  await page.waitForSelector('.tag-slides .tag-slide-btn', { timeout: 90_000 });
-
-  return download;
+  await page.waitForSelector('.tag-slides .tag-slide-btn', { timeout: 90000 });
 }
 
 // ─── Fixture definitions ──────────────────────────────────────────────────

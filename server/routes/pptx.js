@@ -56,7 +56,8 @@ router.post('/generate-pptx', (req, res) => {
     }
 
     const { zip, previewData } = buildPptxZip(templatePath, tags, jsonData, repeatableSlides);
-    const outputPath = path.join(OUTPUT_DIR, `generated-${Date.now()}.pptx`);
+    const originalBase = path.basename(templatePath, '.pptx').replace(/-\d+$/, ''); // strip any timestamp suffix
+    const outputPath   = path.join(OUTPUT_DIR, originalBase + '-generated-' + Date.now() + '.pptx');
     zip.writeZip(outputPath);
 
     res.json({ ok: true, previewData, downloadUrl: `/api/download/${path.basename(outputPath)}` });

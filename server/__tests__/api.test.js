@@ -388,7 +388,7 @@ describe('Patch chain endpoints', () => {
     expect(applyRes.status).toBe(200);
     expect(applyRes.body.ok).toBe(true);
     expect(applyRes.body.outputFile).toContain('patch-1');
-    expect(applyRes.body.downloadUrl).toContain(chainId);
+    expect(applyRes.body.downloadUrl).toMatch(/^\/api\/download\//); // points to public output dir
     expect(Array.isArray(applyRes.body.previewData)).toBe(true);
   });
 

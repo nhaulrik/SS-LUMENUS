@@ -249,28 +249,34 @@ test.describe('UC8 — Propagation config is preserved after apply', () => {
   });
 });
 
-// ─── UC9: PPTX is downloaded ──────────────────────────────────────────────────
 
-test.describe('UC9 — Generated PPTX is downloaded', () => {
-  test('a file is downloaded when Apply Patch & Continue is clicked', async ({ taggedPage: page }) => {
-    const download = await doFullApply(page, REPEATABLE_JSON);
-    expect(download).toBeTruthy();
-    expect(download.suggestedFilename()).toMatch(/\.pptx$/);
-  });
+// --- UC9: PPTX is saved to server/output ---
 
-  test('downloaded filename follows the patch naming convention', async ({ taggedPage: page }) => {
-    const download = await doFullApply(page, REPEATABLE_JSON);
-    // Filename: {original-name}-patch-{n}.pptx — first patch should be -patch-1
-    expect(download.suggestedFilename()).toMatch(/sample-patch-1\.pptx$/);
-  });
-
-  test('second apply increments the patch number in the filename', async ({ taggedPage: page }) => {
-    // First apply
+test.describe("UC9 - Generated PPTX is saved to server/output", () => {
+  test("patch file is accessible via history timeline download link", async ({ taggedPage: page }) => {
     await doFullApply(page, REPEATABLE_JSON);
+    // The history timeline should show a download link for the applied round
+    const downloadLink = page.locator(SEL.historyDownloadBtn).first();
+    await expect(downloadLink).toBeVisible({ timeout: 5000 });
+    const href = await downloadLink.getAttribute("href");
+    expect(href).toMatch(/\.pptx$/);
+  });
 
-    // Second apply (repeatableSlides cleared, so use static JSON)
+  test("patch filename follows the naming convention {original}-patch-{n}.pptx", async ({ taggedPage: page }) => {
+    await doFullApply(page, REPEATABLE_JSON);
+    const downloadLink = page.locator(SEL.historyDownloadBtn).first();
+    const href = await downloadLink.getAttribute("href");
+    expect(href).toMatch(/sample-patch-1\.pptx/);
+  });
+
+  test("second apply increments the patch number", async ({ taggedPage: page }) => {
+    await doFullApply(page, REPEATABLE_JSON);
     await selectSlide(page, 2);
-    const download2 = await doFullApply(page, STATIC_JSON);
-    expect(download2.suggestedFilename()).toMatch(/sample-patch-2\.pptx$/);
+    await doFullApply(page, STATIC_JSON);
+    const links = page.locator(SEL.historyDownloadBtn);
+    const count = await links.count();
+    expect(count).toBeGreaterThanOrEqual(2);
+    const href = await links.nth(count - 1).getAttribute("href");
+    expect(href).toMatch(/sample-patch-2\.pptx/);
   });
 });

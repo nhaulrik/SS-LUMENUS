@@ -366,7 +366,7 @@ export default function App() {
       const applyResult = await applyRes.json()
       if (!applyResult.ok) throw new Error(applyResult.error)
 
-      triggerDownload(applyResult.downloadUrl)
+      // File saved server-side in patch-chains/ — accessible via history timeline
 
       const parseRes = await fetch('/api/parse-pptx-from-path', {
         method: 'POST',
@@ -427,7 +427,7 @@ export default function App() {
           const shapeKey = tplIdx + ':' + elem.shapeName + ':' + elemIdx
           const src = byShapeKey[shapeKey]
           if (!src) return
-          synthetic.push({ ...src, elementId: elem.id, slideIndex: slide.index, autoGenerate: false })
+          synthetic.push({ ...src, elementId: elem.id, slideIndex: slide.index, autoGenerate: false, originalText: elem.text ?? src.originalText })
           covered.add(elem.id)
         })
       })

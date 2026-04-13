@@ -342,6 +342,59 @@ describe('replacePlaceholders', () => {
     // No matching tag for slide 1, so the placeholder is left as-is
     expect(result).toBe(makeContent('title'));
   });
+
+  it('strips newlines from AI values to prevent invalid XML in a:t elements', () => {
+    const content = makeContent('scope');
+    const tags = [{ slideIndex: 1, key: 'scope', autoGenerate: true }];
+    const jsonData = { static: { scope: "Line one\n\nLine two\n� Bullet" } };
+    const result = replacePlaceholders(content, jsonData, null, tags, 1);
+    // Newlines must be replaced with spaces - raw \n inside <a:t> is invalid OOXML
+    expect(result).not.toContain('\n');
+    expect(result).toBe('<a:t>Line one Line two � Bullet</a:t>');
+  });
+
+  it('strips carriage-return-newline sequences', () => {
+    const content = makeContent('scope');
+    const tags = [{ slideIndex: 1, key: 'scope', autoGenerate: true }];
+    const jsonData = { static: { scope: "Line one\r\nLine two" } };
+    const result = replacePlaceholders(content, jsonData, null, tags, 1);
+    expect(result).not.toContain('\r');
+    expect(result).not.toContain('\n');
+    expect(result).toBe('<a:t>Line one Line two</a:t>');
+  });
+
+  it('collapses multiple spaces produced by newline replacement', () => {
+    const content = makeContent('scope');
+    const tags = [{ slideIndex: 1, key: 'scope', autoGenerate: true }];
+    const jsonData = { static: { scope: "First\n\nSecond" } };
+    const result = replacePlaceholders(content, jsonData, null, tags, 1);
+    // Two newlines -> two spaces -> collapsed to one space
+    expect(result).toBe('<a:t>First Second</a:t>');
+  });
+
+  it('XML-escapes double quotes in values', () => {
+    const content = makeContent('label');
+    const tags = [{ slideIndex: 1, key: 'label', autoGenerate: true }];
+    const jsonData = { static: { label: 'She said "hello"' } };
+    const result = replacePlaceholders(content, jsonData, null, tags, 1);
+    expect(result).toBe('<a:t>She said &quot;hello&quot;</a:t>');
+  });
+
+  it('handles numeric values without throwing', () => {
+    const content = makeContent('count');
+    const tags = [{ slideIndex: 1, key: 'count', autoGenerate: true }];
+    const jsonData = { static: { count: 42 } };
+    const result = replacePlaceholders(content, jsonData, null, tags, 1);
+    expect(result).toBe('<a:t>42</a:t>');
+  });
+
+  it('trims leading and trailing whitespace from values', () => {
+    const content = makeContent('title');
+    const tags = [{ slideIndex: 1, key: 'title', autoGenerate: true }];
+    const jsonData = { static: { title: '  My Title  ' } };
+    const result = replacePlaceholders(content, jsonData, null, tags, 1);
+    expect(result).toBe('<a:t>My Title</a:t>');
+  });
 });
 
 // ─────────────────────────────────────────────

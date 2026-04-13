@@ -3,7 +3,7 @@ import admZip from 'adm-zip';
 import path from 'path';
 import fs from 'fs';
 import { randomUUID } from 'crypto';
-import { CHAINS_DIR, RESOLVED_CHAINS_DIR, isInsideDir } from '../config.js';
+import { CHAINS_DIR, RESOLVED_CHAINS_DIR, OUTPUT_DIR, isInsideDir } from '../config.js';
 import { parseSlides, buildPptxZip } from '../pptx-utils.js';
 
 const router = express.Router();
@@ -74,6 +74,10 @@ router.post('/patch-chains/:chainId/apply', (req, res) => {
 
     const { zip, previewData } = buildPptxZip(basePath, tags || [], jsonData || {}, repeatableSlides || []);
     zip.writeZip(outputPath);
+    // Also write to server/output/ so all generated files are in one place
+    if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+    const publicOutputPath = path.join(OUTPUT_DIR, outputFile);
+    zip.writeZip(publicOutputPath);
 
     const round = {
       id:               `round-${appliedCount + 1}`,
@@ -99,7 +103,7 @@ router.post('/patch-chains/:chainId/apply', (req, res) => {
       outputFile,
       nextBasePath: outputPath,
       previewData,
-      downloadUrl:  `/api/patch-chains/${chainId}/download/${outputFile}`
+      downloadUrl:  "/api/download/" + outputFile
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
