@@ -377,8 +377,12 @@ export default function App() {
       const parseResult = await parseRes.json()
       if (!parseResult.ok) throw new Error(parseResult.error)
 
-      // UC2, UC3, UC4, UC8: Preserve tags (merged with new slides) and propagations
+
+      // UC2, UC3, UC4, UC8: Preserve tags (merged with new slides) and propagations.
+      // Keys and hints are preserved; autoGenerate is reset to false so the next
+      // iteration starts with AI off - the user opts back in deliberately.
       const mergedTags = mergeTagsWithSlides(tags, parseResult.slides)
+        .map(t => ({ ...t, autoGenerate: false }))
 
       setTemplateFile({ filePath: parseResult.filePath, slides: parseResult.slides, fileName: templateFile.fileName })
       setSlides(parseResult.slides)
