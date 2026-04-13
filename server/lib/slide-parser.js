@@ -386,8 +386,11 @@ export function extractSlideElements(xml, slideIndex, slideWidth = 10 * EMU_PER_
     const avgCharWidth  = (fontSize || 12) * 0.55;
     const lineHeight    = (fontSize || 12) * 1.2;
     const pointsPerInch = 72;
-    const charsPerLine  = Math.max(1, Math.floor((bounds?.w || 1) * pointsPerInch / avgCharWidth));
-    const lines         = Math.max(1, Math.floor((bounds?.h || 0.1) * pointsPerInch / lineHeight));
+    // bounds are [0,1] fractions of slide dimensions - convert to inches before calculating
+    const widthIn      = (bounds?.w || 1)   * (slideWidth  / EMU_PER_INCH);
+    const heightIn     = (bounds?.h || 0.1) * (slideHeight / EMU_PER_INCH);
+    const charsPerLine = Math.max(1, Math.floor(widthIn  * pointsPerInch / avgCharWidth));
+    const lines        = Math.max(1, Math.floor(heightIn * pointsPerInch / lineHeight));
     const maxChars      = charsPerLine * lines;
 
     slide.elements.push({
