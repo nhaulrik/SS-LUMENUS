@@ -7,10 +7,6 @@ import PropagateModal from '../components/PropagateModal.jsx'
 import PatchHistoryTimeline from '../components/PatchHistoryTimeline.jsx'
 import { maxElementOrder, keyGen } from '../utils/tagUtils.js'
 
-// Reference dimensions (not used - normalization now uses max element bounds)
-const _SLIDE_WIDTH  = 10
-const _SLIDE_HEIGHT = 5.625
-
 export default function TagStep({
   // Slide data
   slides,

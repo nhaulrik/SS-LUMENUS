@@ -35,22 +35,6 @@ router.post('/patch-chains', (req, res) => {
   }
 });
 
-// ── Get chain info (all rounds) ────────────────────────────────────────────────
-router.get('/patch-chains/:chainId', (req, res) => {
-  try {
-    const { chainId } = req.params;
-    const chainDir = path.join(CHAINS_DIR, chainId);
-    if (!isInsideDir(chainDir, RESOLVED_CHAINS_DIR)) {
-      return res.status(403).json({ error: 'Invalid chain id' });
-    }
-    const chainPath = path.join(chainDir, 'chain.json');
-    if (!fs.existsSync(chainPath)) return res.status(404).json({ error: 'Chain not found' });
-    const chain = JSON.parse(fs.readFileSync(chainPath, 'utf8'));
-    res.json({ ok: true, chain });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 // ── Apply patch round ──────────────────────────────────────────────────────────
 router.post('/patch-chains/:chainId/apply', (req, res) => {

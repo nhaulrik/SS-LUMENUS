@@ -9,9 +9,10 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname  = path.dirname(fileURLToPath(import.meta.url));
 const PATCHES_DIR = path.resolve(__dirname, '../server/e2e-data/patches');
 const CHAINS_DIR  = path.resolve(__dirname, '../server/e2e-data/chains');
+const OUTPUT_DIR  = path.resolve(__dirname, '../server/e2e-data/output');
 
 export default async function globalSetup(config) {
   // Clear saved patches (*.json files)
@@ -27,6 +28,15 @@ export default async function globalSetup(config) {
   if (fs.existsSync(CHAINS_DIR)) {
     for (const entry of fs.readdirSync(CHAINS_DIR)) {
       fs.rmSync(path.join(CHAINS_DIR, entry), { recursive: true, force: true });
+    }
+  }
+
+  // Clear generated output files so the directory doesn't grow unboundedly
+  if (fs.existsSync(OUTPUT_DIR)) {
+    for (const file of fs.readdirSync(OUTPUT_DIR)) {
+      if (file.endsWith('.pptx')) {
+        fs.unlinkSync(path.join(OUTPUT_DIR, file));
+      }
     }
   }
 }

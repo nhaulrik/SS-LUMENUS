@@ -101,8 +101,18 @@ test.describe('Patch table — inline key editing', () => {
   });
 
   test('changed key persists after switching slides and returning', async ({ taggedPage: page }) => {
-    // This test is skipped due to modal overlay issue in CI - the functionality works in manual testing
-    // The key persistence is covered by other tests
+    await page.locator(SEL.patchKeyInput).first().fill('persist_key');
+    await page.locator(SEL.patchKeyInput).first().press('Tab');
+
+    // Navigate away and back
+    const slideButtons = page.locator('.tag-slide-btn');
+    if (await slideButtons.count() > 1) {
+      await slideButtons.nth(1).click();
+      await slideButtons.nth(0).click();
+    }
+
+    const firstRow = page.locator('.patch-row').first();
+    await expect(firstRow).toHaveAttribute('data-key', 'persist_key');
   });
 });
 
