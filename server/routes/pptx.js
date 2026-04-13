@@ -3,6 +3,7 @@ import admZip from 'adm-zip';
 import path from 'path';
 import fs from 'fs';
 import { TEMP_DIR, OUTPUT_DIR, RESOLVED_OUTPUT_DIR, isInsideDir } from '../config.js';
+
 import { parseSlides, buildPptxZip, buildRecipe, validateJsonData } from '../pptx-utils.js';
 
 const router = express.Router();
@@ -47,7 +48,9 @@ router.post('/validate-json', (req, res) => {
   }
 });
 
-// ── Generate PPTX ──────────────────────────────────────────────────────────────
+// ── Generate PPTX (preview only — no file written to disk) ────────────────────
+// Used by the Recipe step "Preview & Generate" button to compute previewData
+// for display. File generation only happens through patch apply (chains.js).
 router.post('/generate-pptx', (req, res) => {
   try {
     const { templatePath, tags, jsonData, repeatableSlides } = req.body;
@@ -55,12 +58,8 @@ router.post('/generate-pptx', (req, res) => {
       return res.status(400).json({ error: 'Template file not found' });
     }
 
-    const { zip, previewData } = buildPptxZip(templatePath, tags, jsonData, repeatableSlides);
-    const originalBase = path.basename(templatePath, '.pptx').replace(/-\d+$/, ''); // strip any timestamp suffix
-    const outputPath   = path.join(OUTPUT_DIR, originalBase + '-generated-' + Date.now() + '.pptx');
-    zip.writeZip(outputPath);
-
-    res.json({ ok: true, previewData, downloadUrl: `/api/download/${path.basename(outputPath)}` });
+    const { previewData } = buildPptxZip(templatePath, tags, jsonData, repeatableSlides);
+    res.json({ ok: true, previewData });
   } catch (err) {
     res.status(500).json({ error: 'Failed to generate: ' + err.message });
   }

@@ -12,7 +12,6 @@ export default function PreviewStep({
   navigateTo,
   stepAnimClass,
   applyPatchAndContinue,
-  generateFinalFile,
   debugContext
 }) {
   // Keyboard navigation
@@ -67,11 +66,8 @@ export default function PreviewStep({
           <button className="btn btn-secondary" onClick={() => navigateTo('recipe')}>
             ← Back to Edit
           </button>
-          <button className="btn btn-secondary" onClick={applyPatchAndContinue}>
+          <button className="btn btn-primary" onClick={applyPatchAndContinue}>
             Apply Patch &amp; Continue →
-          </button>
-          <button className="btn btn-primary" onClick={generateFinalFile}>
-            Generate Final File ↓
           </button>
         </div>
       </div>

@@ -4,7 +4,7 @@ import UploadStep   from './steps/UploadStep.jsx'
 import TagStep      from './steps/TagStep.jsx'
 import RecipeStep   from './steps/RecipeStep.jsx'
 import PreviewStep  from './steps/PreviewStep.jsx'
-import { mergeTagsWithSlides, triggerDownload } from './utils/tagUtils.js'
+import { mergeTagsWithSlides } from './utils/tagUtils.js'
 
 const STEPS = ['upload', 'tag', 'recipe', 'preview']
 
@@ -366,7 +366,7 @@ export default function App() {
       const applyResult = await applyRes.json()
       if (!applyResult.ok) throw new Error(applyResult.error)
 
-      // File saved server-side in patch-chains/ � accessible via history timeline
+      // File saved server-side in patch-chains/ � accessible via history timeline
 
       const parseRes = await fetch('/api/parse-pptx-from-path', {
         method: 'POST',
@@ -519,36 +519,6 @@ export default function App() {
     } catch { /* best-effort */ }
   }, [chainId])
 
-  // ── Generate final file download ───────────────────────────────
-  const generateFinalFile = useCallback(async () => {
-    try {
-      const jsonData = JSON.parse(jsonInput)
-
-      if (chainId) {
-        const res = await fetch(`/api/patch-chains/${chainId}/apply`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tags, jsonData, repeatableSlides, propagations })
-        })
-        if (!res.ok) throw new Error(`Apply failed (${res.status})`)
-        const result = await res.json()
-        if (!result.ok) throw new Error(result.error)
-        triggerDownload(result.downloadUrl)
-      } else {
-        const res = await fetch('/api/generate-pptx', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ templatePath: templateFile.filePath, tags, jsonData, repeatableSlides })
-        })
-        if (!res.ok) throw new Error(`Generate failed (${res.status})`)
-        const result = await res.json()
-        if (!result.ok) throw new Error(result.error || 'Generate failed')
-        triggerDownload(result.downloadUrl)
-      }
-    } catch (err) {
-      setToast({ message: 'Download failed: ' + err.message, type: 'error' })
-    }
-  }, [chainId, templateFile, tags, jsonInput, repeatableSlides, propagations])
 
   // ── Step routing ───────────────────────────────────────────────
   // Debug context -- serialisable snapshot of meaningful app state for sharing
@@ -657,7 +627,7 @@ export default function App() {
           selectedPreviewIdx={selectedPreviewIdx}
           setSelectedPreviewIdx={setSelectedPreviewIdx}
           applyPatchAndContinue={applyPatchAndContinue}
-          generateFinalFile={generateFinalFile}
+
         />
       </>
     )
