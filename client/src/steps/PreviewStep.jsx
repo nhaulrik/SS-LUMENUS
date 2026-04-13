@@ -13,6 +13,7 @@ export default function PreviewStep({
   stepAnimClass,
   applyPatchAndContinue,
   generateFinalFile
+  debugContext
 }) {
   // Keyboard navigation
   useEffect(() => {
@@ -29,7 +30,7 @@ export default function PreviewStep({
   return (
     <div className="app">
       <AppHeader title="Preview" subtitle="Review your generated slides, use ← → arrow keys to navigate" />
-      <Breadcrumbs step={step} canNavigateTo={canNavigateTo} navigateTo={navigateTo} />
+      <AppHeader title="Preview" subtitle="Review your generated slides, use arrow keys to navigate" debugContext={debugContext} />
 
       <div className={stepAnimClass}>
         <div className="preview-large">

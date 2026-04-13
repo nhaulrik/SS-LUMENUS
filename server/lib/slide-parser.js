@@ -317,6 +317,11 @@ export function extractSlideElements(xml, slideIndex, slideWidth = 10 * EMU_PER_
       }
     }
 
+    // Extract shapeName early so it can be included on both rect and text elements
+    let shapeName = `text_${i}`;
+    const cNvPrMatch = shapeXml.match(/<p:cNvPr\s+id="\d+"\s+name="([^"]+)"/);
+    if (cNvPrMatch) shapeName = cNvPrMatch[1];
+
     const textMatches = shapeXml.match(/<a:t>([^<]*)<\/a:t>/g);
     const textContent = textMatches
       ? textMatches.map(t => t.replace(/<[^>]+>/g, '')).join(' ')
@@ -332,14 +337,11 @@ export function extractSlideElements(xml, slideIndex, slideWidth = 10 * EMU_PER_
         bounds,
         shapeFill,
         shapeGradient,
-        shapeBorder
+        shapeBorder,
+        shapeName
       });
       continue;
     }
-
-    let shapeName = `text_${i}`;
-    const cNvPrMatch = shapeXml.match(/<p:cNvPr\s+id="\d+"\s+name="([^"]+)"/);
-    if (cNvPrMatch) shapeName = cNvPrMatch[1];
 
     let fontSize = 14;
     let fontBold = false;

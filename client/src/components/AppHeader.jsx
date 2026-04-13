@@ -1,4 +1,9 @@
-export default function AppHeader({ title, subtitle }) {
+import { useState } from 'react'
+import DebugContextModal from './DebugContextModal.jsx'
+
+export default function AppHeader({ title, subtitle, debugContext }) {
+  const [showDebug, setShowDebug] = useState(false)
+
   return (
     <header>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -6,10 +11,28 @@ export default function AppHeader({ title, subtitle }) {
           <h1>{title}</h1>
           {subtitle && <p>{subtitle}</p>}
         </div>
-        <a href="/docs.html" target="_blank" className="docs-link" title="Open Documentation">
-          ⬡ Docs
-        </a>
+        <div className="header-actions">
+          {debugContext && (
+            <button
+              className="debug-link"
+              title="Copy debug context"
+              onClick={() => setShowDebug(true)}
+            >
+              ? Debug
+            </button>
+          )}
+          <a href="/docs.html" target="_blank" className="docs-link" title="Open Documentation">
+            ? Docs
+          </a>
+        </div>
       </div>
+
+      {showDebug && debugContext && (
+        <DebugContextModal
+          context={debugContext}
+          onClose={() => setShowDebug(false)}
+        />
+      )}
     </header>
   )
 }

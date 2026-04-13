@@ -50,6 +50,7 @@ export default function TagStep({
   previewData,
   tagPreviewIdx,
   setTagPreviewIdx,
+  debugContext
 }) {
   // Internal state — not needed outside this step
   const [selectedSlide,      setSelectedSlide]      = useState(0)
@@ -192,7 +193,9 @@ export default function TagStep({
 
   return (
     <div className="app">
-      <AppHeader title="Tag Elements" subtitle="Click on text elements to tag them as placeholders" />
+      <AppHeader title="Tag Elements" subtitle="Click on text elements to tag them as placeholders"
+          debugContext={debugContext}
+        />
       <Breadcrumbs step={step} canNavigateTo={canNavigateTo} navigateTo={navigateTo} />
 
       <div className={stepAnimClass}>

@@ -8,16 +8,18 @@ export default function UploadStep({
   step,
   canNavigateTo,
   navigateTo,
-  handleFileUpload
+  handleFileUpload,
+  debugContext
 }) {
   const fileInputRef = useRef(null)
 
   return (
     <div className="app">
       <AppHeader
+      <AppHeader
         title="Solon Slide Studio"
         subtitle="Upload a PPTX, tag elements, generate recipe, create presentation"
-      />
+        debugContext={debugContext}
       <Breadcrumbs step={step} canNavigateTo={canNavigateTo} navigateTo={navigateTo} />
 
       <div className={stepAnimClass}>

@@ -382,44 +382,41 @@ export default function App() {
       // Keys and hints are preserved; autoGenerate is reset to false so the next
       // iteration starts with AI off - the user opts back in deliberately.
       //
-      // For cloned (repeatable) slides the output PPTX renumbers them positionally
-      // (slide3.xml, slide4.xml...) so their element IDs differ from the template
-      // (slide2-elem0 -> slide3-elem0). Build an ID translation map using previewData
-      // (which carries templateSlideIndex) so mergeTagsWithSlides can match them.
-      const idTranslation = {}
-      ;(applyResult.previewData || []).forEach(preview => {
-        if (!preview.templateSlideIndex) return
-        const parsedSlide = parseResult.slides.find(s => s.index === preview.slideNumber)
-        if (!parsedSlide) return
-        ;(preview.elements || []).forEach((previewElem, i) => {
-          const parsedElem = parsedSlide.elements[i]
-          if (parsedElem && previewElem.id !== parsedElem.id) {
-            idTranslation[parsedElem.id] = previewElem.id
-          }
+      // For cloned (repeatable) slides, use shapeName-based matching to carry keys
+      // forward. Cloned slides are literal XML copies so shapeNames are stable across
+      // the copy. The output PPTX renumbers slides positionally (slide3.xml, slide4.xml)
+      // so element IDs shift, but shapeNames do not.
+
+      // Build shapeName -> tag map from existing tags
+      const byShapeName = {}
+      tags.forEach(t => { if (t.shapeName) byShapeName[t.shapeName] = t })
+
+      // Build output slideNumber -> templateSlideIndex map (clones only)
+      const cloneMap = {}
+      ;(applyResult.previewData || []).forEach(p => {
+        if (p.templateSlideIndex && p.instanceIndex !== null) cloneMap[p.slideNumber] = p.templateSlideIndex
+      })
+
+      // Synthesise tags for cloned slides by shapeName match
+      const synthetic = []
+      const covered   = new Set()
+      parseResult.slides.forEach(slide => {
+        const tplIdx = cloneMap[slide.index]
+        if (!tplIdx) return
+        slide.elements.forEach(elem => {
+          const src = elem.shapeName && byShapeName[elem.shapeName]
+          if (!src || src.slideIndex !== tplIdx) return
+          synthetic.push({ ...src, elementId: elem.id, slideIndex: slide.index, autoGenerate: false })
+          covered.add(elem.id)
         })
       })
 
-      // Translate output-position IDs back to template IDs so existing tags match
-      const translatedSlides = parseResult.slides.map(slide => ({
-        ...slide,
-        elements: slide.elements.map(elem => ({
-          ...elem,
-          id: idTranslation[elem.id] ?? elem.id
-        }))
-      }))
-
-      const mergedTags = mergeTagsWithSlides(tags, translatedSlides)
+      // Standard merge for static slides and elements not covered by shapeName match
+      const mergedTags = mergeTagsWithSlides(tags, parseResult.slides)
         .map(t => ({ ...t, autoGenerate: false }))
+      const filteredMerged = mergedTags.filter(t => !covered.has(t.elementId))
 
-      // Correct slideIndex on each tag to reflect its actual position in the new PPTX
-      const correctedTags = mergedTags.map(tag => {
-        for (const slide of translatedSlides) {
-          if (slide.elements.some(e => e.id === tag.elementId)) {
-            return { ...tag, slideIndex: slide.index }
-          }
-        }
-        return tag
-      })
+      const correctedTags = [...filteredMerged, ...synthetic]
 
       setTemplateFile({ filePath: parseResult.filePath, slides: parseResult.slides, fileName: templateFile.fileName })
       setSlides(parseResult.slides)
@@ -533,7 +530,30 @@ export default function App() {
   }, [chainId, templateFile, tags, jsonInput, repeatableSlides, propagations])
 
   // ── Step routing ───────────────────────────────────────────────
-  const sharedProps = { step, canNavigateTo, navigateTo, stepAnimClass }
+  // Debug context -- serialisable snapshot of meaningful app state for sharing
+  const debugContext = {
+    timestamp:        new Date().toISOString(),
+    step,
+    currentPatch,
+    patchName,
+    chainId,
+    currentRoundId,
+    restoredBaseRoundId,
+    globalPrompt:     globalPrompt || null,
+    // Slides: metadata only (no XML content)
+    slides: slides.map(s => ({ index: s.index, width: s.width, height: s.height, elementCount: s.elements?.length ?? 0 })),
+    tags,
+    repeatableSlides,
+    propagations,
+    validation,
+    // Recipe and JSON truncated to avoid overwhelming output
+    recipe:           recipe   ? recipe.substring(0, 2000)   + (recipe.length   > 2000 ? '...[truncated]' : '') : null,
+    jsonInput:        jsonInput ? jsonInput.substring(0, 2000) + (jsonInput.length > 2000 ? '...[truncated]' : '') : null,
+    chainRounds:      chainRounds.map(r => ({ id: r.id, name: r.name, status: r.status, appliedAt: r.appliedAt, outputFile: r.outputFile })),
+    previewDataCount: previewData?.length ?? 0,
+  }
+
+  const sharedProps = { step, canNavigateTo, navigateTo, stepAnimClass, debugContext }
 
   if (step === 'upload') {
     return (
