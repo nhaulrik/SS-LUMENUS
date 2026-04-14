@@ -2944,3 +2944,191 @@ header p {
   padding: 1px 4px;
   border-radius: 3px;
 }
+
+
+/* ============================================================
+   HTML Editor Panel
+   ============================================================ */
+
+/* Full-screen overlay that replaces the upload step when open */
+.html-editor-overlay {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+/* ?? Header bar ??????????????????????????????????????????????? */
+.html-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px var(--space-lg);
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  gap: var(--space-md);
+}
+
+.html-editor-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.html-editor-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.html-editor-close {
+  font-size: 0.85rem;
+  padding: 0;
+}
+
+.html-editor-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.html-editor-dirty-badge {
+  font-size: 0.72rem;
+  color: var(--warning);
+  background: rgba(212, 168, 83, 0.12);
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(212, 168, 83, 0.25);
+}
+
+/* ?? Inline warnings ?????????????????????????????????????????? */
+.html-editor-warnings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px var(--space-lg);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.html-editor-warning {
+  font-size: 0.75rem;
+  color: var(--warning);
+  background: rgba(212, 168, 83, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.html-editor-warning--error {
+  color: var(--error);
+  background: rgba(232, 84, 74, 0.1);
+}
+
+/* ?? Split pane container ????????????????????????????????????? */
+.html-editor-split {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ?? Individual panes ????????????????????????????????????????? */
+.html-editor-pane {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.html-editor-pane-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 6px 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Code pane */
+.html-editor-pane--code {
+  border-right: none;
+}
+
+.html-editor-cm-host {
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* CodeMirror fills its host */
+.html-editor-cm-host .cm-editor {
+  height: 100%;
+}
+
+.html-editor-cm-host .cm-scroller {
+  overflow: auto;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* Preview pane */
+.html-editor-pane--preview {
+  background: var(--bg-secondary);
+}
+
+.html-editor-preview-wrapper {
+  position: relative;
+  margin: 12px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  background: #000;
+  flex-shrink: 0;
+}
+
+/* ?? Resizable divider ???????????????????????????????????????? */
+.html-editor-divider {
+  width: 6px;
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+  border-left:  1px solid var(--border-subtle);
+  border-right: 1px solid var(--border-subtle);
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast);
+}
+
+.html-editor-divider:hover,
+.html-editor-divider:active {
+  background: rgba(76, 175, 128, 0.15);
+  border-color: rgba(76, 175, 128, 0.4);
+}
+
+.html-editor-divider-handle {
+  width: 2px;
+  height: 32px;
+  background: var(--border-medium);
+  border-radius: 1px;
+}
+
+.html-editor-divider:hover .html-editor-divider-handle {
+  background: var(--accent-primary);
+}
+
+/* ?? Edit HTML button (small) ????????????????????????????????? */
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 0.78rem;
+}

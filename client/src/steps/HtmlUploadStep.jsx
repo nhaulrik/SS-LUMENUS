@@ -1,5 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import AppHeader from '../components/AppHeader.jsx'
+import { lazy, Suspense } from 'react'
+const HtmlEditorPanel = lazy(() => import('../components/HtmlEditorPanel.jsx'))
+import { mergeZoneEdits } from '../utils/mergeZoneEdits.js'
 
 const TYPE_LABELS   = { text: 'Text', number: 'Number', chart: 'Chart', image: 'Image', repeatable: 'Repeatable Block' }
 const TYPE_OPTIONS  = ['text', 'number', 'chart', 'image', 'repeatable']
@@ -148,6 +151,10 @@ export default function HtmlUploadStep({ stepAnimClass, debugContext, onProjectC
   const [creating,    setCreating]    = useState(false)
   const [projectName, setProjectName] = useState('')
 
+  // Editor (opt-in)
+  const [rawHtml,    setRawHtml]    = useState('')   // committed HTML text for the editor
+  const [editorOpen, setEditorOpen] = useState(false)
+
   // ── Responsive preview scale ──────────────────────────────────────────────
   useEffect(() => {
     const el = wrapperRef.current
@@ -194,7 +201,8 @@ export default function HtmlUploadStep({ stepAnimClass, debugContext, onProjectC
         return
       }
       setTemplateId(data.templateId); setSlideCount(data.slideCount)
-      setZones(data.zones); setPreviewHtml(data.previewHtml)
+      setZones(data.zones.map(z => ({ ...z, htmlKey: z.key }))); setPreviewHtml(data.previewHtml)
+      setRawHtml(html)
       setProjectName(file.name.replace(/\.html?$/, ''))
     } catch (err) {
       setToast({ message: 'Upload error: ' + err.message, type: 'error' })
@@ -239,6 +247,14 @@ export default function HtmlUploadStep({ stepAnimClass, debugContext, onProjectC
       setCreating(false)
     }
   }, [templateId, zones, projectName, handleSaveZones, onProjectCreated, setToast])
+
+  // ── Editor apply ───────────────────────────────────────────────
+  const handleEditorApply = useCallback((newHtml, newZones) => {
+    setRawHtml(newHtml)
+    setPreviewHtml(newHtml)
+    setZones(newZones)
+    setEditorOpen(false)
+  }, [])
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const zonesBySlide = zones.reduce((acc, z) => { (acc[z.slideIndex] ??= []).push(z); return acc }, {})
@@ -289,6 +305,20 @@ ${highlightCss}
       ? previewHtml.replace('</head>', injection + '</head>')
       : injection + previewHtml
   })()
+
+  // ── Editor overlay (opt-in) ───────────────────────────────────────────────
+  if (editorOpen && rawHtml) {
+    return (
+      <Suspense fallback={<div className="html-editor-overlay" style={{display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text-muted)'}}>Loading editor?</div>}>
+        <HtmlEditorPanel
+          uploadedHtml={rawHtml}
+          zones={zones}
+          onApply={handleEditorApply}
+          onClose={() => setEditorOpen(false)}
+        />
+      </Suspense>
+    )
+  }
 
   return (
     <div className="app">
@@ -346,9 +376,18 @@ ${highlightCss}
                     <p className="html-file-meta">{slideCount} slide{slideCount !== 1 ? 's' : ''} · {zones.length} zone{zones.length !== 1 ? 's' : ''} detected</p>
                   </div>
                 </div>
-                <button className="btn btn-link" onClick={() => { setTemplateId(null); setZones([]); setPreviewHtml(''); setFileName(''); setViolations([]) }}>
-                  Replace file
-                </button>
+                <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => setEditorOpen(true)}
+                    title="Open HTML editor to tweak layout and content"
+                  >
+                    ✎ Edit HTML
+                  </button>
+                  <button className="btn btn-link" onClick={() => { setTemplateId(null); setZones([]); setPreviewHtml(''); setRawHtml(''); setFileName(''); setViolations([]) }}>
+                    Replace file
+                  </button>
+                </div>
               </div>
             )}
 
