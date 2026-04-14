@@ -1,37 +1,70 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import Toast        from './components/Toast.jsx'
-import UploadStep   from './steps/UploadStep.jsx'
-import TagStep      from './steps/TagStep.jsx'
-import RecipeStep   from './steps/RecipeStep.jsx'
-import PreviewStep  from './steps/PreviewStep.jsx'
+import Toast            from './components/Toast.jsx'
+import FlowSelectStep   from './steps/FlowSelectStep.jsx'
+import UploadStep       from './steps/UploadStep.jsx'
+import HtmlUploadStep   from './steps/HtmlUploadStep.jsx'
+import TagStep          from './steps/TagStep.jsx'
+import RecipeStep       from './steps/RecipeStep.jsx'
+import PreviewStep      from './steps/PreviewStep.jsx'
 import { mergeTagsWithSlides } from './utils/tagUtils.js'
 
-const STEPS = ['upload', 'tag', 'recipe', 'preview']
+// All steps including the shared entry points
+const ALL_STEPS  = ['flow-select', 'upload', 'html-upload', 'tag', 'recipe', 'preview']
 
 export default function App() {
   // ── Step navigation ────────────────────────────────────────────
-  const [step,    setStep]    = useState('upload')
+  const [step,    setStep]    = useState('flow-select')
   const [animDir, setAnimDir] = useState('forward')
 
   const navigateTo = useCallback((newStep) => {
-    const curr = STEPS.indexOf(step)
-    const next = STEPS.indexOf(newStep)
+    const curr = ALL_STEPS.indexOf(step)
+    const next = ALL_STEPS.indexOf(newStep)
     setAnimDir(next >= curr ? 'forward' : 'backward')
     setStep(newStep)
   }, [step])
 
   const stepAnimClass = `step-content step-content-enter-${animDir === 'forward' ? 'right' : 'left'}`
 
-  // ── Template data ──────────────────────────────────────────────
+  // ── Flow selection ─────────────────────────────────────────────
+  const [activeFlow, setActiveFlow] = useState(null) // 'pptx' | 'html'
+
+  const handleSelectFlow = useCallback((flow) => {
+    setActiveFlow(flow)
+    if (flow === 'pptx') navigateTo('upload')
+    if (flow === 'html') navigateTo('html-upload')
+  }, [navigateTo])
+
+  const handleBackToFlowSelect = useCallback(() => {
+    setActiveFlow(null)
+    // Reset HTML flow state
+    setHtmlProject(null)
+    navigateTo('flow-select')
+  }, [navigateTo])
+
+  // ── HTML flow state ────────────────────────────────────────────
+  // Set when the user completes HtmlUploadStep (project created on server)
+  const [htmlProject, setHtmlProject] = useState(null)
+  // { chainId, projectName, zones, templatePath }
+
+  const handleHtmlProjectCreated = useCallback((project) => {
+    setHtmlProject(project)
+    // Stage 2+ (recipe / content generation) is not yet implemented.
+    // For now, show a success state within HtmlUploadStep by staying on
+    // 'html-upload' — the step will detect htmlProject != null and render
+    // a "project created" confirmation. Future stages will navigate forward.
+    setStep('html-upload')
+  }, [])
+
+  // ── PPTX flow: Template data ───────────────────────────────────
   const [templateFile, setTemplateFile] = useState(null)
   const [slides,       setSlides]       = useState([])
 
-  // ── Tags ───────────────────────────────────────────────────────
+  // ── PPTX flow: Tags ────────────────────────────────────────────
   const [tags,             setTags]             = useState([])
   const [repeatableSlides, setRepeatableSlides] = useState([])
   const [propagations,     setPropagations]     = useState([])
 
-  // ── Patch persistence ──────────────────────────────────────────
+  // ── PPTX flow: Patch persistence ──────────────────────────────
   const [patches,      setPatches]      = useState([])
   const [currentPatch, setCurrentPatch] = useState(null)
   const [patchName,    setPatchName]    = useState('')
@@ -39,13 +72,13 @@ export default function App() {
   const lastSavedPatchRef = useRef(null)
   const saveTimeoutRef    = useRef(null)
 
-  // ── Chain state ────────────────────────────────────────────────
+  // ── PPTX flow: Chain state ─────────────────────────────────────
   const [chainId,             setChainId]             = useState(null)
   const [chainRounds,         setChainRounds]         = useState([])
   const [currentRoundId,      setCurrentRoundId]      = useState(null)
   const [restoredBaseRoundId, setRestoredBaseRoundId] = useState(null)
 
-  // ── Recipe / generation ────────────────────────────────────────
+  // ── PPTX flow: Recipe / generation ────────────────────────────
   const [recipe,             setRecipe]             = useState('')
   const [jsonInput,          setJsonInput]          = useState('')
   const [validation,         setValidation]         = useState(null)
@@ -56,14 +89,16 @@ export default function App() {
   // ── Global toast notification ──────────────────────────────────
   const [toast, setToast] = useState(null)
 
-  // ── canNavigateTo guard ────────────────────────────────────────
+  // ── canNavigateTo guard (PPTX flow) ───────────────────────────
   const canNavigateTo = useCallback((s) => {
-    if (s === 'upload')  return true
-    if (s === 'tag')     return !!templateFile
-    if (s === 'recipe')  return !!(templateFile && tags.length > 0)
-    if (s === 'preview') return !!(templateFile && tags.length > 0 && jsonInput && validation?.valid)
+    if (s === 'flow-select') return true
+    if (s === 'upload')      return activeFlow === 'pptx'
+    if (s === 'html-upload') return activeFlow === 'html'
+    if (s === 'tag')         return !!(templateFile)
+    if (s === 'recipe')      return !!(templateFile && tags.length > 0)
+    if (s === 'preview')     return !!(templateFile && tags.length > 0 && jsonInput && validation?.valid)
     return false
-  }, [templateFile, tags.length, jsonInput, validation])
+  }, [activeFlow, templateFile, tags.length, jsonInput, validation])
 
   // ── Load patches on mount ──────────────────────────────────────
   useEffect(() => {
@@ -73,9 +108,6 @@ export default function App() {
       .catch(() => setPatches([]))
   }, [])
 
-  // chainRounds is managed purely via local state updates (no server sync needed —
-  // chainId is not persisted across page reloads, so there is no catch-up scenario).
-
   // ── Patch save helpers ─────────────────────────────────────────
   const savePatchToServer = useCallback(async (patch) => {
     try {
@@ -84,16 +116,14 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ patch })
       })
-    } catch {
-      // Non-critical; user is not blocked if a save fails silently
-    }
+    } catch { /* non-critical */ }
   }, [])
 
   const triggerSave = useCallback((newTags, newRepeatableSlides, newGlobalPrompt, newPropagations) => {
     if (!currentPatch) return
 
-    const promptToSave      = newGlobalPrompt  !== undefined ? newGlobalPrompt  : globalPrompt
-    const propagationsToSave = newPropagations !== undefined ? newPropagations  : propagations
+    const promptToSave       = newGlobalPrompt  !== undefined ? newGlobalPrompt  : globalPrompt
+    const propagationsToSave = newPropagations  !== undefined ? newPropagations  : propagations
 
     clearTimeout(saveTimeoutRef.current)
     saveTimeoutRef.current = setTimeout(() => {
@@ -115,7 +145,7 @@ export default function App() {
   // ── Auto-load / create patch when entering Tag step ───────────
   useEffect(() => {
     if (step !== 'tag' || slides.length === 0) return
-    if (chainId) return  // inside a chain — preserve existing state
+    if (chainId) return
 
     const existing = patches.find(p => p.pptxFile === templateFile?.fileName)
     if (existing) {
@@ -130,7 +160,6 @@ export default function App() {
       return
     }
 
-    // Don't auto-tag - only create patch skeleton, user adds tags manually
     const autoPatchName = templateFile?.fileName
       ? templateFile.fileName.replace('.pptx', '') + '_auto'
       : 'auto_patch'
@@ -155,7 +184,7 @@ export default function App() {
   // ── Auto-match patch when a PPTX is loaded ────────────────────
   useEffect(() => {
     if (!templateFile?.fileName || patches.length === 0 || slides.length === 0) return
-    if (chainId) return  // Don't auto-load patch when in chain mode
+    if (chainId) return
 
     const match = patches.find(p => p.pptxFile === templateFile.fileName)
     if (!match) return
@@ -205,13 +234,10 @@ export default function App() {
         ? [...prev.filter(p => p.key !== key), { key, ...config }]
         : prev.filter(p => p.key !== key)
 
-      // maxChars is a field-level constraint — sync it across all tags sharing
-      // this key whenever propagation is configured, regardless of mode.
       const tagsWithKey = tags.filter(t => t.key === key)
       const sourceTag = tagsWithKey.find(t => t.maxChars != null) ?? tagsWithKey[0]
 
       if (config?.mode === 'non-unique') {
-        // Non-unique: sync both hint and maxChars (one value for all slides)
         if (sourceTag) {
           const newTags = tags.map(tag =>
             tag.key === key
@@ -225,7 +251,6 @@ export default function App() {
       }
 
       if (config?.mode === 'unique') {
-        // Unique: hints stay slide-specific, but maxChars is still a shared constraint
         if (sourceTag?.maxChars != null) {
           const newTags = tags.map(tag =>
             tag.key === key
@@ -244,7 +269,6 @@ export default function App() {
   }, [tags, repeatableSlides, triggerSave])
 
   // ── Merge elements from other slides into one shared key ───────
-  // targetElementIds: elementIds of tags on other slides to rename to sourceTag.key
   const handleMergeKey = useCallback((sourceTag, targetElementIds) => {
     const newTags = tags.map(tag =>
       targetElementIds.includes(tag.elementId)
@@ -259,14 +283,14 @@ export default function App() {
   const handleRenameKeyAllSlides = useCallback((oldKey, newKey) => {
     const newTags = tags.map(tag => tag.key === oldKey ? { ...tag, key: newKey } : tag)
     const newPropagations = propagations
-      .map(p => p.key      === oldKey ? { ...p, key:       newKey } : p)
+      .map(p => p.key       === oldKey ? { ...p, key:       newKey } : p)
       .map(p => p.linkedKey === oldKey ? { ...p, linkedKey: newKey } : p)
     setTags(newTags)
     setPropagations(newPropagations)
     triggerSave(newTags, repeatableSlides, undefined, newPropagations)
   }, [tags, propagations, repeatableSlides, triggerSave])
 
-  // ── File upload ────────────────────────────────────────────────
+  // ── File upload (PPTX flow) ────────────────────────────────────
   const handleFileUpload = useCallback(async (e) => {
     const file = e.target.files?.[0] || e.dataTransfer?.files?.[0]
     if (!file || !file.name.endsWith('.pptx')) {
@@ -313,7 +337,7 @@ export default function App() {
     }
   }, [tags, repeatableSlides, globalPrompt, propagations, navigateTo])
 
-  // ── Generate preview & navigate to Preview step ───────────────
+  // ── Generate preview ───────────────────────────────────────────
   const generatePreview = useCallback(async () => {
     try {
       const jsonData = JSON.parse(jsonInput)
@@ -332,7 +356,7 @@ export default function App() {
     }
   }, [templateFile, tags, jsonInput, repeatableSlides, navigateTo])
 
-  // ── Apply patch round and return to Tag step (UC1-UC10) ────────
+  // ── Apply patch round (PPTX flow) ─────────────────────────────
   const applyPatchAndContinue = useCallback(async () => {
     try {
       const jsonData = JSON.parse(jsonInput)
@@ -354,19 +378,11 @@ export default function App() {
       const applyRes = await fetch(`/api/patch-chains/${activeChainId}/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tags,
-          jsonData,
-          repeatableSlides,
-          propagations,
-          baseRoundId: restoredBaseRoundId  // null = use last applied (default)
-        })
+        body: JSON.stringify({ tags, jsonData, repeatableSlides, propagations, baseRoundId: restoredBaseRoundId })
       })
       if (!applyRes.ok) throw new Error(`Apply failed (${applyRes.status})`)
       const applyResult = await applyRes.json()
       if (!applyResult.ok) throw new Error(applyResult.error)
-
-      // File saved server-side in patch-chains/ � accessible via history timeline
 
       const parseRes = await fetch('/api/parse-pptx-from-path', {
         method: 'POST',
@@ -377,27 +393,12 @@ export default function App() {
       const parseResult = await parseRes.json()
       if (!parseResult.ok) throw new Error(parseResult.error)
 
-
-      // UC2, UC3, UC4, UC8: Preserve tags (merged with new slides) and propagations.
-      // Keys and hints are preserved; autoGenerate is reset to false so the next
-      // iteration starts with AI off - the user opts back in deliberately.
-      //
-      // For cloned (repeatable) slides, use shapeName-based matching to carry keys
-      // forward. Cloned slides are literal XML copies so shapeNames are stable across
-      // the copy. The output PPTX renumbers slides positionally (slide3.xml, slide4.xml)
-      // so element IDs shift, but shapeNames do not.
-
-      // Enrich tags that lack shapeName by looking up the element in the current slides.
-      // This handles tags saved before shapeName was added to the data model.
       const elemById = {}
       slides.forEach(s => s.elements.forEach(e => { elemById[e.id] = e }))
       const enrichedTags = tags.map(t =>
         t.shapeName ? t : { ...t, shapeName: elemById[t.elementId]?.shapeName ?? null }
       )
 
-      // Build (slideIndex:shapeName:elementIndex) -> tag map.
-      // Key includes the element's positional index within its slide so that slides
-      // with multiple shapes sharing the same shapeName are disambiguated correctly.
       const byShapeKey = {}
       enrichedTags.forEach(t => {
         if (!t.shapeName) return
@@ -407,15 +408,11 @@ export default function App() {
         byShapeKey[key] = t
       })
 
-      // Build output slideNumber -> templateSlideIndex map (clones only)
       const cloneMap = {}
       ;(applyResult.previewData || []).forEach(p => {
         if (p.templateSlideIndex && p.instanceIndex !== null) cloneMap[p.slideNumber] = p.templateSlideIndex
       })
 
-      // Synthesise tags for cloned slides by (shapeName + position index) match.
-      // Using the element's index within the slide ensures shapes that share a
-      // shapeName (non-unique names in PPTX) are matched to the correct source tag.
       const synthetic = []
       const covered   = new Set()
       parseResult.slides.forEach(slide => {
@@ -432,39 +429,34 @@ export default function App() {
         })
       })
 
-      // Standard merge for static slides and elements not covered by shapeName match
       const mergedTags = mergeTagsWithSlides(enrichedTags, parseResult.slides)
         .map(t => ({ ...t, autoGenerate: false }))
       const filteredMerged = mergedTags.filter(t => !covered.has(t.elementId))
-
       const correctedTags = [...filteredMerged, ...synthetic]
 
       setTemplateFile({ filePath: parseResult.filePath, slides: parseResult.slides, fileName: templateFile.fileName })
       setSlides(parseResult.slides)
-      setTags(correctedTags)                        // preserved + merged, IDs translated (UC2/UC3/UC4)
-      setRepeatableSlides([])                      // reset (UC5)
-      // propagations preserved — not reset (UC8)
+      setTags(correctedTags)
+      setRepeatableSlides([])
       setRecipe('')
       setJsonInput('')
       setValidation(null)
-      setPreviewData(applyResult.previewData)      // set from apply response (UC6)
+      setPreviewData(applyResult.previewData)
       setTagPreviewIdx(0)
       setRestoredBaseRoundId(null)
 
-      // Update chain rounds list
       setChainRounds(prev => {
         const without = prev.filter(r => r.id !== applyResult.round.id)
         return [...without, applyResult.round]
       })
       setCurrentRoundId(applyResult.roundId)
-
       navigateTo('tag')
     } catch (err) {
       setToast({ message: 'Patch failed: ' + err.message, type: 'error' })
     }
   }, [chainId, templateFile, tags, jsonInput, repeatableSlides, propagations, restoredBaseRoundId, navigateTo])
 
-  // ── Restore state from a previous patch round (UC11) ──────────
+  // ── Restore a previous patch round ────────────────────────────
   const handleRestoreRound = useCallback(async (roundId) => {
     if (!chainId) return
     try {
@@ -487,7 +479,6 @@ export default function App() {
       setRestoredBaseRoundId(roundId)
       setCurrentRoundId(roundId)
 
-      // Build pseudo-previewData from the round's slides for display (UC6)
       const restoredPreview = roundSlides.map((s, idx) => ({
         slideNumber:   idx + 1,
         instanceIndex: null,
@@ -498,14 +489,13 @@ export default function App() {
       }))
       setPreviewData(restoredPreview)
       setTagPreviewIdx(0)
-
       setToast({ message: `Restored to "${round.name}"`, type: 'success' })
     } catch (err) {
       setToast({ message: 'Restore failed: ' + err.message, type: 'error' })
     }
   }, [chainId])
 
-  // ── Rename a chain round (UC14) ────────────────────────────────
+  // ── Rename a chain round ───────────────────────────────────────
   const handleRenameRound = useCallback(async (roundId, name) => {
     if (!chainId) return
     try {
@@ -519,32 +509,83 @@ export default function App() {
     } catch { /* best-effort */ }
   }, [chainId])
 
-
-  // ── Step routing ───────────────────────────────────────────────
-  // Debug context -- serialisable snapshot of meaningful app state for sharing
+  // ── Debug context ──────────────────────────────────────────────
   const debugContext = {
     timestamp:        new Date().toISOString(),
     step,
+    activeFlow,
     currentPatch,
     patchName,
     chainId,
     currentRoundId,
     restoredBaseRoundId,
     globalPrompt:     globalPrompt || null,
-    // Slides: metadata only (no XML content)
     slides: slides.map(s => ({ index: s.index, width: s.width, height: s.height, elementCount: s.elements?.length ?? 0 })),
     tags,
     repeatableSlides,
     propagations,
     validation,
-    // Recipe and JSON truncated to avoid overwhelming output
     recipe:           recipe   ? recipe.substring(0, 2000)   + (recipe.length   > 2000 ? '...[truncated]' : '') : null,
     jsonInput:        jsonInput ? jsonInput.substring(0, 2000) + (jsonInput.length > 2000 ? '...[truncated]' : '') : null,
     chainRounds:      chainRounds.map(r => ({ id: r.id, name: r.name, status: r.status, appliedAt: r.appliedAt, outputFile: r.outputFile })),
     previewDataCount: previewData?.length ?? 0,
+    htmlProject:      htmlProject ? { chainId: htmlProject.chainId, projectName: htmlProject.projectName, zoneCount: htmlProject.zones?.length } : null,
   }
 
   const sharedProps = { step, canNavigateTo, navigateTo, stepAnimClass, debugContext }
+
+  // ── Step routing ───────────────────────────────────────────────
+
+  if (step === 'flow-select') {
+    return (
+      <>
+        <Toast toast={toast} onDismiss={() => setToast(null)} />
+        <FlowSelectStep
+          onSelectFlow={handleSelectFlow}
+          debugContext={debugContext}
+        />
+      </>
+    )
+  }
+
+  if (step === 'html-upload') {
+    // Show project-created confirmation if project already exists
+    if (htmlProject) {
+      return (
+        <>
+          <Toast toast={toast} onDismiss={() => setToast(null)} />
+          <div className="app">
+            <div className="html-project-created">
+              <div className="html-project-created-icon">✓</div>
+              <h2>Project created</h2>
+              <p className="html-project-created-name">{htmlProject.projectName}</p>
+              <p className="html-project-created-meta">
+                {htmlProject.zones?.length} zones · Content generation coming in Stage 2
+              </p>
+              <button
+                className="btn btn-link"
+                onClick={handleBackToFlowSelect}
+              >
+                ← Start a new project
+              </button>
+            </div>
+          </div>
+        </>
+      )
+    }
+
+    return (
+      <>
+        <Toast toast={toast} onDismiss={() => setToast(null)} />
+        <HtmlUploadStep
+          {...sharedProps}
+          onProjectCreated={handleHtmlProjectCreated}
+          onBack={handleBackToFlowSelect}
+          setToast={setToast}
+        />
+      </>
+    )
+  }
 
   if (step === 'upload') {
     return (
@@ -554,6 +595,7 @@ export default function App() {
           {...sharedProps}
           templateFile={templateFile}
           handleFileUpload={handleFileUpload}
+          onBack={handleBackToFlowSelect}
         />
       </>
     )
@@ -627,7 +669,6 @@ export default function App() {
           selectedPreviewIdx={selectedPreviewIdx}
           setSelectedPreviewIdx={setSelectedPreviewIdx}
           applyPatchAndContinue={applyPatchAndContinue}
-
         />
       </>
     )

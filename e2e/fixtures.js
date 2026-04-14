@@ -3,11 +3,13 @@
  *
  * Each fixture builds on the previous, bringing the app to a well-defined state:
  *
- *   page            — blank browser page (base Playwright fixture)
- *   uploadedPage    — sample.pptx uploaded, app is on the Tag step
- *   repeatablePage  — slide 2 selected, marked repeatable, structure type + prompt filled
- *   taggedPage      — both target elements on slide 2 tagged with correct keys/hints/AI on
+ *   page             — blank browser page (base Playwright fixture)
+ *   uploadedPage     — sample.pptx uploaded via PowerPoint Native flow, on Tag step
+ *   repeatablePage   — slide 2 selected, marked repeatable, structure type + prompt filled
+ *   taggedPage       — both target elements on slide 2 tagged with correct keys/hints/AI on
  *   appliedPatchPage — taggedPage + full apply flow completed, back on Tag step
+ *   htmlUploadedPage — test_slide.html uploaded via Visual flow, zones parsed, on zone review
+ *   htmlProjectPage  — test_slide.html uploaded + project created, on confirmation screen
  */
 
 import { test as base, expect } from '@playwright/test';
@@ -15,14 +17,25 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 export const FIXTURE_PPTX = path.resolve(__dirname, 'fixtures/sample.pptx');
+export const FIXTURE_HTML = path.resolve(__dirname, '../input/test_slide.html');
+
+// ─── Expected zones in test_slide.html ───────────────────────────────────────
+// Used by tests to assert zone detection correctness.
+export const EXPECTED_ZONES = [
+  { key: 'initiative_group_title', type: 'text',   slideIndex: 1 },
+  { key: 'initiative_group_subtitle', type: 'text', slideIndex: 1 },
+  { key: 'total_hours',           type: 'number',  slideIndex: 1 },
+  { key: 'initiative_count',      type: 'number',  slideIndex: 1 },
+  { key: 'feature_count',         type: 'number',  slideIndex: 1 },
+  { key: 'completion_pct',        type: 'number',  slideIndex: 1 },
+  { key: 'business_value',        type: 'text',    slideIndex: 1 },
+  { key: 'market_relevance',      type: 'text',    slideIndex: 1 },
+];
 
 // ─── JSON payloads used across the apply-patch tests ─────────────────────────
 
-/**
- * JSON for the taggedPage fixture (slide 2 repeatable, structure "Initiatie Group").
- * Used for the first patch apply.
- */
 export const REPEATABLE_JSON = {
   slides: {
     'Initiatie Group': [
@@ -35,10 +48,6 @@ export const REPEATABLE_JSON = {
   }
 }
 
-/**
- * JSON for a second apply after repeatableSlides has been cleared.
- * initiative_group and initiative_group_subheader are now static fields.
- */
 export const STATIC_JSON = {
   static: {
     initiative_group:           'Updated Group Round 2',
@@ -49,10 +58,56 @@ export const STATIC_JSON = {
 // ─── Selectors (single source of truth for the whole suite) ──────────────────
 
 export const SEL = {
-  // Upload step
+  // ── Flow selector ──────────────────────────────────────────────────────────
+  flowSelectContainer: '.flow-select-container',
+  flowCards:           '.flow-card',
+  flowCardPptx:        '.flow-card:not(.flow-card--visual)',
+  flowCardVisual:      '.flow-card--visual',
+
+  // ── PPTX upload step ───────────────────────────────────────────────────────
   fileInput:        'input[type="file"][accept=".pptx"]',
 
-  // Tag step — slide carousel
+  // ── HTML upload step ───────────────────────────────────────────────────────
+  htmlFileInput:    'input[type="file"][accept=".html,.htm"]',
+  htmlUploadZone:   '.html-upload-zone',
+  htmlFileLoaded:   '.html-file-loaded',
+  htmlFileName:     '.html-file-name',
+  htmlFileMeta:     '.html-file-meta',
+  htmlViolations:   '.html-violations',
+  htmlViolationItems: '.html-violation-item',
+
+  // Zone list
+  zoneListSection:  '.zone-list-section',
+  zoneRows:         '.zone-row',
+  zoneRowByKey:     (key) => `.zone-row:has(.zone-key-badge:text("${key}"))`,
+  zoneKeyBadge:     '.zone-key-badge',
+  zoneTypeSelect:   '.zone-type-select',
+  zoneAutoToggle:   '.zone-auto-toggle input[type="checkbox"]',
+  zoneExpandBtn:    '.zone-expand-btn',
+  zoneRemoveBtn:    '.zone-remove-btn',
+  zoneHintInput:    '.zone-hint-input',
+  zoneOriginalText: '.zone-original-text',
+  zoneTagRepeatable: '.zone-tag--repeatable',
+  zoneTagChild:     '.zone-tag--child',
+  zoneListEmpty:    '.zone-list-empty',
+
+  // Project footer
+  projectNameInput: '.html-project-footer .form-input',
+  createProjectBtn: 'button:has-text("Create Project")',
+
+  // Preview panel
+  htmlPreviewPanel: '.html-preview-panel',
+  htmlPreviewFrame: '.html-preview-frame',
+
+  // Project created confirmation
+  htmlProjectCreated: '.html-project-created',
+  projectCreatedName: '.html-project-created-name',
+  projectCreatedMeta: '.html-project-created-meta',
+
+  // Change flow link (shared)
+  changeFlowBtn:    'button:has-text("Change flow")',
+
+  // ── Tag step — slide carousel ───────────────────────────────────────────────
   slideThumb:       (n) => `.tag-slide-btn:nth-child(${n})`,
 
   // Tag step — repeatable config
@@ -60,7 +115,7 @@ export const SEL = {
   structureType:    '.repeatable-config input[type="text"]',
   customPrompt:     '.repeatable-config textarea',
 
-  // Tag step — slide overlay click targets (by original text, stable regardless of tag state)
+  // Tag step — slide overlay click targets
   overlayByText:    (text) => `.overlay-element[data-text="${text}"]`,
 
   // Tag modal
@@ -104,14 +159,14 @@ export const SEL = {
   previewLarge:     '.preview-large',
   applyPatchBtn:    'button:has-text("Apply Patch & Continue")',
 
-  // Tag step — generated preview panel (UC6)
+  // Tag step — generated preview panel
   tagStepPreview:       '.tag-step-preview',
   tagStepPreviewMain:   '.tag-step-preview-main',
   tagStepPreviewThumbs: '.tag-step-preview-thumbs',
   tagPreviewNavBtn:     '.tag-step-preview-nav-btn',
   tagPreviewNavLabel:   '.tag-step-preview-nav-label',
 
-  // Patch history timeline (UC11–UC14)
+  // Patch history timeline
   patchHistory:         '.patch-history',
   historyRound:         '.patch-history-round',
   historyCurrentRound:  '.patch-history-round.current',
@@ -125,21 +180,53 @@ export const SEL = {
 
 // ─── Shared action helpers ────────────────────────────────────────────────────
 
+/** Navigate to the app and select the PowerPoint Native flow. */
+export async function selectPptxFlow(page) {
+  await page.goto('/');
+  await page.locator(SEL.flowCardPptx).click();
+}
+
+/** Navigate to the app and select the Visual (HTML) flow. */
+export async function selectHtmlFlow(page) {
+  await page.goto('/');
+  await page.locator(SEL.flowCardVisual).click();
+}
+
 /** Upload the fixture PPTX and wait for the Tag step to appear. */
 export async function doUpload(page) {
-  // Clear server-side patch and chain state so each test starts from a clean slate.
   await page.request.delete('http://localhost:3001/api/patches');
   await page.request.delete('http://localhost:3001/api/patch-chains');
-  await page.goto('/');
+  await selectPptxFlow(page);
   await page.setInputFiles(SEL.fileInput, FIXTURE_PPTX);
-  // Wait for slide thumbnails to appear — confirms we're in the Tag step
   await page.waitForSelector('.tag-slides .tag-slide-btn');
+}
+
+/**
+ * Upload the fixture HTML template and wait for the zone list to appear.
+ * Returns after the server has parsed zones and the zone list is visible.
+ */
+export async function doHtmlUpload(page) {
+  await page.request.delete('http://localhost:3001/api/patches');
+  await page.request.delete('http://localhost:3001/api/patch-chains');
+  await selectHtmlFlow(page);
+  await page.setInputFiles(SEL.htmlFileInput, FIXTURE_HTML);
+  await page.waitForSelector(SEL.zoneListSection);
+}
+
+/**
+ * Upload the fixture HTML, fill the project name, and create the project.
+ * Returns after the project-created confirmation screen is shown.
+ */
+export async function doHtmlCreateProject(page, projectName = 'test-project') {
+  await doHtmlUpload(page);
+  await page.locator(SEL.projectNameInput).fill(projectName);
+  await page.locator(SEL.createProjectBtn).click();
+  await page.waitForSelector(SEL.htmlProjectCreated);
 }
 
 /** Select slide N (1-based) in the carousel. */
 export async function selectSlide(page, n) {
   await page.locator(SEL.slideThumb(n)).click();
-  // Wait for the overlay to reflect the new slide
   await page.waitForTimeout(150);
 }
 
@@ -150,65 +237,37 @@ export async function configureRepeatable(page, { structureType, customPrompt })
   await page.locator(SEL.customPrompt).fill(customPrompt);
 }
 
-/**
- * Click a slide overlay element (by its original text), fill the modal,
- * and save. Enables AI generation by default.
- */
+/** Click a slide overlay element, fill the modal, and save. */
 export async function tagElement(page, { originalText, key, hint, ai = true }) {
   await page.locator(SEL.overlayByText(originalText)).click();
   await page.waitForSelector(SEL.modal);
-
-  // Select all and replace key
   await page.locator(SEL.modalKey).fill(key);
-
-  // Set hint
   await page.locator(SEL.modalHint).fill(hint);
-
-  // Toggle AI if needed
   const checkbox = page.locator(SEL.modalAI);
   const checked  = await checkbox.isChecked();
   if (ai && !checked) await checkbox.check();
   if (!ai && checked) await checkbox.uncheck();
-
   await page.locator(SEL.modalSave).click();
   await page.waitForSelector(SEL.modal, { state: 'detached' });
-  // Debounce is 1000ms; wait for the save to flush before the test proceeds.
   await page.waitForTimeout(1500);
 }
 
-/**
- * Complete the full "Generate Recipe → fill JSON → Preview → Apply Patch & Continue" flow.
- * The caller must already be on the Tag step with tags configured.
- *
- * @param {import('@playwright/test').Page} page
- * @param {object} json  - The JSON object to paste into the JSON Response textarea
- * @returns {import('@playwright/test').Download} - The triggered download
- */
+/** Complete the full "Generate Recipe → fill JSON → Preview → Apply Patch & Continue" flow. */
 export async function doFullApply(page, json) {
-  // 1. Generate recipe → Recipe step
   await page.locator(SEL.generateRecipe).click();
   await page.waitForSelector(SEL.recipeArea);
-
-  // 2. Fill JSON
   await page.locator(SEL.jsonInput).fill(JSON.stringify(json));
-
-  // 3. Wait for server-side validation to pass (debounce 300ms + round-trip)
   await expect(page.locator(SEL.previewGenerate)).toBeEnabled({ timeout: 8000 });
-
-  // 4. Preview → Preview step
   await page.locator(SEL.previewGenerate).click();
   await page.waitForSelector(SEL.previewLarge);
-
-  // 5. Apply Patch & Continue -> navigates back to Tag step (no auto-download)
   await page.locator(SEL.applyPatchBtn).click();
-
   await page.waitForSelector('.tag-slides .tag-slide-btn', { timeout: 90000 });
 }
 
-// ─── Fixture definitions ──────────────────────────────────────────────────
+// ─── Fixture definitions ──────────────────────────────────────────────────────
 
 export const test = base.extend({
-  /** App is on the Tag step with sample.pptx loaded. */
+  /** App is on the Tag step with sample.pptx loaded (PPTX Native flow). */
   uploadedPage: async ({ page }, use) => {
     await doUpload(page);
     await use(page);
@@ -246,11 +305,7 @@ export const test = base.extend({
     await use(page);
   },
 
-  /**
-   * "initiative_group" is tagged on slides 2 and 3.
-   * Both are non-repeatable slides, so propagation icon appears.
-   * Slide 3 is the duplicate of slide 2 in sample.pptx.
-   */
+  /** "initiative_group" is tagged on slides 2 and 3 — propagation icon appears. */
   propagatedPage: async ({ page }, use) => {
     await doUpload(page);
     await selectSlide(page, 2);
@@ -260,11 +315,7 @@ export const test = base.extend({
     await use(page);
   },
 
-  /**
-   * Full apply flow completed once.
-   * taggedPage + recipe generated + JSON filled + preview + Apply Patch & Continue.
-   * App is back on the Tag step with previewData set and one round in chain history.
-   */
+  /** Full apply flow completed once. Back on Tag step with history. */
   appliedPatchPage: async ({ page }, use) => {
     await doUpload(page);
     await selectSlide(page, 2);
@@ -284,7 +335,25 @@ export const test = base.extend({
     });
     await doFullApply(page, REPEATABLE_JSON);
     await use(page);
-  }
+  },
+
+  /**
+   * Visual flow: test_slide.html uploaded, zones parsed, zone list visible.
+   * App is on the HTML upload step showing the zone review panel.
+   */
+  htmlUploadedPage: async ({ page }, use) => {
+    await doHtmlUpload(page);
+    await use(page);
+  },
+
+  /**
+   * Visual flow: test_slide.html uploaded + project created.
+   * App is on the project-created confirmation screen.
+   */
+  htmlProjectPage: async ({ page }, use) => {
+    await doHtmlCreateProject(page, 'test-project');
+    await use(page);
+  },
 });
 
 export { expect };

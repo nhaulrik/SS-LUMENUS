@@ -9,7 +9,8 @@ export default function UploadStep({
   canNavigateTo,
   navigateTo,
   handleFileUpload,
-  debugContext
+  debugContext,
+  onBack,
 }) {
   const fileInputRef = useRef(null)
 
@@ -17,9 +18,18 @@ export default function UploadStep({
     <div className="app">
       <AppHeader
         title="Solon Slide Studio"
-        subtitle="Upload a PPTX, tag elements, generate recipe, create presentation"
+        subtitle="PowerPoint Native — Upload your PPTX template"
         debugContext={debugContext}
       />
+
+      {onBack && (
+        <div className="html-upload-back">
+          <button className="btn btn-link" onClick={onBack}>
+            ← Change flow
+          </button>
+        </div>
+      )}
+
       <Breadcrumbs step={step} canNavigateTo={canNavigateTo} navigateTo={navigateTo} />
 
       <div className={stepAnimClass}>

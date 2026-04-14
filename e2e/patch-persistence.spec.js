@@ -5,7 +5,7 @@
  * The patch file should be stored in a version-controllable location.
  */
 
-import { test, expect, SEL, doUpload, selectSlide, FIXTURE_PPTX } from './fixtures.js';
+import { test, expect, SEL, doUpload, selectSlide, selectPptxFlow, FIXTURE_PPTX } from './fixtures.js';
 
 test.describe('Patch persistence', () => {
   test('patch data is saved to a local file', async ({ page }) => {
@@ -44,8 +44,7 @@ test.describe('Patch persistence', () => {
 
     // Simulate app restart: reload the page and re-upload the same file
     await page.reload();
-    
-    // Re-upload the same PPTX file
+    await selectPptxFlow(page);
     await page.setInputFiles(SEL.fileInput, FIXTURE_PPTX);
     await page.waitForSelector('.tag-slides .tag-slide-btn');
     await selectSlide(page, 2);
@@ -71,6 +70,7 @@ test.describe('Patch persistence', () => {
 
     // Reload and re-upload to simulate app restart
     await page.reload();
+    await selectPptxFlow(page);
     await page.setInputFiles(SEL.fileInput, FIXTURE_PPTX);
     await page.waitForSelector('.tag-slides .tag-slide-btn');
     await selectSlide(page, 2);
@@ -99,6 +99,7 @@ test.describe('Patch persistence', () => {
 
     // Reload and re-upload to simulate app restart
     await page.reload();
+    await selectPptxFlow(page);
     await page.setInputFiles(SEL.fileInput, FIXTURE_PPTX);
     await page.waitForSelector('.tag-slides .tag-slide-btn');
     await selectSlide(page, 2);
