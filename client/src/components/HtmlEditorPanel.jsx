@@ -242,19 +242,53 @@ export default function HtmlEditorPanel({
     return () => window.removeEventListener('message', stableHandler)
   }, [])
 
-  // ── Build preview srcDoc (inject hover script + highlight CSS) ───────────────
+  // ── Preview scale — measured from the wrapper div via callback ref ───────────
+  // The wrapper uses aspect-ratio:16/9 so its width drives the scale.
+  const previewPaneRef = useRef(null)   // kept for the pane element reference
+  const [previewScale, setPreviewScale] = useState(0.46)
+  const previewRoRef   = useRef(null)
+  const previewWrapperCallbackRef = useCallback((el) => {
+    if (previewRoRef.current) { previewRoRef.current.disconnect(); previewRoRef.current = null }
+    if (!el) return
+    const measure = () => {
+      const { width } = el.getBoundingClientRect()
+      if (width > 0) setPreviewScale(width / 1280)
+    }
+    measure()
+    previewRoRef.current = new ResizeObserver(measure)
+    previewRoRef.current.observe(el)
+  }, [])
+
+  // ── Build preview srcDoc ──────────────────────────────────────────────────────
+  // Wraps the first <section> in #solon-slide-shell (position:absolute; top:0;
+  // left:0; transform-origin:top left) and injects a scale style so the 1280×720
+  // slide fills the iframe viewport — same technique as the upload step preview.
+  // Also injects zone-hover postMessage script and highlight CSS.
   const previewSrcDoc = useMemo(() => {
     if (!previewHtml) return ''
+
     const highlightCss = highlightedKey ? `
 [data-zone="${highlightedKey}"] {
-  outline: 3px solid #4CAF80 !important;
+  outline: 3px solid var(--accent-primary, #4CAF80) !important;
   outline-offset: 2px !important;
-  box-shadow: 0 0 0 4px #4CAF80, 0 4px 12px rgba(115,170,135,0.4) !important;
+  box-shadow: 0 0 0 4px rgba(76,175,128,0.4) !important;
   background: rgba(115,170,135,0.2) !important;
   position: relative !important;
   z-index: 9999 !important;
 }` : ''
+
+    const shellScale = previewScale < 1 ? previewScale : 0.46
+
     const injection = `<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #000; display: block; }
+#solon-slide-shell {
+  position: absolute; top: 0; left: 0;
+  width: 1280px; height: 720px;
+  overflow: hidden; display: block;
+  transform-origin: top left;
+  transform: scale(${shellScale});
+}
 [data-zone], [data-label-for], [data-block] { outline: 1px dashed rgba(76,175,128,0.3); }
 ${highlightCss}
 </style>
@@ -270,23 +304,19 @@ ${highlightCss}
   });
 })();
 </script>`
-    return previewHtml.includes('</head>')
-      ? previewHtml.replace('</head>', injection + '</head>')
-      : injection + previewHtml
-  }, [previewHtml, highlightedKey])
 
-  // ── Preview scale (ResizeObserver on preview pane) ───────────────────────────
-  const previewPaneRef = useRef(null)
-  const [previewScale, setPreviewScale] = useState(0.46)
-  useEffect(() => {
-    const el = previewPaneRef.current
-    if (!el) return
-    const measure = () => { const w = el.getBoundingClientRect().width; if (w > 0) setPreviewScale(w / 1280) }
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
+    // Wrap the first <section> in #solon-slide-shell if not already wrapped
+    let html = previewHtml
+    if (!html.includes('id="solon-slide-shell"')) {
+      html = html.replace(/<section(\s|>)/i, '<div id="solon-slide-shell"><section$1')
+      // Close the shell after the first </section>
+      html = html.replace(/<\/section>/, '</section></div>')
+    }
+
+    return html.includes('</head>')
+      ? html.replace('</head>', injection + '</head>')
+      : injection + html
+  }, [previewHtml, highlightedKey, previewScale])
 
   // ── Mount CodeMirror ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -447,17 +477,13 @@ ${highlightCss}
               </span>
             )}
           </div>
-          <div
-            className="html-editor-preview-wrapper"
-            style={{ height: Math.round(1280 * 0.5625 * previewScale) + 'px' }}
-          >
+          <div className="html-editor-preview-wrapper" ref={previewWrapperCallbackRef}>
             <iframe
               ref={iframeRef}
               className="html-preview-frame"
               srcDoc={previewSrcDoc}
               sandbox="allow-same-origin allow-scripts"
               title="Live preview"
-              style={{ transform: `scale(${previewScale})` }}
             />
           </div>
           <p className="html-preview-note">

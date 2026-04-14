@@ -33,6 +33,103 @@ const EDITOR_SEL = {
   warningItem:  '.html-editor-warning',
 };
 
+// ── UC-HE-00: Split-screen layout ────────────────────────────────────────────
+
+test.describe('UC-HE-00 — Editor renders as a split-screen (code left, preview right)', () => {
+  test('editor overlay fills the viewport', async ({ page }) => {
+    await doHtmlUpload(page);
+    await page.locator(EDITOR_SEL.editBtn).click();
+    // Wait for CodeMirror to mount — by then the overlay is fully rendered
+    const overlay = page.locator(EDITOR_SEL.overlay);
+    await expect(page.locator(EDITOR_SEL.cmEditor)).toBeVisible({ timeout: 15000 });
+    // position:fixed;inset:0 — overlay should cover the full viewport
+    const box = await overlay.boundingBox();
+    const vp  = page.viewportSize();
+    expect(box).not.toBeNull();
+    expect(box.width).toBeGreaterThan(vp.width * 0.9);
+    expect(box.height).toBeGreaterThan(vp.height * 0.7);
+  });
+
+  test('code pane and preview pane are side by side (not stacked)', async ({ page }) => {
+    await doHtmlUpload(page);
+    await page.locator(EDITOR_SEL.editBtn).click();
+    await expect(page.locator(EDITOR_SEL.cmEditor)).toBeVisible({ timeout: 15000 });
+
+    const codeBox    = await page.locator('.html-editor-pane--code').boundingBox();
+    const previewBox = await page.locator('.html-editor-pane--preview').boundingBox();
+
+    // Both panes must exist and have meaningful width
+    expect(codeBox).not.toBeNull();
+    expect(previewBox).not.toBeNull();
+    expect(codeBox.width).toBeGreaterThan(200);
+    expect(previewBox.width).toBeGreaterThan(200);
+
+    // Side by side: their top edges are within 20px of each other
+    expect(Math.abs(codeBox.y - previewBox.y)).toBeLessThan(20);
+
+    // And their horizontal positions don't overlap (code is left of preview)
+    expect(codeBox.x).toBeLessThan(previewBox.x);
+    expect(codeBox.x + codeBox.width).toBeLessThanOrEqual(previewBox.x + 10);
+  });
+
+  test('CodeMirror editor is visible in the code pane', async ({ page }) => {
+    await doHtmlUpload(page);
+    await page.locator(EDITOR_SEL.editBtn).click();
+    await expect(page.locator('.html-editor-pane--code .cm-editor')).toBeVisible({ timeout: 15000 });
+  });
+
+  test('preview iframe is visible in the preview pane', async ({ page }) => {
+    await doHtmlUpload(page);
+    await page.locator(EDITOR_SEL.editBtn).click();
+    await expect(page.locator('.html-editor-pane--preview iframe')).toBeVisible({ timeout: 15000 });
+  });
+
+  test('preview iframe has a non-empty srcDoc', async ({ page }) => {
+    await doHtmlUpload(page);
+    await page.locator(EDITOR_SEL.editBtn).click();
+    await expect(page.locator('.html-editor-pane--preview iframe')).toBeVisible({ timeout: 15000 });
+    const srcDoc = await page.locator('.html-editor-pane--preview iframe').getAttribute('srcdoc');
+    expect(srcDoc?.length).toBeGreaterThan(100);
+  });
+
+  test('preview iframe fills the full width of the preview pane', async ({ page }) => {
+    await doHtmlUpload(page);
+    await page.locator(EDITOR_SEL.editBtn).click();
+    await expect(page.locator('.html-editor-pane--preview iframe')).toBeVisible({ timeout: 15000 });
+
+    const paneBox   = await page.locator('.html-editor-pane--preview').boundingBox();
+    const iframeBox = await page.locator('.html-editor-pane--preview iframe').boundingBox();
+    expect(paneBox).not.toBeNull();
+    expect(iframeBox).not.toBeNull();
+    // iframe width must be within 20px of the pane width (accounting for margin)
+    expect(iframeBox.width).toBeGreaterThan(paneBox.width - 40);
+  });
+
+  test('preview slide content is scaled to fit (no overflow)', async ({ page }) => {
+    await doHtmlUpload(page);
+    await page.locator(EDITOR_SEL.editBtn).click();
+    await expect(page.locator('.html-editor-pane--preview iframe')).toBeVisible({ timeout: 15000 });
+
+    const iframeBox = await page.locator('.html-editor-pane--preview iframe').boundingBox();
+    const frame     = page.frameLocator('.html-editor-pane--preview iframe');
+    const shell     = frame.locator('#solon-slide-shell');
+
+    // Poll until the real scale (< 1) is applied
+    let scale;
+    await expect(async () => {
+      const matrix = await shell.evaluate(el => window.getComputedStyle(el).transform);
+      expect(matrix).not.toBe('none');
+      const m = matrix.match(/matrix\(([^,]+)/);
+      expect(m).not.toBeNull();
+      scale = parseFloat(m[1]);
+      expect(scale).toBeLessThan(1);
+    }).toPass({ timeout: 5000 });
+
+    // Visual width must fit within iframe bounds
+    expect(1280 * scale).toBeLessThanOrEqual(iframeBox.width + 4);
+  });
+});
+
 test.describe('UC-HE-01/02 ? Edit HTML button opens editor', () => {
   test('Edit HTML button is visible after upload', async ({ page }) => {
     await doHtmlUpload(page);
