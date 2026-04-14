@@ -1,15 +1,13 @@
 /**
- * Step-progress breadcrumb bar.
+ * Step-progress breadcrumb bar for the HTML Visual Flow.
  *
- * Supports two flows via the `flow` prop:
- *   'pptx' (default) — Upload → Tag Elements → Recipe + JSON → Preview
- *   'html'           — Upload → Review Zones → Recipe + JSON → Preview
+ * Steps: Template & Zones → Recipe + JSON → Preview
  *
  * Props:
- *   step          — current step string (e.g. 'html-upload', 'recipe')
+ *   step          — current step string (e.g. 'html-upload', 'html-recipe')
  *   canNavigateTo — (stepName: string) => boolean
  *   navigateTo    — (stepName: string) => void
- *   flow          — 'pptx' | 'html'  (default: 'pptx')
+ *   flow          — always 'html' (default: 'html')
  */
 
 const FLOW_STEPS = {
