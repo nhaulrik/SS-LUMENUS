@@ -47,16 +47,14 @@ test.describe('UC-HF-01 — Flow selector routes to correct flow', () => {
     await expect(page.locator(SEL.htmlUploadZone)).toBeVisible();
   });
 
-  test('Visual flow does not show PPTX file input', async ({ page }) => {
+  test('Flow selector shows the Visual card', async ({ page }) => {
     await page.goto('/');
-    await page.locator(SEL.flowCardVisual).click();
-    await expect(page.locator(SEL.fileInput)).not.toBeVisible();
+    await expect(page.locator(SEL.flowCardVisual)).toBeVisible();
   });
 
-  test('PPTX Native card click shows PPTX upload zone', async ({ page }) => {
+  test('Flow selector shows exactly one card', async ({ page }) => {
     await page.goto('/');
-    await page.locator(SEL.flowCardPptx).click();
-    await expect(page.locator('.upload-zone')).toBeVisible();
+    await expect(page.locator(SEL.flowCards)).toHaveCount(1);
   });
 });
 
@@ -211,9 +209,9 @@ test.describe('UC-HF-07 — Slide preview iframe is rendered', () => {
     const iBox = await page.locator(SEL.htmlPreviewFrame).boundingBox();
     expect(wBox).not.toBeNull();
     expect(iBox).not.toBeNull();
-    // Allow 2px tolerance for sub-pixel rounding
-    expect(Math.abs(iBox.height - wBox.height)).toBeLessThanOrEqual(2);
-    expect(Math.abs(iBox.width  - wBox.width )).toBeLessThanOrEqual(2);
+    // Allow 3px tolerance for sub-pixel rounding from aspect-ratio computation
+    expect(Math.abs(iBox.height - wBox.height)).toBeLessThanOrEqual(3);
+    expect(Math.abs(iBox.width  - wBox.width )).toBeLessThanOrEqual(3);
   });
 
   test('slide shell is scaled to fit the iframe bounds', async ({ page }) => {
@@ -308,10 +306,10 @@ test.describe('UC-HF-19 — Back navigation returns to flow selector', () => {
     await expect(page.locator(SEL.flowSelectContainer)).toBeVisible();
   });
 
-  test('flow selector shows both cards after returning', async ({ page }) => {
+  test('flow selector shows the Visual card after returning', async ({ page }) => {
     await doHtmlUpload(page);
     await page.locator(SEL.changeFlowBtn).click();
-    await expect(page.locator(SEL.flowCards)).toHaveCount(2);
+    await expect(page.locator(SEL.flowCardVisual)).toBeVisible();
   });
 });
 

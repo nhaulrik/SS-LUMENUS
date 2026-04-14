@@ -20,10 +20,10 @@ const SHARED = {
   },
   webServer: [
     {
-      command:             'cross-env PATCHES_DIR=server/e2e-data/patches CHAINS_DIR=server/e2e-data/chains TEMP_DIR=server/e2e-data/temp OUTPUT_DIR=server/e2e-data/output npm run server',
-      url:                 'http://localhost:3001/api/patches',
+      command:             'cross-env CHAINS_DIR=server/e2e-data/chains npm run server',
+      url:                 'http://localhost:3001/api/health',
       reuseExistingServer: true,
-      timeout:             15_000,
+      timeout:             30_000,
     },
     {
       command:             'npm run client',
@@ -39,7 +39,7 @@ export default defineConfig({
   testDir: './e2e',
 
   projects: [
-    // ── Run everything (default: npx playwright test) ───────────────────────
+    // ── Run all HTML flow tests (default) ───────────────────────────────────
     {
       name:      'all',
       testMatch: '**/*.spec.js',
@@ -47,18 +47,9 @@ export default defineConfig({
     },
 
     // ── HTML Visual Flow only (npx playwright test --project=html-flow) ─────
-    // Matches any spec file prefixed with "html-"
     {
       name:      'html-flow',
       testMatch: '**/html-*.spec.js',
-      use:       BROWSER,
-    },
-
-    // ── PPTX Native Flow only (npx playwright test --project=pptx-flow) ─────
-    // Matches all spec files NOT prefixed with "html-"
-    {
-      name:      'pptx-flow',
-      testMatch: /e2e\/(?!html-).*\.spec\.js$/,
       use:       BROWSER,
     },
   ],

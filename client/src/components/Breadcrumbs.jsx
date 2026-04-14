@@ -13,17 +13,10 @@
  */
 
 const FLOW_STEPS = {
-  pptx: ['upload', 'tag', 'recipe', 'preview'],
   html: ['html-upload', 'html-recipe', 'html-preview'],
 }
 
 const FLOW_LABELS = {
-  pptx: {
-    upload:  'Upload',
-    tag:     'Tag Elements',
-    recipe:  'Recipe + JSON',
-    preview: 'Preview',
-  },
   html: {
     'html-upload':  'Template & Zones',
     'html-recipe':  'Recipe + JSON',
@@ -31,9 +24,9 @@ const FLOW_LABELS = {
   },
 }
 
-export default function Breadcrumbs({ step, canNavigateTo, navigateTo, flow = 'pptx' }) {
-  const steps   = FLOW_STEPS[flow]  ?? FLOW_STEPS.pptx
-  const labels  = FLOW_LABELS[flow] ?? FLOW_LABELS.pptx
+export default function Breadcrumbs({ step, canNavigateTo, navigateTo, flow = 'html' }) {
+  const steps   = FLOW_STEPS[flow]  ?? FLOW_STEPS.html
+  const labels  = FLOW_LABELS[flow] ?? FLOW_LABELS.html
   const currIdx = steps.indexOf(step)
 
   return (
