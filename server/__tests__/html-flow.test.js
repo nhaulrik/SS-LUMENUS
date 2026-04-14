@@ -343,6 +343,55 @@ describe('POST /api/html-flow/create-project', () => {
       .send({ templateId: 'nope', selections: [], projectName: 'x' });
     expect(res.status).toBe(404);
   });
+
+  // ── repeatableSlides ────────────────────────────────────────────────────────
+
+  it('accepts and persists repeatableSlides in chain.json', async () => {
+    const { templateId, selections } = await uploadTemplate(LEAF_HTML);
+    const repSlides = [{ slideIndex: 1, key: 'brand_slide', prompt: 'one per brand' }];
+    const res = await request(app)
+      .post('/api/html-flow/create-project')
+      .send({ templateId, selections, projectName: 'rep-test', repeatableSlides: repSlides });
+    expect(res.status).toBe(200);
+    const chain = JSON.parse(fs.readFileSync(
+      path.join(process.env.CHAINS_DIR, res.body.chainId, 'chain.json'), 'utf8'
+    ));
+    expect(chain.repeatableSlides).toHaveLength(1);
+    expect(chain.repeatableSlides[0].key).toBe('brand_slide');
+    expect(chain.repeatableSlides[0].prompt).toBe('one per brand');
+  });
+
+  it('zones on repeatable slides get isRepeatable:true', async () => {
+    const { templateId, selections } = await uploadTemplate(LEAF_HTML);
+    const repSlides = [{ slideIndex: 1, key: 'brand_slide', prompt: 'one per brand' }];
+    const res = await request(app)
+      .post('/api/html-flow/create-project')
+      .send({ templateId, selections, projectName: 'rep-zones', repeatableSlides: repSlides });
+    expect(res.status).toBe(200);
+    // All zones on slide 1 are repeatable
+    expect(res.body.zones.every(z => z.isRepeatable === true)).toBe(true);
+  });
+
+  it('propagates unique:false from selections to zones', async () => {
+    const { templateId, selections } = await uploadTemplate(LEAF_HTML);
+    // Mark the first selection as non-unique
+    const modified = selections.map((s, i) => i === 0 ? { ...s, unique: false } : s);
+    const repSlides = [{ slideIndex: 1, key: 'brand_slide', prompt: 'one per brand' }];
+    const res = await request(app)
+      .post('/api/html-flow/create-project')
+      .send({ templateId, selections: modified, projectName: 'unique-test', repeatableSlides: repSlides });
+    expect(res.status).toBe(200);
+    const nonUnique = res.body.zones.find(z => z.unique === false);
+    expect(nonUnique).toBeDefined();
+  });
+
+  it('defaults missing repeatableSlides to empty array', async () => {
+    const { chainId } = await createProject(LEAF_HTML);
+    const chain = JSON.parse(fs.readFileSync(
+      path.join(process.env.CHAINS_DIR, chainId, 'chain.json'), 'utf8'
+    ));
+    expect(chain.repeatableSlides).toEqual([]);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

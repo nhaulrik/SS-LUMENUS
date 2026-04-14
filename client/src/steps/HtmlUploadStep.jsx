@@ -52,13 +52,14 @@ export default function HtmlUploadStep({
   const [uploading, setUploading] = useState(false)
 
   // ── Stage B: tree + selections ────────────────────────────────────────────
-  const [templateId,  setTemplateId]  = useState(initialSession?.templateId  ?? null)
-  const [slideCount,  setSlideCount]  = useState(initialSession?.slideCount  ?? 0)
-  const [trees,       setTrees]       = useState(initialSession?.trees       ?? [])
-  const [selections,  setSelections]  = useState(initialSession?.selections  ?? [])
-  const [previewHtml, setPreviewHtml] = useState(initialSession?.previewHtml ?? '')
-  const [violations,  setViolations]  = useState([])
-  const [promptCopied, setPromptCopied] = useState(false)
+  const [templateId,       setTemplateId]       = useState(initialSession?.templateId       ?? null)
+  const [slideCount,       setSlideCount]        = useState(initialSession?.slideCount       ?? 0)
+  const [trees,            setTrees]             = useState(initialSession?.trees            ?? [])
+  const [selections,       setSelections]        = useState(initialSession?.selections       ?? [])
+  const [repeatableSlides, setRepeatableSlides]  = useState(initialSession?.repeatableSlides ?? [])
+  const [previewHtml,      setPreviewHtml]       = useState(initialSession?.previewHtml      ?? '')
+  const [violations,       setViolations]        = useState([])
+  const [promptCopied,     setPromptCopied]      = useState(false)
 
   // ── Stage C: create project ───────────────────────────────────────────────
   const [creating,     setCreating]     = useState(false)
@@ -81,7 +82,7 @@ export default function HtmlUploadStep({
     }
 
     setFileName(file.name); setUploading(true); setViolations([])
-    setTemplateId(null); setTrees([]); setSelections([]); setPreviewHtml('')
+    setTemplateId(null); setTrees([]); setSelections([]); setRepeatableSlides([]); setPreviewHtml('')
 
     try {
       const html = await file.text()
@@ -113,14 +114,15 @@ export default function HtmlUploadStep({
       setProjectName(derivedName)
 
       syncSession({
-        templateId:  data.templateId,
-        fileName:    file.name,
-        slideCount:  data.slideCount,
-        trees:       data.trees ?? [],
-        selections:  data.selections ?? [],
-        previewHtml: data.previewHtml,
-        rawHtml:     html,
-        projectName: derivedName,
+        templateId:       data.templateId,
+        fileName:         file.name,
+        slideCount:       data.slideCount,
+        trees:            data.trees ?? [],
+        selections:       data.selections ?? [],
+        repeatableSlides: [],
+        previewHtml:      data.previewHtml,
+        rawHtml:          html,
+        projectName:      derivedName,
       })
     } catch (err) {
       setToast({ message: 'Upload error: ' + err.message, type: 'error' })
@@ -145,6 +147,12 @@ export default function HtmlUploadStep({
     }
   }, [templateId, syncSession])
 
+  // ── Repeatable slides change ──────────────────────────────────────────────
+  const handleRepeatableSlidesChange = useCallback((newRepSlides) => {
+    setRepeatableSlides(newRepSlides)
+    syncSession({ repeatableSlides: newRepSlides })
+  }, [syncSession])
+
   // ── Create project ────────────────────────────────────────────────────────
   const handleCreateProject = useCallback(async () => {
     if (!templateId) return
@@ -152,23 +160,23 @@ export default function HtmlUploadStep({
     try {
       const res  = await fetch('/api/html-flow/create-project', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ templateId, selections, projectName })
+        body: JSON.stringify({ templateId, selections, repeatableSlides, projectName })
       })
       const data = await res.json()
       if (!res.ok || !data.ok) throw new Error(data.error || 'Failed to create project')
       onProjectCreated({
-        chainId:     data.chainId,
-        projectName: data.projectName,
-        selections:  data.selections,
-        zones:       data.zones,
-        templatePath: data.templatePath,
+        chainId:          data.chainId,
+        projectName:      data.projectName,
+        selections:       data.selections,
+        zones:            data.zones,
+        repeatableSlides: repeatableSlides,  // pass current client state
       })
     } catch (err) {
       setToast({ message: 'Create project failed: ' + err.message, type: 'error' })
     } finally {
       setCreating(false)
     }
-  }, [templateId, selections, projectName, onProjectCreated, setToast])
+  }, [templateId, selections, repeatableSlides, projectName, onProjectCreated, setToast])
 
   // ── Copy AI fix prompt ────────────────────────────────────────────────────
   const handleCopyPrompt = useCallback(() => {
@@ -309,9 +317,9 @@ ${highlightCss}
                     </button>
                     <button className="btn btn-link" onClick={() => {
                       if (selections.length > 0 && !window.confirm('Replace file? Your current zone assignments will be lost.')) return
-                      setTemplateId(null); setTrees([]); setSelections([])
+                      setTemplateId(null); setTrees([]); setSelections([]); setRepeatableSlides([])
                       setPreviewHtml(''); setRawHtml(''); setFileName(''); setViolations([])
-                      syncSession({ templateId: null, trees: [], selections: [], previewHtml: '', rawHtml: '', fileName: '' })
+                      syncSession({ templateId: null, trees: [], selections: [], repeatableSlides: [], previewHtml: '', rawHtml: '', fileName: '' })
                     }}>
                       Replace file
                     </button>
@@ -349,6 +357,8 @@ ${highlightCss}
                   trees={trees}
                   selections={selections}
                   onSelections={handleSelectionsChange}
+                  repeatableSlides={repeatableSlides}
+                  onRepeatableSlides={handleRepeatableSlidesChange}
                   slideCount={slideCount}
                   highlightNodeId={highlightNodeId}
                   onHighlight={setHighlightNodeId}

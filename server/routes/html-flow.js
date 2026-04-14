@@ -307,12 +307,20 @@ router.post('/html-flow/create-project', (req, res) => {
 
     const session = pendingTemplates.get(templateId);
 
+    // Validate and normalise repeatableSlides
+    const rawRepSlides = Array.isArray(req.body.repeatableSlides) ? req.body.repeatableSlides : [];
+    const repeatableSlides = rawRepSlides.filter(rs =>
+      Number.isInteger(rs.slideIndex) &&
+      typeof rs.key === 'string' && /^[a-z][a-z0-9_]*$/.test(rs.key) &&
+      typeof rs.prompt === 'string'
+    );
+
     // Resolve conflicts: block zones supersede descendant leaf zones
     const rawSelections         = Array.isArray(selections) ? selections : (session.selections ?? []);
     const { resolved, removed } = resolveConflicts(rawSelections);
 
     // Derive the zones array that all downstream consumers expect
-    const zones = selectionsToZones(resolved);
+    const zones = selectionsToZones(resolved, repeatableSlides);
 
     const chainId  = 'chain-' + randomUUID();
     const chainDir = path.join(CHAINS_DIR, chainId);
@@ -324,18 +332,19 @@ router.post('/html-flow/create-project', (req, res) => {
     const name = projectName?.trim() || session.fileName?.replace(/\.html?$/, '') || 'html-project';
 
     const chain = {
-      id:           chainId,
-      flow:         'html',
-      projectName:  name,
-      templateFile: session.fileName,
+      id:              chainId,
+      flow:            'html',
+      projectName:     name,
+      templateFile:    session.fileName,
       templatePath,
-      slideCount:   session.slideCount,
-      createdAt:    new Date().toISOString(),
-      updatedAt:    new Date().toISOString(),
-      selections:   resolved,
+      slideCount:      session.slideCount,
+      createdAt:       new Date().toISOString(),
+      updatedAt:       new Date().toISOString(),
+      selections:      resolved,
       zones,
-      trees:        session.trees ?? [],  // stored for data-solon-id injection at apply time
-      rounds:       [],
+      repeatableSlides,
+      trees:           session.trees ?? [],
+      rounds:          [],
     };
 
     fs.writeFileSync(path.join(chainDir, 'chain.json'), JSON.stringify(chain, null, 2), 'utf8');
@@ -374,11 +383,12 @@ router.post('/html-flow/generate-recipe', (req, res) => {
       return res.status(404).json({ ok: false, error: 'Project not found.' });
     }
 
-    const chain  = JSON.parse(fs.readFileSync(chainPath, 'utf8'));
-    const zones  = chain.zones || [];
-    const prompt = globalPrompt ?? chain.globalPrompt ?? '';
+    const chain          = JSON.parse(fs.readFileSync(chainPath, 'utf8'));
+    const zones          = chain.zones || [];
+    const repSlides      = chain.repeatableSlides || [];
+    const prompt         = globalPrompt ?? chain.globalPrompt ?? '';
 
-    const recipe = buildHtmlRecipe(zones, prompt);
+    const recipe = buildHtmlRecipe(zones, prompt, repSlides);
 
     if (globalPrompt !== undefined) {
       chain.globalPrompt = globalPrompt;
@@ -411,9 +421,10 @@ router.post('/html-flow/validate-json', (req, res) => {
       return res.status(404).json({ ok: false, error: 'Project not found.' });
     }
 
-    const chain  = JSON.parse(fs.readFileSync(chainPath, 'utf8'));
-    const zones  = chain.zones || [];
-    const result = validateHtmlJson(jsonString, zones);
+    const chain          = JSON.parse(fs.readFileSync(chainPath, 'utf8'));
+    const zones          = chain.zones || [];
+    const repSlides      = chain.repeatableSlides || [];
+    const result         = validateHtmlJson(jsonString, zones, repSlides);
 
     return res.json({ ok: true, ...result });
   } catch (err) {
@@ -443,17 +454,18 @@ router.post('/html-flow/apply-content', (req, res) => {
       return res.status(404).json({ ok: false, error: 'Project not found.' });
     }
 
-    const chain = JSON.parse(fs.readFileSync(chainPath, 'utf8'));
-    const zones = chain.zones || [];
+    const chain          = JSON.parse(fs.readFileSync(chainPath, 'utf8'));
+    const zones          = chain.zones || [];
+    const repeatableSlides = chain.repeatableSlides || [];
 
-    const validation = validateHtmlJson(jsonString, zones);
+    const validation = validateHtmlJson(jsonString, zones, repeatableSlides);
     if (!validation.valid) {
       return res.status(422).json({ ok: false, error: 'JSON validation failed', missingFields: validation.missingFields });
     }
 
     const data         = JSON.parse(jsonString);
     const templateHtml = fs.readFileSync(chain.templatePath, 'utf8');
-    const patchedHtml  = applyHtmlContent(templateHtml, data, zones);
+    const patchedHtml  = applyHtmlContent(templateHtml, data, zones, repeatableSlides);
 
     const roundId    = randomUUID();
     const outputFile = `output-${roundId}.html`;

@@ -33,15 +33,22 @@
  *   - elementOrder is the selection's position in the array (stable)
  *   - Block selections always have autoGenerate:true and type:'block'
  *   - Leaf selections inherit autoGenerate and type from the selection
- *   - isRepeatable and repeatableKey are not supported via the tree UI
- *     (repeatable slides remain a PPTX-flow concept for now)
+ *   - isRepeatable is set to true for zones whose slideIndex matches a
+ *     repeatableSlides entry; unique is propagated from the selection
+ *     (default true) for repeatable zones, undefined for static zones
  *
  * @param {Object[]} selections
+ * @param {Object[]} repeatableSlides - [{ slideIndex, key, prompt }]
  * @returns {Object[]} zones
  */
-export function selectionsToZones(selections) {
+export function selectionsToZones(selections, repeatableSlides = []) {
+  // Build a fast lookup: slideIndex → repeatableSlide entry
+  const repBySlide = new Map()
+  repeatableSlides.forEach(rs => repBySlide.set(rs.slideIndex, rs))
+
   return selections.map((sel, idx) => {
-    const isBlock = sel.zoneType === 'block'
+    const isBlock      = sel.zoneType === 'block'
+    const isRepeatable = repBySlide.has(sel.slideIndex)
 
     return {
       // Discriminant
@@ -49,7 +56,7 @@ export function selectionsToZones(selections) {
 
       // Identity
       key:          sel.key,
-      nodeId:       sel.nodeId,         // retained so patcher can target by node id
+      nodeId:       sel.nodeId,
       slideIndex:   sel.slideIndex,
 
       // Type metadata
@@ -59,17 +66,18 @@ export function selectionsToZones(selections) {
 
       // Block-specific
       prompt:       isBlock ? (sel.prompt || '') : undefined,
-      exampleHtml:  undefined,          // populated by patcher at patch time from live DOM
+      exampleHtml:  isBlock ? (sel.exampleHtml || undefined) : undefined,
 
-      // Repeatable — not supported via tree UI; always false
-      isRepeatable:  false,
+      // Repeatable — derived from repeatableSlides argument
+      isRepeatable,
       repeatableKey: null,
+
+      // Uniqueness — only meaningful for zones on repeatable slides
+      // defaults to true (unique per instance) when not explicitly set
+      unique: isRepeatable ? (sel.unique !== false) : undefined,
 
       // Ordering
       elementOrder: idx,
-
-      // originalText is not available at selection time (we don't have the DOM here)
-      // the patcher reads it from the live template at apply time
       originalText: '',
     }
   })

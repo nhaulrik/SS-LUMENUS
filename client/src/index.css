@@ -1360,6 +1360,162 @@ header p {
   border-color: var(--accent-primary);
 }
 
+.html-tree-slide-tab--repeatable {
+  border-color: var(--accent-block);
+  color: var(--accent-block);
+}
+
+/* ── Slide control bar (repeatable toggle) ──────────────────────────────────── */
+
+.html-tree-slide-bar {
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+}
+
+.html-tree-slide-bar--repeatable {
+  background: rgba(255,160,80,0.04);
+  border-bottom-color: rgba(255,160,80,0.2);
+}
+
+.html-tree-slide-bar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+}
+
+.html-tree-slide-bar-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.html-tree-slide-bar-badge {
+  font-size: 0.68rem;
+  font-weight: 600;
+  background: rgba(255,160,80,0.15);
+  color: var(--accent-block);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.html-tree-slide-bar-toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.html-tree-slide-bar-toggle input {
+  accent-color: var(--accent-block);
+}
+
+.html-tree-slide-bar-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 12px 10px;
+}
+
+.html-tree-slide-bar-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.html-tree-slide-bar-field label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.html-tree-slide-bar-input {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  padding: 4px 8px;
+  font-family: inherit;
+  width: 100%;
+}
+
+.html-tree-slide-bar-input:focus {
+  outline: none;
+  border-color: var(--accent-block);
+}
+
+.html-tree-slide-bar-textarea {
+  resize: vertical;
+  min-height: 48px;
+  line-height: 1.4;
+}
+
+.html-tree-slide-bar-warning {
+  font-size: 0.72rem;
+  color: var(--warning);
+  margin: 0;
+}
+
+/* ── Uniqueness toggle in assignment panel ───────────────────────────────────── */
+
+.tree-assign-uniqueness-options {
+  display: flex;
+  gap: 6px;
+}
+
+.tree-assign-uniqueness-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  font-size: 0.78rem;
+  flex: 1;
+}
+
+.tree-assign-uniqueness-option input {
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: var(--accent-primary);
+}
+
+.tree-assign-uniqueness-option div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.tree-assign-uniqueness-option strong {
+  font-size: 0.78rem;
+  color: var(--text-primary);
+}
+
+.tree-assign-uniqueness-option span {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.tree-assign-uniqueness-option--active {
+  border-color: var(--accent-primary);
+  background: rgba(76,175,128,0.05);
+}
+
+/* ── Shared zone badge variant ───────────────────────────────────────────────── */
+
+.tree-zone-badge--shared {
+  background: rgba(212,168,83,0.15);
+  color: var(--warning);
+}
+
 .html-tree-scroll {
   flex: 1;
   overflow-y: auto;

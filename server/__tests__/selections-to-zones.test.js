@@ -222,3 +222,69 @@ describe('resolveConflicts', () => {
     expect(removed).toHaveLength(0);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// selectionsToZones — repeatableSlides integration
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('selectionsToZones — repeatableSlides', () => {
+  const repSlides = [{ slideIndex: 2, key: 'brand_slide', prompt: 'one per brand' }];
+
+  it('marks zones on repeatable slides as isRepeatable:true', () => {
+    const sels  = [leafSel('p.title', 'title', { slideIndex: 2 })];
+    const zones = selectionsToZones(sels, repSlides);
+    expect(zones[0].isRepeatable).toBe(true);
+  });
+
+  it('leaves zones on static slides as isRepeatable:false', () => {
+    const sels  = [leafSel('p.title', 'title', { slideIndex: 1 })];
+    const zones = selectionsToZones(sels, repSlides);
+    expect(zones[0].isRepeatable).toBe(false);
+  });
+
+  it('propagates unique:true from selection (default)', () => {
+    const sels  = [leafSel('p.title', 'title', { slideIndex: 2 })];
+    const zones = selectionsToZones(sels, repSlides);
+    expect(zones[0].unique).toBe(true);
+  });
+
+  it('propagates unique:false from selection', () => {
+    const sels  = [{ ...leafSel('p.footer', 'footer', { slideIndex: 2 }), unique: false }];
+    const zones = selectionsToZones(sels, repSlides);
+    expect(zones[0].unique).toBe(false);
+  });
+
+  it('zones on static slides have unique:undefined (not applicable)', () => {
+    const sels  = [leafSel('p.title', 'title', { slideIndex: 1 })];
+    const zones = selectionsToZones(sels, repSlides);
+    expect(zones[0].unique).toBeUndefined();
+  });
+
+  it('handles empty repeatableSlides array', () => {
+    const sels  = [leafSel('p.title', 'title', { slideIndex: 1 })];
+    const zones = selectionsToZones(sels, []);
+    expect(zones[0].isRepeatable).toBe(false);
+    expect(zones[0].unique).toBeUndefined();
+  });
+
+  it('handles missing repeatableSlides argument (backward compat)', () => {
+    const sels  = [leafSel('p.title', 'title', { slideIndex: 1 })];
+    const zones = selectionsToZones(sels);
+    expect(zones[0].isRepeatable).toBe(false);
+  });
+
+  it('mixed slide: some zones repeatable, some static', () => {
+    const sels = [
+      leafSel('p.deck_title', 'deck_title', { slideIndex: 1 }),
+      leafSel('p.brand_name', 'brand_name', { slideIndex: 2 }),
+      { ...leafSel('p.footer', 'footer', { slideIndex: 2 }), unique: false },
+    ];
+    const zones = selectionsToZones(sels, repSlides);
+    expect(zones[0].isRepeatable).toBe(false);
+    expect(zones[0].unique).toBeUndefined();
+    expect(zones[1].isRepeatable).toBe(true);
+    expect(zones[1].unique).toBe(true);
+    expect(zones[2].isRepeatable).toBe(true);
+    expect(zones[2].unique).toBe(false);
+  });
+});

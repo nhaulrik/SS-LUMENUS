@@ -5,12 +5,14 @@
  * can select nodes (single or multi), assign zone types, and provide prompts.
  *
  * Props:
- *   trees          — array of per-slide tree node arrays from the server
- *   selections     — current selection objects array (controlled)
- *   onSelections   — (newSelections) => void
- *   slideCount     — total number of slides
- *   highlightNodeId — node id currently highlighted from iframe hover
- *   onHighlight    — (nodeId | null) => void — called on tree row hover
+ *   trees             — array of per-slide tree node arrays from the server
+ *   selections        — current selection objects array (controlled)
+ *   onSelections      — (newSelections) => void
+ *   repeatableSlides  — [{ slideIndex, key, prompt }] (controlled)
+ *   onRepeatableSlides — (newRepeatableSlides) => void
+ *   slideCount        — total number of slides
+ *   highlightNodeId   — node id currently highlighted from iframe hover
+ *   onHighlight       — (nodeId | null) => void — called on tree row hover
  */
 
 import { useState, useCallback, useMemo } from 'react'
@@ -47,12 +49,93 @@ function isDescendant(nodeId, ancestorId) {
   return nodeId !== ancestorId && nodeId.startsWith(ancestorId + '>')
 }
 
+// ── Slide control bar ─────────────────────────────────────────────────────────
+
+function SlideControlBar({ slideIndex, repeatableSlides, onRepeatableSlides, hasZones }) {
+  const existing = repeatableSlides.find(rs => rs.slideIndex === slideIndex)
+  const isRep    = !!existing
+
+  const handleToggle = (e) => {
+    if (e.target.checked) {
+      onRepeatableSlides([...repeatableSlides, { slideIndex, key: `slide_${slideIndex}`, prompt: '' }])
+    } else {
+      onRepeatableSlides(repeatableSlides.filter(rs => rs.slideIndex !== slideIndex))
+    }
+  }
+
+  const handleKey = (val) => {
+    const sanitized = val.toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/^_+/, '').slice(0, 60)
+    onRepeatableSlides(repeatableSlides.map(rs =>
+      rs.slideIndex === slideIndex ? { ...rs, key: sanitized } : rs
+    ))
+  }
+
+  const handlePrompt = (val) => {
+    onRepeatableSlides(repeatableSlides.map(rs =>
+      rs.slideIndex === slideIndex ? { ...rs, prompt: val } : rs
+    ))
+  }
+
+  return (
+    <div className={`html-tree-slide-bar${isRep ? ' html-tree-slide-bar--repeatable' : ''}`}
+         data-testid={`slide-bar-${slideIndex}`}>
+      <div className="html-tree-slide-bar-header">
+        <span className="html-tree-slide-bar-label">
+          Slide {slideIndex}
+          {isRep && <span className="html-tree-slide-bar-badge" data-testid={`slide-repeatable-badge-${slideIndex}`}>repeatable</span>}
+        </span>
+        <label className="html-tree-slide-bar-toggle" title="Mark this entire slide as repeatable">
+          <input
+            type="checkbox"
+            checked={isRep}
+            onChange={handleToggle}
+            data-testid={`slide-repeatable-toggle-${slideIndex}`}
+          />
+          <span>Repeatable</span>
+        </label>
+      </div>
+
+      {isRep && (
+        <div className="html-tree-slide-bar-fields">
+          <div className="html-tree-slide-bar-field">
+            <label>Slide key</label>
+            <input
+              className="html-tree-slide-bar-input"
+              value={existing.key}
+              onChange={e => handleKey(e.target.value)}
+              placeholder="brand_slide"
+              data-testid={`slide-key-input-${slideIndex}`}
+            />
+          </div>
+          <div className="html-tree-slide-bar-field">
+            <label>Generation prompt</label>
+            <textarea
+              className="html-tree-slide-bar-input html-tree-slide-bar-textarea"
+              rows={2}
+              value={existing.prompt}
+              onChange={e => handlePrompt(e.target.value)}
+              placeholder='e.g. "Generate one slide per car brand found in your context"'
+              data-testid={`slide-prompt-input-${slideIndex}`}
+            />
+          </div>
+          {!hasZones && (
+            <p className="html-tree-slide-bar-warning" data-testid={`slide-no-zones-warning-${slideIndex}`}>
+              ⚠ No zones assigned to this slide. Mark at least one zone as unique for meaningful instances.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Selection badge ───────────────────────────────────────────────────────────
 
 function SelectionBadge({ sel }) {
+  const isShared = sel.unique === false
   return (
-    <span className={`tree-zone-badge tree-zone-badge--${sel.zoneType}`}>
-      {sel.zoneType === 'block' ? 'block' : sel.type || 'leaf'}
+    <span className={`tree-zone-badge tree-zone-badge--${sel.zoneType}${isShared ? ' tree-zone-badge--shared' : ''}`}>
+      {isShared ? 'shared' : sel.zoneType === 'block' ? 'block' : sel.type || 'leaf'}
       <span className="tree-zone-badge-key">{sel.key}</span>
     </span>
   )
@@ -60,7 +143,7 @@ function SelectionBadge({ sel }) {
 
 // ── Assignment panel ──────────────────────────────────────────────────────────
 
-function AssignmentPanel({ nodes, existingSel, onAssign, onClear, onClose }) {
+function AssignmentPanel({ nodes, existingSel, isRepeatableSlide, onAssign, onClear, onClose }) {
   const isGroup  = nodes.length > 1
   const firstNode = nodes[0]
 
@@ -70,10 +153,15 @@ function AssignmentPanel({ nodes, existingSel, onAssign, onClear, onClose }) {
   const [prompt,   setPrompt]     = useState(existingSel?.prompt ?? '')
   const [type,     setType]       = useState(existingSel?.type ?? 'text')
   const [autoGen,  setAutoGen]    = useState(existingSel?.autoGenerate ?? true)
+  // unique: true = different per instance, false = same on every clone
+  // Only meaningful for zones on repeatable slides
+  const [unique,   setUnique]     = useState(existingSel?.unique !== false)
 
   const handleConfirm = () => {
     if (!key.trim()) return
-    onAssign({ zoneType, key: key.trim(), hint: hint.trim(), prompt: prompt.trim(), type, autoGenerate: autoGen })
+    const payload = { zoneType, key: key.trim(), hint: hint.trim(), prompt: prompt.trim(), type, autoGenerate: autoGen }
+    if (isRepeatableSlide) payload.unique = unique
+    onAssign(payload)
   }
 
   return (
@@ -169,6 +257,41 @@ function AssignmentPanel({ nodes, existingSel, onAssign, onClear, onClose }) {
             placeholder='e.g. "Populate with Q3 initiatives for the EMEA region"'
             data-testid="tree-assign-prompt"
           />
+        </div>
+      )}
+
+      {/* Uniqueness toggle — only shown for zones on repeatable slides */}
+      {isRepeatableSlide && (
+        <div className="tree-assign-field" data-testid="tree-assign-uniqueness">
+          <label>Across slide instances</label>
+          <div className="tree-assign-uniqueness-options">
+            <label className={`tree-assign-uniqueness-option${unique ? ' tree-assign-uniqueness-option--active' : ''}`}>
+              <input
+                type="radio"
+                name="unique"
+                checked={unique}
+                onChange={() => setUnique(true)}
+                data-testid="tree-assign-unique"
+              />
+              <div>
+                <strong>Unique</strong>
+                <span>Different value per instance</span>
+              </div>
+            </label>
+            <label className={`tree-assign-uniqueness-option${!unique ? ' tree-assign-uniqueness-option--active' : ''}`}>
+              <input
+                type="radio"
+                name="unique"
+                checked={!unique}
+                onChange={() => setUnique(false)}
+                data-testid="tree-assign-shared"
+              />
+              <div>
+                <strong>Shared</strong>
+                <span>Same value on every clone</span>
+              </div>
+            </label>
+          </div>
         </div>
       )}
 
@@ -323,6 +446,8 @@ export default function HtmlTreePanel({
   trees,
   selections,
   onSelections,
+  repeatableSlides = [],
+  onRepeatableSlides,
   slideCount,
   highlightNodeId,
   onHighlight,
@@ -335,6 +460,9 @@ export default function HtmlTreePanel({
 
   const currentTree = trees?.[slideIdx] ?? []
   const slideIndex  = slideIdx + 1
+
+  // Is the current slide marked repeatable?
+  const isCurrentSlideRepeatable = repeatableSlides.some(rs => rs.slideIndex === slideIndex)
 
   // Nodes that are descendants of a block zone (will be superseded)
   const conflictIds = useMemo(() => {
@@ -381,7 +509,7 @@ export default function HtmlTreePanel({
 
   // ── Assign ───────────────────────────────────────────────────────────────────
 
-  const handleAssign = useCallback(({ zoneType, key, hint, prompt, type, autoGenerate }) => {
+  const handleAssign = useCallback(({ zoneType, key, hint, prompt, type, autoGenerate, unique }) => {
     if (!assignTarget) return
 
     const newSelections = [...selections]
@@ -412,6 +540,8 @@ export default function HtmlTreePanel({
         prompt:       zoneType === 'block' ? prompt : '',
         autoGenerate: zoneType === 'block' ? true : autoGenerate,
         type:         zoneType === 'block' ? 'block' : type,
+        // unique is only set for zones on repeatable slides
+        ...(isCurrentSlideRepeatable ? { unique: unique !== false } : {}),
       }
       if (idx >= 0) filtered[idx] = sel
       else filtered.push(sel)
@@ -422,7 +552,7 @@ export default function HtmlTreePanel({
     if (removedByConflict.length > 0) setConflicts(removedByConflict)
     setAssignTarget(null)
     setSelectedIds(new Set())
-  }, [assignTarget, selections, onSelections, slideIndex])
+  }, [assignTarget, selections, onSelections, slideIndex, isCurrentSlideRepeatable])
 
   // ── Clear zone ───────────────────────────────────────────────────────────────
 
@@ -493,16 +623,29 @@ export default function HtmlTreePanel({
       {/* ── Slide tabs (multi-slide templates) ──────────────────────────── */}
       {slideCount > 1 && (
         <div className="html-tree-slide-tabs">
-          {Array.from({ length: slideCount }, (_, i) => (
-            <button
-              key={i}
-              className={`html-tree-slide-tab${slideIdx === i ? ' html-tree-slide-tab--active' : ''}`}
-              onClick={() => { setSlideIdx(i); setExpandedIds(new Set()); setSelectedIds(new Set()) }}
-            >
-              Slide {i + 1}
-            </button>
-          ))}
+          {Array.from({ length: slideCount }, (_, i) => {
+            const isRep = repeatableSlides.some(rs => rs.slideIndex === i + 1)
+            return (
+              <button
+                key={i}
+                className={`html-tree-slide-tab${slideIdx === i ? ' html-tree-slide-tab--active' : ''}${isRep ? ' html-tree-slide-tab--repeatable' : ''}`}
+                onClick={() => { setSlideIdx(i); setExpandedIds(new Set()); setSelectedIds(new Set()) }}
+              >
+                Slide {i + 1}{isRep ? ' ↻' : ''}
+              </button>
+            )
+          })}
         </div>
+      )}
+
+      {/* ── Slide control bar (repeatable toggle) ────────────────────────── */}
+      {onRepeatableSlides && (
+        <SlideControlBar
+          slideIndex={slideIndex}
+          repeatableSlides={repeatableSlides}
+          onRepeatableSlides={onRepeatableSlides}
+          hasZones={selections.some(s => s.slideIndex === slideIndex && s.unique !== false)}
+        />
       )}
 
       {/* ── Conflict warning ─────────────────────────────────────────────── */}
@@ -541,6 +684,7 @@ export default function HtmlTreePanel({
               existingSel={assignTarget.length === 1
                 ? selections.find(s => s.nodeId === assignTarget[0].id)
                 : null}
+              isRepeatableSlide={isCurrentSlideRepeatable}
               onAssign={handleAssign}
               onClear={handleClear}
               onClose={() => setAssignTarget(null)}

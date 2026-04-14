@@ -159,6 +159,7 @@ function walkNode(node, parentId, depth, siblingMap, slideIndex, selections) {
       prompt:       existingPrompt,
       autoGenerate: true,
       type:         'block',
+      exampleHtml:  node.innerHTML?.trim() || undefined,
     })
   }
 

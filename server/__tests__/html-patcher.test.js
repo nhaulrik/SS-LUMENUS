@@ -26,14 +26,14 @@ const block = (key, slideIndex = 1) => ({
   isRepeatable: false, repeatableKey: null,
 });
 
-const repLeaf = (key, slideIndex = 2, structureType = 'item') => ({
+const repLeaf = (key, slideIndex = 2, unique = true) => ({
   zoneType: 'leaf', key, slideIndex, type: 'text', autoGenerate: true,
-  isRepeatable: true, repeatableKey: null, structureType,
+  isRepeatable: true, repeatableKey: null, unique,
 });
 
-const repBlock = (key, slideIndex = 2, structureType = 'item') => ({
+const repBlock = (key, slideIndex = 2, unique = true) => ({
   zoneType: 'block', key, slideIndex, type: 'block', autoGenerate: true,
-  isRepeatable: true, repeatableKey: null, structureType,
+  isRepeatable: true, repeatableKey: null, unique,
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -182,61 +182,135 @@ describe('applyHtmlContent — label zones', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('applyHtmlContent — repeatable slides', () => {
+  const repSlides = [{ slideIndex: 2, key: 'item', prompt: 'one per item' }];
+
   it('clones the repeatable section once per instance', () => {
-    const html  = `<section><p data-zone="title">T</p></section><section data-zone="item"><p data-zone="item_name">N</p></section>`;
+    const html  = `<section><p data-zone="title">T</p></section><section><p data-zone="item_name">N</p></section>`;
     const data  = {
       static: { title: 'Report' },
       slides: {
-        item: [
-          { structure_type: 'item', item_name: 'Alpha' },
-          { structure_type: 'item', item_name: 'Beta'  },
-        ]
+        item: {
+          instances: [
+            { item_name: 'Alpha' },
+            { item_name: 'Beta'  },
+          ]
+        }
       }
     };
-    const zones = [
-      leaf('title', 1),
-      repLeaf('item_name', 2, 'item'),
-    ];
-    const result = applyHtmlContent(html, data, zones);
+    const zones = [leaf('title', 1), repLeaf('item_name', 2, true)];
+    const result = applyHtmlContent(html, data, zones, repSlides);
     expect(result).toContain('Alpha');
     expect(result).toContain('Beta');
-    // Two clones = two occurrences of the section
     const matches = result.match(/<section/g) || [];
     expect(matches.length).toBe(3); // 1 static + 2 clones
   });
 
   it('fills block zones inside repeatable slides per instance', () => {
+    const rs    = [{ slideIndex: 1, key: 'item', prompt: '' }];
     const html  = `<section><table data-block="rows">old</table></section>`;
     const data  = {
       slides: {
-        item: [
-          { structure_type: 'item', rows: '<tr><td>Alpha</td></tr>' },
-          { structure_type: 'item', rows: '<tr><td>Beta</td></tr>'  },
-        ]
+        item: {
+          instances: [
+            { rows: '<tr><td>Alpha</td></tr>' },
+            { rows: '<tr><td>Beta</td></tr>'  },
+          ]
+        }
       }
     };
-    const zones = [repBlock('rows', 1, 'item')];
-    const result = applyHtmlContent(html, data, zones);
+    const zones = [repBlock('rows', 1, true)];
+    const result = applyHtmlContent(html, data, zones, rs);
     expect(result).toContain('Alpha');
     expect(result).toContain('Beta');
     expect(result).not.toContain('old');
   });
 
   it('removes data-zone from cloned repeatable sections', () => {
+    const rs    = [{ slideIndex: 1, key: 'item', prompt: '' }];
     const html  = `<section><p data-zone="item_name">N</p></section>`;
-    const data  = { slides: { item: [{ structure_type: 'item', item_name: 'Alpha' }] } };
-    const zones = [repLeaf('item_name', 1, 'item')];
-    const result = applyHtmlContent(html, data, zones);
+    const data  = { slides: { item: { instances: [{ item_name: 'Alpha' }] } } };
+    const zones = [repLeaf('item_name', 1, true)];
+    const result = applyHtmlContent(html, data, zones, rs);
     expect(result).not.toContain('data-zone');
   });
 
-  it('produces zero clones and removes the section when instances array is empty', () => {
+  it('produces zero clones when instances array is empty', () => {
     const html  = `<section><p data-zone="title">T</p></section><section><p data-zone="item_name">N</p></section>`;
-    const data  = { static: { title: 'Report' }, slides: { item: [] } };
-    const zones = [leaf('title', 1), repLeaf('item_name', 2, 'item')];
-    const result = applyHtmlContent(html, data, zones);
+    const data  = { static: { title: 'Report' }, slides: { item: { instances: [] } } };
+    const zones = [leaf('title', 1), repLeaf('item_name', 2, true)];
+    const result = applyHtmlContent(html, data, zones, repSlides);
     expect(result).toContain('Report');
     expect(result).not.toContain('item_name');
+  });
+
+  it('stamps non-unique (shared) zone values identically across all clones', () => {
+    const rs    = [{ slideIndex: 1, key: 'item', prompt: '' }];
+    const html  = `<section><p data-zone="footer">F</p><p data-zone="brand">B</p></section>`;
+    const data  = {
+      slides: {
+        item: {
+          shared:    { footer: 'Confidential' },
+          instances: [
+            { brand: 'BMW'      },
+            { brand: 'Mercedes' },
+          ]
+        }
+      }
+    };
+    const zones = [
+      { ...repLeaf('footer', 1, false) },  // non-unique
+      repLeaf('brand', 1, true),           // unique
+    ];
+    const result = applyHtmlContent(html, data, zones, rs);
+    const confidentialMatches = (result.match(/Confidential/g) || []).length;
+    expect(confidentialMatches).toBe(2);
+    expect(result).toContain('BMW');
+    expect(result).toContain('Mercedes');
+  });
+
+  it('unique zone values differ across clones', () => {
+    const rs    = [{ slideIndex: 1, key: 'item', prompt: '' }];
+    const html  = `<section><p data-zone="brand">B</p></section>`;
+    const data  = {
+      slides: {
+        item: {
+          instances: [
+            { brand: 'BMW'      },
+            { brand: 'Mercedes' },
+            { brand: 'Audi'     },
+          ]
+        }
+      }
+    };
+    const zones = [repLeaf('brand', 1, true)];
+    const result = applyHtmlContent(html, data, zones, rs);
+    expect(result).toContain('BMW');
+    expect(result).toContain('Mercedes');
+    expect(result).toContain('Audi');
+    const sections = result.match(/<section/g) || [];
+    expect(sections.length).toBe(3);
+  });
+
+  it('static slides before/after repeatable section are preserved', () => {
+    const html = `<section><p data-zone="intro">I</p></section><section><p data-zone="brand">B</p></section><section><p data-zone="outro">O</p></section>`;
+    const data = {
+      static: { intro: 'Welcome', outro: 'Goodbye' },
+      slides: { item: { instances: [{ brand: 'BMW' }, { brand: 'Audi' }] } }
+    };
+    const repSlides3 = [{ slideIndex: 2, key: 'item', prompt: 'one per brand' }];
+    const zones = [
+      leaf('intro', 1),
+      repLeaf('brand', 2, true),
+      leaf('outro', 3),
+    ];
+    const result = applyHtmlContent(html, data, zones, repSlides3);
+    expect(result).toContain('Welcome');
+    expect(result).toContain('Goodbye');
+    expect(result).toContain('BMW');
+    expect(result).toContain('Audi');
+    // 1 intro + 2 brand clones + 1 outro = 4 sections
+    const sections = result.match(/<section/g) || [];
+    expect(sections.length).toBe(4);
   });
 });
 

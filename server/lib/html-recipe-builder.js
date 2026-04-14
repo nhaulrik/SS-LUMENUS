@@ -8,33 +8,38 @@
  *   - block (zoneType:'block') : data-block — AI fills the entire innerHTML
  *   - label (zoneType:'label') : data-label-for — paired label, treated as leaf
  *
- * Repeatable slides: zones where isRepeatable:true on the section trigger
- * multi-instance generation (one set of values per slide clone).
+ * Repeatable slides: sections marked repeatable via repeatableSlides[].
+ * Each zone on a repeatable slide carries:
+ *   - unique:true  → different value per instance (goes into instances array)
+ *   - unique:false → same value across all clones (goes into shared object)
+ *
+ * The recipe structure for repeatable slides:
+ *   slides[key].shared    — one value per non-unique zone
+ *   slides[key].instances — array of objects, one per slide clone
+ *
+ * Block zones always include their full exampleHtml — no truncation.
  */
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** True when a zone contributes a value to the AI JSON. */
 const isGenerated = (z) => z.autoGenerate !== false;
 
-/**
- * Collect the set of slide indices that are repeatable.
- * A slide is repeatable when it contains at least one zone with isRepeatable:true.
- */
-function repeatableSlideIndices(zones) {
+/** Set of slideIndex values that are repeatable. */
+function repeatableSlideIndexSet(zones, repeatableSlides = []) {
+  if (repeatableSlides.length > 0) {
+    return new Set(repeatableSlides.map(rs => rs.slideIndex));
+  }
+  // Backward compat: derive from zone.isRepeatable flag
   const set = new Set();
   zones.forEach(z => { if (z.isRepeatable) set.add(z.slideIndex); });
   return set;
 }
 
-/**
- * Detect keys that appear on more than one static slide (contextual fields).
- * Block zones are never contextual — they are always slide-specific.
- */
-function detectContextualKeys(zones, repeatableSet) {
+/** Keys that appear on more than one static slide (contextual). */
+function detectContextualKeys(zones, repSet) {
   const keyToSlides = {};
   zones
-    .filter(z => !repeatableSet.has(z.slideIndex) && z.zoneType !== 'block' && isGenerated(z))
+    .filter(z => !repSet.has(z.slideIndex) && z.zoneType !== 'block' && isGenerated(z))
     .forEach(z => {
       if (!keyToSlides[z.key]) keyToSlides[z.key] = new Set();
       keyToSlides[z.key].add(z.slideIndex);
@@ -51,13 +56,30 @@ function detectContextualKeys(zones, repeatableSet) {
 /**
  * Build a recipe prompt string from a zone list.
  *
- * @param {Array}  zones         - Zone objects from parseTemplate / user edits
- * @param {string} globalPrompt  - Optional global guidance prepended to the recipe
- * @returns {string}             - Recipe prompt ready to copy-paste to the AI
+ * @param {Array}  zones            - Zone objects from parseTemplate / user edits
+ * @param {string} globalPrompt     - Optional global guidance prepended to the recipe
+ * @param {Array}  repeatableSlides - [{ slideIndex, key, prompt }]
+ * @returns {string}
  */
-export function buildHtmlRecipe(zones, globalPrompt = '') {
-  const repSet        = repeatableSlideIndices(zones);
+export function buildHtmlRecipe(zones, globalPrompt = '', repeatableSlides = []) {
+  const repSet         = repeatableSlideIndexSet(zones, repeatableSlides);
   const contextualKeys = detectContextualKeys(zones, repSet);
+
+  // Build a lookup: slideIndex → repeatableSlide entry
+  const repBySlide = new Map();
+  repeatableSlides.forEach(rs => repBySlide.set(rs.slideIndex, rs));
+  // Backward compat: if no repeatableSlides arg, use structureType from zones
+  if (repeatableSlides.length === 0) {
+    zones.filter(z => z.isRepeatable).forEach(z => {
+      if (!repBySlide.has(z.slideIndex)) {
+        repBySlide.set(z.slideIndex, {
+          slideIndex: z.slideIndex,
+          key: z.structureType || `slide_${z.slideIndex}`,
+          prompt: '',
+        });
+      }
+    });
+  }
 
   const globalSection = globalPrompt ? `GLOBAL GUIDANCE:\n${globalPrompt}\n\n` : '';
 
@@ -73,8 +95,7 @@ export function buildHtmlRecipe(zones, globalPrompt = '') {
   );
   const repeatableZones = zones.filter(z => repSet.has(z.slideIndex) && isGenerated(z));
 
-  // Deduplicate static leaf keys (same key may appear on multiple non-repeatable slides
-  // only if it's NOT contextual — e.g. a non-unique shared key)
+  // Deduplicate static leaf keys
   const seenStatic = new Set();
   const dedupedStatic = staticLeafZones.filter(z => {
     if (seenStatic.has(z.key)) return false;
@@ -86,6 +107,7 @@ export function buildHtmlRecipe(zones, globalPrompt = '') {
 - Return ONLY valid JSON, no explanations or markdown
 - Use EXACT key names as provided - do NOT abbreviate or modify key names
 - For block zones marked with [HTML BLOCK], return the full innerHTML string
+- For repeatable slides, return both a "shared" object and an "instances" array
 
 ${globalSection}GENERATE THE FOLLOWING DATA:\n`;
 
@@ -93,32 +115,28 @@ ${globalSection}GENERATE THE FOLLOWING DATA:\n`;
 
   // ── Static leaf fields ────────────────────────────────────────────────────
   if (dedupedStatic.length > 0) {
-    recipe += `\n${sectionNum}. STATIC FIELDS (one value per field):\n{\n  "static": {\n`;
+    recipe += `\n${sectionNum}. STATIC FIELDS (appear once in the output):\n{\n  "static": {\n`;
     dedupedStatic.forEach(z => {
-      const hint        = z.hint || `value for ${z.key}`;
-      const maxCharsStr = z.maxChars ? ` (max ${z.maxChars} chars)` : '';
-      recipe += `    "${z.key}": "${hint}${maxCharsStr}",\n`;
+      const hint = z.hint || `value for ${z.key}`;
+      recipe += `    "${z.key}": "${hint}",\n`;
     });
-    recipe += `  },\n}\n`;
+    recipe += `  }\n}\n`;
     sectionNum++;
   }
 
   // ── Contextual leaf fields ────────────────────────────────────────────────
   if (contextualZones.length > 0) {
-    recipe += `\n${sectionNum}. CONTEXTUAL FIELDS (same field, slide-specific value — one entry per slide):\n"contextual": [\n`;
+    recipe += `\n${sectionNum}. CONTEXTUAL FIELDS (same field, slide-specific value):\n"contextual": [\n`;
     const byKey = {};
     contextualZones.forEach(z => {
       if (!byKey[z.key]) byKey[z.key] = [];
       byKey[z.key].push(z);
     });
     Object.entries(byKey).forEach(([key, fieldZones]) => {
-      fieldZones
-        .sort((a, b) => a.slideIndex - b.slideIndex)
-        .forEach(z => {
-          const hint        = z.hint || `value for ${key} on slide ${z.slideIndex}`;
-          const maxCharsStr = z.maxChars ? ` (max ${z.maxChars} chars)` : '';
-          recipe += `  { "slide_index": ${z.slideIndex}, "${key}": "${hint}${maxCharsStr}" },\n`;
-        });
+      fieldZones.sort((a, b) => a.slideIndex - b.slideIndex).forEach(z => {
+        const hint = z.hint || `value for ${key} on slide ${z.slideIndex}`;
+        recipe += `  { "slide_index": ${z.slideIndex}, "${key}": "${hint}" },\n`;
+      });
     });
     recipe += `]\n`;
     sectionNum++;
@@ -128,11 +146,9 @@ ${globalSection}GENERATE THE FOLLOWING DATA:\n`;
   if (staticBlockZones.length > 0) {
     recipe += `\n${sectionNum}. BLOCK ZONES [HTML BLOCK] (generate full innerHTML for each container):\n{\n  "blocks": {\n`;
     staticBlockZones.forEach(z => {
-      const promptLine = z.prompt
-        ? `      // Prompt: ${z.prompt}\n`
-        : '';
+      const promptLine  = z.prompt    ? `      // Prompt: ${z.prompt}\n` : '';
       const exampleLine = z.exampleHtml
-        ? `      // Example structure: ${z.exampleHtml.replace(/\n/g, ' ').slice(0, 200)}\n`
+        ? `      // Example structure (populate with real data, preserve all tags and classes):\n      // ${z.exampleHtml.replace(/\n/g, '\n      // ')}\n`
         : '';
       recipe += `    "${z.key}": {\n${promptLine}${exampleLine}      "value": "<!-- your generated HTML here -->"\n    },\n`;
     });
@@ -142,45 +158,88 @@ ${globalSection}GENERATE THE FOLLOWING DATA:\n`;
 
   // ── Repeatable slides ─────────────────────────────────────────────────────
   if (repeatableZones.length > 0) {
-    // Group by slideIndex to build per-slide structure types
+    // Group by slideIndex
     const bySlide = {};
     repeatableZones.forEach(z => {
       if (!bySlide[z.slideIndex]) bySlide[z.slideIndex] = [];
       bySlide[z.slideIndex].push(z);
     });
 
-    recipe += `\n${sectionNum}. REPEATABLE SLIDES (generate an array of instances — one object per slide clone):\n"slides": {\n`;
+    Object.entries(bySlide).forEach(([slideIdxStr, slideZones]) => {
+      const slideIndex = parseInt(slideIdxStr);
+      const repSlide   = repBySlide.get(slideIndex);
+      const slideKey   = repSlide?.key || `slide_${slideIndex}`;
+      const prompt     = repSlide?.prompt || '';
 
-    Object.entries(bySlide).forEach(([slideIdx, slideZones]) => {
-      // Derive a structure type from the slide's zones or fall back to slide_N
-      const structureType = slideZones.find(z => z.structureType)?.structureType
-        || `slide_${slideIdx}`;
+      // Partition into unique (per-instance) and non-unique (shared)
+      const uniqueZones    = slideZones.filter(z => z.unique !== false);
+      const nonUniqueZones = slideZones.filter(z => z.unique === false);
 
-      recipe += `  "${structureType}": [\n    {\n`;
-      recipe += `      "structure_type": "${structureType}",\n`;
+      recipe += `\n${sectionNum}. REPEATABLE SLIDE — ${slideKey}\n`;
+      if (prompt) recipe += `PROMPT: "${prompt}"\n`;
+      sectionNum++;
 
-      slideZones.forEach(z => {
-        const hint        = z.hint || `value for ${z.key}`;
-        const maxCharsStr = z.maxChars ? ` (max ${z.maxChars} chars)` : '';
-        if (z.zoneType === 'block') {
-          const promptNote = z.prompt ? ` // ${z.prompt}` : '';
-          recipe += `      "${z.key}": "<!-- generated HTML -->${promptNote}",\n`;
-        } else {
-          recipe += `      "${z.key}": "${hint}${maxCharsStr}",\n`;
+      // 2a. Shared values (non-unique)
+      if (nonUniqueZones.length > 0) {
+        recipe += `\n${sectionNum - 1}a. SHARED VALUES (same on every clone — generate once):\n`;
+        recipe += `{\n  "slides": {\n    "${slideKey}": {\n      "shared": {\n`;
+        nonUniqueZones.forEach(z => {
+          const hint = z.hint || `value for ${z.key}`;
+          if (z.zoneType === 'block') {
+            recipe += `        "${z.key}": "[HTML BLOCK]${z.prompt ? ` — ${z.prompt}` : ''}",\n`;
+            if (z.exampleHtml) {
+              recipe += `        // Example structure (preserve all tags and classes):\n`;
+              recipe += `        // ${z.exampleHtml.replace(/\n/g, '\n        // ')}\n`;
+            }
+          } else {
+            recipe += `        "${z.key}": "${hint}",\n`;
+          }
+        });
+        recipe += `      }\n    }\n  }\n}\n`;
+      }
+
+      // 2b. Instance values (unique)
+      if (uniqueZones.length > 0) {
+        recipe += `\n${sectionNum - 1}b. INSTANCE VALUES (unique per clone — generate one object per instance):\n`;
+        recipe += `Each instance must follow this structure exactly:\n{\n`;
+        uniqueZones.forEach(z => {
+          const hint = z.hint || `value for ${z.key}`;
+          if (z.zoneType === 'block') {
+            recipe += `  "${z.key}": "[HTML BLOCK]${z.prompt ? ` — ${z.prompt}` : ''}",\n`;
+          } else {
+            recipe += `  "${z.key}": "${hint}",\n`;
+          }
+        });
+        recipe += `}\n`;
+
+        // Block zone example HTML — full, no truncation
+        uniqueZones.filter(z => z.zoneType === 'block' && z.exampleHtml).forEach(z => {
+          recipe += `\nExample HTML structure for ${z.key} (populate with real data, preserve all tags and classes):\n`;
+          recipe += z.exampleHtml + '\n';
+        });
+
+        recipe += `\nReturn the full structure as:\n`;
+        recipe += `{\n  "slides": {\n    "${slideKey}": {\n`;
+        if (nonUniqueZones.length > 0) {
+          recipe += `      "shared": { ${nonUniqueZones.map(z => `"${z.key}": "..."`).join(', ')} },\n`;
         }
-      });
-
-      recipe += `    }\n  ],\n`;
+        recipe += `      "instances": [\n        {\n`;
+        uniqueZones.forEach(z => {
+          recipe += `          "${z.key}": "...",\n`;
+        });
+        recipe += `        }\n      ]\n    }\n  }\n}\n`;
+      }
     });
-
-    recipe += `}\n`;
   }
 
   recipe += `\nIMPORTANT:
 - static: one value per key
 - contextual: one array entry per slide, each with "slide_index" and the field value
 - blocks: innerHTML strings (valid HTML, no surrounding tags)
-- slides: array of instances, each with "structure_type" field`;
+- slides[key].shared: one value per non-unique key — same on every clone
+- slides[key].instances: array of N objects (AI decides N from context)
+- Each instance must include ALL unique keys listed above
+- Block zone values: valid innerHTML only — no surrounding container tags`;
 
   return recipe;
 }
@@ -190,11 +249,15 @@ ${globalSection}GENERATE THE FOLLOWING DATA:\n`;
 /**
  * Validate AI-generated JSON against the zone list.
  *
- * @param {string} jsonString - Raw JSON string from the AI
- * @param {Array}  zones      - Zone objects (same list used to build the recipe)
+ * Supports both the new { shared, instances } format (when repeatableSlides
+ * is provided) and the legacy array format (backward compat).
+ *
+ * @param {string} jsonString
+ * @param {Array}  zones
+ * @param {Array}  repeatableSlides - [{ slideIndex, key, prompt }]
  * @returns {{ valid, error, foundFields, missingFields, instanceCount }}
  */
-export function validateHtmlJson(jsonString, zones) {
+export function validateHtmlJson(jsonString, zones, repeatableSlides = []) {
   let data;
   try {
     data = JSON.parse(jsonString);
@@ -207,8 +270,23 @@ export function validateHtmlJson(jsonString, zones) {
     };
   }
 
-  const repSet         = repeatableSlideIndices(zones);
+  const repSet         = repeatableSlideIndexSet(zones, repeatableSlides);
   const contextualKeys = detectContextualKeys(zones, repSet);
+
+  // Build lookup: slideIndex → repeatableSlide
+  const repBySlide = new Map();
+  repeatableSlides.forEach(rs => repBySlide.set(rs.slideIndex, rs));
+  if (repeatableSlides.length === 0) {
+    zones.filter(z => z.isRepeatable).forEach(z => {
+      if (!repBySlide.has(z.slideIndex)) {
+        repBySlide.set(z.slideIndex, {
+          slideIndex: z.slideIndex,
+          key: z.structureType || `slide_${z.slideIndex}`,
+          prompt: '',
+        });
+      }
+    });
+  }
 
   const foundFields   = [];
   const missingFields = [];
@@ -246,8 +324,8 @@ export function validateHtmlJson(jsonString, zones) {
     });
 
   // ── Repeatable slides ─────────────────────────────────────────────────────
-  const slidesData = data.slides || {};
-  let instanceCount = 0;
+  const slidesData   = data.slides || {};
+  let instanceCount  = 0;
 
   const bySlide = {};
   zones.filter(z => repSet.has(z.slideIndex) && isGenerated(z)).forEach(z => {
@@ -255,23 +333,65 @@ export function validateHtmlJson(jsonString, zones) {
     bySlide[z.slideIndex].push(z);
   });
 
-  Object.entries(bySlide).forEach(([slideIdx, slideZones]) => {
-    const structureType = slideZones.find(z => z.structureType)?.structureType || `slide_${slideIdx}`;
-    const instances     = slidesData[structureType];
+  Object.entries(bySlide).forEach(([slideIdxStr, slideZones]) => {
+    const slideIndex = parseInt(slideIdxStr);
+    const repSlide   = repBySlide.get(slideIndex);
+    const slideKey   = repSlide?.key || `slide_${slideIndex}`;
+    const slideData  = slidesData[slideKey];
 
-    if (!Array.isArray(instances) || instances.length === 0) {
-      missingFields.push(`${structureType} (no instances)`);
+    if (!slideData) {
+      missingFields.push(`${slideKey} (missing)`);
       return;
     }
 
-    instanceCount += instances.length;
-    instances.forEach((inst, idx) => {
-      if (!inst.structure_type) missingFields.push(`structure_type (${structureType} instance ${idx + 1})`);
-      slideZones.forEach(z => {
-        if (inst[z.key] !== undefined) foundFields.push(`${z.key} (${structureType} instance ${idx + 1})`);
-        else missingFields.push(`${z.key} (${structureType} instance ${idx + 1})`);
+    // Detect format: new { shared, instances } vs legacy array
+    const isNewFormat = !Array.isArray(slideData) && (slideData.instances !== undefined || slideData.shared !== undefined);
+
+    if (isNewFormat) {
+      // New format validation
+      const uniqueZones    = slideZones.filter(z => z.unique !== false);
+      const nonUniqueZones = slideZones.filter(z => z.unique === false);
+
+      // Validate shared block
+      const sharedData = slideData.shared || {};
+      nonUniqueZones.forEach(z => {
+        if (sharedData[z.key] !== undefined) foundFields.push(`${slideKey}.shared.${z.key}`);
+        else missingFields.push(`${slideKey}.shared.${z.key}`);
       });
-    });
+
+      // Validate instances array
+      const instances = slideData.instances;
+      if (!Array.isArray(instances) || instances.length === 0) {
+        if (uniqueZones.length > 0) {
+          missingFields.push(`${slideKey}.instances (missing or empty)`);
+        }
+        return;
+      }
+
+      instanceCount += instances.length;
+      instances.forEach((inst, idx) => {
+        uniqueZones.forEach(z => {
+          if (inst[z.key] !== undefined) foundFields.push(`${slideKey}[${idx + 1}].${z.key}`);
+          else missingFields.push(`${slideKey}[${idx + 1}].${z.key}`);
+        });
+      });
+
+    } else {
+      // Legacy array format — backward compat
+      const instances = Array.isArray(slideData) ? slideData : [];
+      if (instances.length === 0) {
+        missingFields.push(`${slideKey} (no instances)`);
+        return;
+      }
+      instanceCount += instances.length;
+      instances.forEach((inst, idx) => {
+        if (!inst.structure_type) missingFields.push(`structure_type (${slideKey} instance ${idx + 1})`);
+        slideZones.forEach(z => {
+          if (inst[z.key] !== undefined) foundFields.push(`${z.key} (${slideKey} instance ${idx + 1})`);
+          else missingFields.push(`${z.key} (${slideKey} instance ${idx + 1})`);
+        });
+      });
+    }
   });
 
   return {
