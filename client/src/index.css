@@ -3132,3 +3132,381 @@ header p {
   padding: 4px 10px;
   font-size: 0.78rem;
 }
+
+/* ?? Label zone tag ???????????????????????????????????????????????????????? */
+
+.zone-tag--label {
+  background: rgba(100, 160, 255, 0.15);
+  color: #64a0ff;
+}
+
+/* ?? Label child row (indented under parent zone) ?????????????????????????? */
+
+.zone-label-child {
+  display: flex;
+  align-items: stretch;
+  margin-top: 1px;
+}
+
+.zone-label-child-indent {
+  width: 20px;
+  flex-shrink: 0;
+  border-left: 2px solid rgba(76, 175, 128, 0.25);
+  margin-left: 10px;
+  margin-right: 6px;
+  border-bottom: 2px solid rgba(76, 175, 128, 0.25);
+  border-bottom-left-radius: 4px;
+  margin-bottom: 4px;
+}
+
+.zone-label-child .zone-row {
+  flex: 1;
+  background: rgba(76, 175, 128, 0.03);
+}
+
+/* ============================================================
+   Zone Assignment Modal
+   ============================================================ */
+
+.zone-assign-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.zone-assign-modal {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  width: 420px;
+  max-width: calc(100vw - 48px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+}
+
+.zone-assign-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.zone-assign-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.zone-assign-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.zone-assign-close:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+/* Clicked element preview */
+.zone-assign-element {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.zone-assign-tag {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  background: var(--bg-tertiary);
+  padding: 2px 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.zone-assign-text {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Mode options */
+.zone-assign-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 18px 8px;
+}
+
+.zone-assign-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.zone-assign-option input[type="radio"] {
+  margin-top: 2px;
+  accent-color: var(--accent-primary);
+  flex-shrink: 0;
+}
+
+.zone-assign-option div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.zone-assign-option strong {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.zone-assign-option span {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.zone-assign-option--active {
+  border-color: var(--accent-primary);
+  background: rgba(76, 175, 128, 0.06);
+}
+
+/* Field */
+.zone-assign-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 18px 8px;
+}
+
+.zone-assign-field label {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.zone-assign-input {
+  width: 100%;
+  padding: 7px 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color var(--transition-fast);
+}
+
+.zone-assign-input:focus {
+  border-color: var(--accent-primary);
+}
+
+/* Ambiguous warning */
+.zone-assign-ambiguous {
+  font-size: 0.78rem;
+  color: var(--warning);
+  padding: 0 18px 8px;
+  margin: 0;
+}
+
+/* Actions */
+.zone-assign-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  padding: 12px 18px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+
+/* ============================================================
+   Violations panel - enhanced with AI fix prompt
+   ============================================================ */
+
+.html-violations {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: rgba(232, 84, 74, 0.06);
+  border: 1px solid rgba(232, 84, 74, 0.25);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.html-violations-header {
+  padding: var(--space-md) var(--space-lg);
+  border-bottom: 1px solid rgba(232, 84, 74, 0.15);
+}
+
+.html-violations-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.html-violations-icon {
+  font-size: 1rem;
+  color: var(--error);
+}
+
+.html-violations-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--error);
+  margin: 0;
+}
+
+.html-violations-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.html-violations-list {
+  list-style: none;
+  padding: var(--space-sm) var(--space-lg);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.html-violation-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.82rem;
+}
+
+.html-violation-bullet {
+  color: var(--error);
+  font-size: 0.7rem;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.html-violation-rule {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  color: var(--error);
+  background: rgba(232, 84, 74, 0.12);
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-right: 6px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.html-violation-message {
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.html-violations-prompt-section {
+  border-top: 1px solid rgba(232, 84, 74, 0.15);
+  background: var(--bg-secondary);
+  padding: var(--space-md) var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.html-violations-prompt-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.html-violations-prompt-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 3px;
+}
+
+.html-violations-prompt-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.html-violations-copy-btn {
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  padding: 5px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.html-violations-copy-btn:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.html-violations-copy-btn--copied {
+  border-color: var(--accent-primary) !important;
+  color: var(--accent-primary) !important;
+  background: rgba(76, 175, 128, 0.08) !important;
+}
+
+.html-violations-prompt-preview {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.html-violations-prompt-preview code {
+  font-family: inherit;
+  color: var(--text-muted);
+}
+
+.html-violations-prompt-issues {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--error);
+  opacity: 0.8;
+}

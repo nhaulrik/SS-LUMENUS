@@ -69,6 +69,7 @@ function ZoneRow({ zone, onChange, onRemove, highlighted, onMouseEnter, onMouseL
           )}
 
           <span className="zone-slide-label">Slide {zone.slideIndex}</span>
+          {zone.isLabel     && <span className="zone-tag zone-tag--label">label</span>}
           {zone.isRepeatable && <span className="zone-tag zone-tag--repeatable">Repeatable</span>}
           {zone.repeatableKey && <span className="zone-tag zone-tag--child">inside {zone.repeatableKey}</span>}
         </div>
@@ -146,6 +147,7 @@ export default function HtmlUploadStep({ stepAnimClass, debugContext, onProjectC
   const [zones,       setZones]       = useState([])
   const [previewHtml, setPreviewHtml] = useState('')
   const [violations,  setViolations]  = useState([])
+  const [promptCopied, setPromptCopied] = useState(false)
 
   // Stage C: create project
   const [creating,    setCreating]    = useState(false)
@@ -247,6 +249,16 @@ export default function HtmlUploadStep({ stepAnimClass, debugContext, onProjectC
       setCreating(false)
     }
   }, [templateId, zones, projectName, handleSaveZones, onProjectCreated, setToast])
+
+  // ── Copy AI fix prompt ────────────────────────────────────────────────────
+  const handleCopyPrompt = useCallback(() => {
+    const issueList = violations.map(v => v.rule).join(', ')
+    const prompt = `You are an expert HTML developer helping to prepare a slide template for use with an AI content generation tool.\n\nThe following validation issues were found:\n${issueList}\n\nPlease fix the HTML file so that:\n- Each slide is wrapped in a <section> element\n- Each dynamic content zone has a data-zone attribute with a unique snake_case key\n- data-hint attributes provide context for the AI\n- data-type="number" is used for numeric fields\n\nReturn only the corrected HTML.`
+    navigator.clipboard.writeText(prompt).then(() => {
+      setPromptCopied(true)
+      setTimeout(() => setPromptCopied(false), 2000)
+    }).catch(() => {})
+  }, [violations])
 
   // ── Editor apply ───────────────────────────────────────────────
   const handleEditorApply = useCallback((newHtml, newZones) => {
@@ -394,15 +406,54 @@ ${highlightCss}
             {/* Validation errors */}
             {violations.length > 0 && (
               <div className="html-violations">
-                <p className="html-violations-title">Template issues found:</p>
-                <ul>
+                <div className="html-violations-header">
+                  <div className="html-violations-title-row">
+                    <span className="html-violations-icon">?</span>
+                    <p className="html-violations-title">Template issues found</p>
+                  </div>
+                  <p className="html-violations-subtitle">
+                    Your HTML file needs a few adjustments before it can be used as a slide template.
+                  </p>
+                </div>
+
+                <ul className="html-violations-list">
                   {violations.map((v, i) => (
                     <li key={i} className="html-violation-item">
-                      <span className="html-violation-rule">{v.rule}</span>
-                      {v.message}
+                      <span className="html-violation-bullet">?</span>
+                      <div>
+                        <span className="html-violation-rule">{v.rule}</span>
+                        <span className="html-violation-message">{v.message}</span>
+                      </div>
                     </li>
                   ))}
                 </ul>
+
+                <div className="html-violations-prompt-section">
+                  <div className="html-violations-prompt-header">
+                    <div>
+                      <p className="html-violations-prompt-title">Fix with AI</p>
+                      <p className="html-violations-prompt-desc">
+                        Copy this prompt and send it to your AI assistant along with your HTML file.
+                        Paste the fixed file back and re-upload.
+                      </p>
+                    </div>
+                    <button
+                      className={`btn html-violations-copy-btn${promptCopied ? ' html-violations-copy-btn--copied' : ''}`}
+                      onClick={handleCopyPrompt}
+                    >
+                      {promptCopied ? '? Copied' : 'Copy prompt'}
+                    </button>
+                  </div>
+                  <div className="html-violations-prompt-preview">
+                    <code>
+                      You are an expert HTML developer helping to prepare a slide template?
+                      <br />
+                      <span className="html-violations-prompt-issues">
+                        Issues: {violations.map(v => v.rule).join(' ? ')}
+                      </span>
+                    </code>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -420,17 +471,53 @@ ${highlightCss}
                 {Object.entries(zonesBySlide).map(([slideIdx, slideZones]) => (
                   <div key={slideIdx} className="zone-slide-group">
                     <div className="zone-slide-label-header">Slide {slideIdx}</div>
-                    {slideZones.map((zone) => {
-                      const globalIdx = zones.indexOf(zone)
+                    {slideZones
+                      .filter(z => !z.isLabel)
+                      .map((zone) => {
+                        const globalIdx  = zones.indexOf(zone)
+                        // Find label sub-zones attached to this zone
+                        const labelZones = slideZones.filter(z => z.isLabel && z.labelFor === zone.key)
+                        return (
+                          <div key={zone.key + '-' + slideIdx + '-' + globalIdx}>
+                            <ZoneRow
+                              zone={zone}
+                              highlighted={highlightedKey === zone.key}
+                              onMouseEnter={() => setHighlightedKey(zone.key)}
+                              onMouseLeave={() => setHighlightedKey(null)}
+                              onChange={updated => handleZoneChange(globalIdx, updated)}
+                              onRemove={() => handleZoneRemove(globalIdx)}
+                            />
+                            {labelZones.map(lz => {
+                              const lIdx = zones.indexOf(lz)
+                              return (
+                                <div key={lz.key} className="zone-label-child">
+                                  <div className="zone-label-child-indent" />
+                                  <ZoneRow
+                                    zone={lz}
+                                    highlighted={highlightedKey === lz.key}
+                                    onMouseEnter={() => setHighlightedKey(lz.key)}
+                                    onMouseLeave={() => setHighlightedKey(null)}
+                                    onChange={updated => handleZoneChange(lIdx, updated)}
+                                    onRemove={() => handleZoneRemove(lIdx)}
+                                  />
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )
+                      })}
+                    {/* Orphaned label zones (labelFor points to a zone not on this slide) */}
+                    {slideZones.filter(z => z.isLabel && !slideZones.find(p => p.key === z.labelFor)).map(lz => {
+                      const lIdx = zones.indexOf(lz)
                       return (
                         <ZoneRow
-                          key={zone.key + '-' + slideIdx + '-' + globalIdx}
-                          zone={zone}
-                          highlighted={highlightedKey === zone.key}
-                          onMouseEnter={() => setHighlightedKey(zone.key)}
+                          key={lz.key}
+                          zone={lz}
+                          highlighted={highlightedKey === lz.key}
+                          onMouseEnter={() => setHighlightedKey(lz.key)}
                           onMouseLeave={() => setHighlightedKey(null)}
-                          onChange={updated => handleZoneChange(globalIdx, updated)}
-                          onRemove={() => handleZoneRemove(globalIdx)}
+                          onChange={updated => handleZoneChange(lIdx, updated)}
+                          onRemove={() => handleZoneRemove(lIdx)}
                         />
                       )
                     })}

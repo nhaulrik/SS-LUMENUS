@@ -15,7 +15,7 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { EditorView, lineNumbers, keymap, highlightActiveLine, drawSelection, dropCursor } from '@codemirror/view'
-import { EditorState, Compartment } from '@codemirror/state'
+import { EditorState } from '@codemirror/state'
 import { html }           from '@codemirror/lang-html'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { searchKeymap }   from '@codemirror/search'
@@ -160,6 +160,40 @@ function validateHtml(html) {
   return warnings
 }
 
+// ── Source injection ─────────────────────────────────────────────────────────
+// Finds an element in the HTML source by (tag + class + textContent) fingerprint
+// and injects a data attribute into its opening tag.
+// Returns { newHtml, from, to } on success, { ambiguous, count } if multiple
+// matches, or null if not found.
+function injectAttributeIntoSource(html, { tag, className, textContent, attribute, value }) {
+  const escapedClass = (className || '').trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const escapedText  = (textContent || '').trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&').slice(0, 40)
+
+  // Match the opening tag: <TAG ... class="...CLASS..."...>
+  // Allow any attributes before/after class, and class to be anywhere in the tag.
+  const tagPattern = new RegExp(
+    `(<${tag}(?=[^>]*\\bclass="[^"]*${escapedClass}[^"]*")[^>]*?)(\\/?>)`,
+    'gi'
+  )
+
+  const matches = []
+  let m
+  while ((m = tagPattern.exec(html)) !== null) {
+    // Verify the text content follows immediately after this opening tag
+    const afterTag = html.slice(m.index + m[0].length, m.index + m[0].length + 200)
+    if (escapedText && !afterTag.includes(textContent.trim().slice(0, 20))) continue
+    matches.push({ index: m.index, len: m[0].length, prefix: m[1], close: m[2] })
+  }
+
+  if (matches.length === 0) return null
+  if (matches.length > 1)   return { ambiguous: true, count: matches.length }
+
+  const { index, prefix, close } = matches[0]
+  const newTag  = `${prefix} ${attribute}="${value}"${close}`
+  const newHtml = html.slice(0, index) + newTag + html.slice(index + prefix.length + close.length)
+  return { newHtml, from: index, to: index + prefix.length + close.length }
+}
+
 // ── Smart zone merge ──────────────────────────────────────────────────────────
 // Merges user edits (key renames, hint changes, type overrides, autoGenerate)
 // from the old zone list into the freshly parsed new zone list.
@@ -212,6 +246,13 @@ export default function HtmlEditorPanel({
   const [applying,     setApplying]     = useState(false)
   const [highlightedKey, setHighlightedKey] = useState(null)
 
+  // ── Click-to-zone modal state ─────────────────────────────────────────────────
+  const [clickedEl,     setClickedEl]     = useState(null)   // { tag, className, textContent, existingZone }
+  const [modalMode,     setModalMode]     = useState('zone') // 'zone' | 'label'
+  const [modalKey,      setModalKey]      = useState('')
+  const [modalLabelFor, setModalLabelFor] = useState('')
+  const [ambiguous,     setAmbiguous]     = useState(false)
+
   // ── Resizable divider ────────────────────────────────────────────────────────
   const [splitPct,   setSplitPct]   = useState(50)
   const dragging     = useRef(false)
@@ -246,27 +287,61 @@ export default function HtmlEditorPanel({
   }, [])
 
   // ── postMessage listener (preview → editor cursor sync) ──────────────────────
+  // Keep a ref to the latest zones so the stable handler can read current state
   const iframeRef = useRef(null)
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.data?.type === 'zone-hover') {
-        const key = e.data.key || null
-        setHighlightedKey(key)
-        // Phase B: scroll editor to the data-zone line for this key
-        if (key && editorViewRef.current) {
-          const idx = buildZoneLineIndex(editorViewRef.current.state.doc)
-          const entry = idx[key]
-          if (entry) {
-            editorViewRef.current.dispatch({
-              selection: { anchor: entry.from },
-              effects:   EditorView.scrollIntoView(entry.from, { y: 'center' }),
-            })
-          }
+  const zonesRef  = useRef(zones)
+  useEffect(() => { zonesRef.current = zones }, [zones])
+
+  // Register a stable window message handler using the ref-forwarding pattern.
+  // dispatchRef.current always points to the latest handler function, so
+  // StrictMode double-invocation only registers/removes the outer stable wrapper
+  // once — the inner logic always reads current state via refs and setters.
+  const dispatchRef = useRef(null)
+  dispatchRef.current = (e) => {
+    if (e.data?.type === 'zone-hover') {
+      const key = e.data.key || null
+      setHighlightedKey(key)
+      if (key && editorViewRef.current) {
+        const idx   = buildZoneLineIndex(editorViewRef.current.state.doc)
+        const entry = idx[key]
+        if (entry) {
+          editorViewRef.current.dispatch({
+            selection: { anchor: entry.from },
+            effects:   EditorView.scrollIntoView(entry.from, { y: 'center' }),
+          })
         }
       }
     }
-    window.addEventListener('message', handler)
-    return () => window.removeEventListener('message', handler)
+    if (e.data?.type === 'element-click') {
+      const el = e.data
+      if (el.existingZone && editorViewRef.current) {
+        const idx   = buildZoneLineIndex(editorViewRef.current.state.doc)
+        const entry = idx[el.existingZone]
+        if (entry) {
+          editorViewRef.current.dispatch({
+            selection: { anchor: entry.from },
+            effects:   EditorView.scrollIntoView(entry.from, { y: 'center' }),
+          })
+        }
+        return
+      }
+      if (!el.textContent?.trim() || el.textContent.trim().length < 2) return
+      const suggested = el.textContent.trim()
+        .toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 40)
+      setClickedEl(el)
+      setModalMode('zone')
+      setModalKey(suggested)
+      setModalLabelFor(zonesRef.current.length > 0 ? zonesRef.current[0].key : '')
+      setAmbiguous(false)
+    }
+  }
+
+  useEffect(() => {
+    // Stable wrapper — always delegates to dispatchRef.current.
+    // Registering this once means StrictMode cleanup/remount is harmless.
+    const stableHandler = (e) => dispatchRef.current?.(e)
+    window.addEventListener('message', stableHandler)
+    return () => window.removeEventListener('message', stableHandler)
   }, [])
 
   // ── Build preview srcDoc (inject hover script + highlight CSS) ───────────────
@@ -282,18 +357,41 @@ export default function HtmlEditorPanel({
   z-index: 9999 !important;
 }` : ''
     const injection = `<style>
-[data-zone] { cursor: pointer; }
+[data-zone], [data-label-for] { cursor: pointer; }
+* { cursor: default; }
+[data-zone]:hover, [data-label-for]:hover { outline: 1px dashed rgba(76,175,128,0.5); }
 ${highlightCss}
 </style>
 <script>
 (function() {
-  function notify(key) { window.parent.postMessage({ type: 'zone-hover', key: key }, '*'); }
+  function notifyHover(key) { window.parent.postMessage({ type: 'zone-hover', key: key }, '*'); }
   document.addEventListener('mouseover', function(e) {
     var el = e.target.closest('[data-zone]');
-    notify(el ? el.getAttribute('data-zone') : null);
+    notifyHover(el ? el.getAttribute('data-zone') : null);
   });
   document.addEventListener('mouseout', function(e) {
-    if (!e.relatedTarget || !e.relatedTarget.closest('[data-zone]')) notify(null);
+    if (!e.relatedTarget || !e.relatedTarget.closest('[data-zone]')) notifyHover(null);
+  });
+  // Click any element to open zone assignment modal
+  document.addEventListener('click', function(e) {
+    var el = e.target;
+    // Walk up to find a meaningful element (stop at section/body)
+    while (el && el !== document.body && !['SECTION','BODY','HTML'].includes(el.tagName)) {
+      var text = (el.innerText || el.textContent || '').trim();
+      if (text.length >= 2) break;
+      el = el.parentElement;
+    }
+    if (!el || !el.innerText) return;
+    var text = (el.innerText || el.textContent || '').trim();
+    if (!text || text.length < 2) return;
+    window.parent.postMessage({
+      type:             'element-click',
+      tag:              el.tagName.toLowerCase(),
+      className:        el.className || '',
+      textContent:      text.slice(0, 100),
+      existingZone:     el.getAttribute('data-zone') || null,
+      existingLabelFor: el.getAttribute('data-label-for') || null,
+    }, '*');
   });
 })();
 </script>`
@@ -398,6 +496,41 @@ ${highlightCss}
     }
   }, [draftHtml, zones, hasBlockingError, applying, onApply])
 
+  // ── Zone assignment modal handlers ───────────────────────────────────────────
+  const handleModalClose = useCallback(() => {
+    setClickedEl(null)
+    setAmbiguous(false)
+  }, [])
+
+  const handleModalConfirm = useCallback(() => {
+    if (!clickedEl || !editorViewRef.current) return
+    const attribute = modalMode === 'zone' ? 'data-zone' : 'data-label-for'
+    const value     = modalMode === 'zone' ? modalKey.trim() : modalLabelFor.trim()
+    if (!value) return
+
+    const currentHtml = editorViewRef.current.state.doc.toString()
+    const result = injectAttributeIntoSource(currentHtml, {
+      tag:         clickedEl.tag,
+      className:   clickedEl.className,
+      textContent: clickedEl.textContent,
+      attribute,
+      value,
+    })
+
+    if (!result) { setClickedEl(null); return }
+    if (result.ambiguous) { setAmbiguous(true); return }
+
+    // Replace the full document so CodeMirror undo captures the change
+    editorViewRef.current.dispatch({
+      changes: { from: 0, to: editorViewRef.current.state.doc.length, insert: result.newHtml }
+    })
+    setDraftHtml(result.newHtml)
+    schedulePreview(result.newHtml)
+    scheduleValidation(result.newHtml)
+    setClickedEl(null)
+    setAmbiguous(false)
+  }, [clickedEl, modalMode, modalKey, modalLabelFor, schedulePreview, scheduleValidation])
+
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="html-editor-overlay">
@@ -486,10 +619,90 @@ ${highlightCss}
             />
           </div>
           <p className="html-preview-note">
-            Updates 200ms after last edit. Hover elements to highlight in editor.
+            Click any element to make it a zone. Hover to highlight.
           </p>
         </div>
       </div>
+
+      {/* ?? Zone Assignment Modal ??????????????????????????????????????????? */}
+      {clickedEl && (
+        <div className="zone-assign-backdrop" onClick={handleModalClose}>
+          <div className="zone-assign-modal" onClick={e => e.stopPropagation()}>
+            <div className="zone-assign-header">
+              <span className="zone-assign-title">Make element dynamic</span>
+              <button className="zone-assign-close" onClick={handleModalClose}>?</button>
+            </div>
+
+            <div className="zone-assign-element">
+              <code className="zone-assign-tag">&lt;{clickedEl.tag}&gt;</code>
+              <span className="zone-assign-text">{clickedEl.textContent.slice(0, 60)}{clickedEl.textContent.length > 60 ? '?' : ''}</span>
+            </div>
+
+            <div className="zone-assign-options">
+              <label className={`zone-assign-option${modalMode === 'zone' ? ' zone-assign-option--active' : ''}`}>
+                <input type="radio" name="mode" value="zone" checked={modalMode === 'zone'} onChange={() => setModalMode('zone')} />
+                <div>
+                  <strong>Content zone</strong>
+                  <span>AI fills this element directly</span>
+                </div>
+              </label>
+              <label className={`zone-assign-option${modalMode === 'label' ? ' zone-assign-option--active' : ''}`}>
+                <input type="radio" name="mode" value="label" checked={modalMode === 'label'} onChange={() => setModalMode('label')} />
+                <div>
+                  <strong>Label for a zone</strong>
+                  <span>AI names this label alongside its zone</span>
+                </div>
+              </label>
+            </div>
+
+            {modalMode === 'zone' && (
+              <div className="zone-assign-field">
+                <label>Zone key</label>
+                <input
+                  className="zone-assign-input"
+                  value={modalKey}
+                  onChange={e => setModalKey(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_'))}
+                  placeholder="snake_case_key"
+                  autoFocus
+                  onKeyDown={e => e.key === 'Enter' && handleModalConfirm()}
+                />
+              </div>
+            )}
+
+            {modalMode === 'label' && (
+              <div className="zone-assign-field">
+                <label>Label for zone</label>
+                <select
+                  className="zone-assign-input"
+                  value={modalLabelFor}
+                  onChange={e => setModalLabelFor(e.target.value)}
+                >
+                  {zones.filter(z => !z.isLabel).map(z => (
+                    <option key={z.key} value={z.key}>{z.key}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {ambiguous && (
+              <p className="zone-assign-ambiguous">
+                Multiple matching elements found. Edit the HTML directly to add the attribute.
+              </p>
+            )}
+
+            <div className="zone-assign-actions">
+              <button className="btn btn-secondary" onClick={handleModalClose}>Cancel</button>
+              <button
+                className="btn btn-primary"
+                onClick={handleModalConfirm}
+                disabled={modalMode === 'zone' ? !modalKey.trim() : !modalLabelFor.trim()}
+              >
+                Add zone
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

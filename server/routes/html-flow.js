@@ -35,11 +35,18 @@ function inferZoneType(node) {
   return 'text';
 }
 
-/** Extract the plain text hint from a node (trimmed, max 120 chars). */
+/** Extract the plain text hint from a node (trimmed, max 120 chars).
+ *  Replaces non-printable / replacement characters with a plain hyphen so
+ *  hints survive JSON serialisation without corruption (e.g. en-dash in
+ *  data-hint attributes written by PowerShell). */
 function extractHint(node) {
-  const explicit = node.getAttribute('data-hint');
-  if (explicit) return explicit.trim().slice(0, 120);
-  return (node.text?.trim() ?? '').slice(0, 120);
+  const raw = node.getAttribute('data-hint') ?? node.text ?? '';
+  return raw.trim()
+    .replace(/\u2013|\u2014/g, '-')   // en-dash / em-dash -> hyphen
+    .replace(/\uFFFD/g, '-')           // replacement character -> hyphen
+    .replace(/[^\x20-\x7E\u00A0-\u024F]/g, '')  // strip other non-printable
+    .trim()
+    .slice(0, 120);
 }
 
 /**
@@ -114,6 +121,37 @@ function parseTemplate(html) {
         originalText,
         // elementOrder within slide for stable display ordering
         elementOrder: nodeIdx,
+      });
+    });
+    // ?? data-label-for: label zones ?????????????????????????????????????????
+    // Elements marked data-label-for="zone_key" are paired label zones.
+    // They appear as sub-zones under their parent in the UI and generate
+    // a sibling field (zone_key + '__label') in the AI JSON output.
+    const labelNodes = section.querySelectorAll('[data-label-for]');
+    labelNodes.forEach((node, nodeIdx) => {
+      const labelFor = node.getAttribute('data-label-for')?.trim();
+      if (!labelFor) return;
+
+      const labelKey     = labelFor + '__label';
+      const originalText = (node.text?.trim() ?? '').slice(0, 200);
+      const hint         = `Label for the ${labelFor} zone`;
+      const autoStr      = node.getAttribute('data-auto');
+      const autoGenerate = autoStr === 'false' ? false : true;
+
+      hasAnyZone = true;
+
+      zones.push({
+        key:          labelKey,
+        slideIndex,
+        type:         'text',
+        hint,
+        autoGenerate,
+        isRepeatable: false,
+        repeatableKey: null,
+        originalText,
+        isLabel:      true,       // marks this as a label sub-zone
+        labelFor,                 // the zone key this labels
+        elementOrder: 1000 + nodeIdx,
       });
     });
   });

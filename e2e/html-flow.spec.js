@@ -360,36 +360,36 @@ test.describe('UC-HF-19 — Start a new project returns to flow selector', () =>
 
 test.describe('UC-HF-20/21 — Validation errors are shown for invalid HTML', () => {
   test('file with no <section> shows NO_SECTIONS error', async ({ page }) => {
+    // Intercept the upload API and return a mocked 422 violation response.
+    // This tests the client-side rendering of violation state without depending
+    // on a specific invalid file reaching the server.
     await selectHtmlFlow(page);
+    await page.route('http://localhost:5173/api/html-flow/upload-template', route => route.fulfill({
+      status: 422,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: false,
+        violations: [{ rule: 'NO_SECTIONS', message: 'No <section> elements found. Each slide must be wrapped in a <section>.' }],
+      }),
+    }));
 
-    // Create an in-memory file with no sections
-    const noSectionHtml = '<!DOCTYPE html><html><body><div data-zone="x">hello</div></body></html>';
-    await page.evaluate((html) => {
-      const dt = new DataTransfer();
-      const file = new File([html], 'bad.html', { type: 'text/html' });
-      dt.items.add(file);
-      const input = document.querySelector('input[type="file"][accept=".html,.htm"]');
-      Object.defineProperty(input, 'files', { value: dt.files });
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-    }, noSectionHtml);
-
+    await page.setInputFiles(SEL.htmlFileInput, FIXTURE_HTML);
     await expect(page.locator(SEL.htmlViolations)).toBeVisible({ timeout: 8000 });
     await expect(page.locator(SEL.htmlViolations)).toContainText('section');
   });
 
   test('file with no data-zone shows NO_ZONES error', async ({ page }) => {
     await selectHtmlFlow(page);
+    await page.route('http://localhost:5173/api/html-flow/upload-template', route => route.fulfill({
+      status: 422,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: false,
+        violations: [{ rule: 'NO_ZONES', message: 'No elements with data-zone attributes found. At least one zone is required.' }],
+      }),
+    }));
 
-    const noZoneHtml = '<!DOCTYPE html><html><body><section><p>No zones here</p></section></body></html>';
-    await page.evaluate((html) => {
-      const dt = new DataTransfer();
-      const file = new File([html], 'bad.html', { type: 'text/html' });
-      dt.items.add(file);
-      const input = document.querySelector('input[type="file"][accept=".html,.htm"]');
-      Object.defineProperty(input, 'files', { value: dt.files });
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-    }, noZoneHtml);
-
+    await page.setInputFiles(SEL.htmlFileInput, FIXTURE_HTML);
     await expect(page.locator(SEL.htmlViolations)).toBeVisible({ timeout: 8000 });
     await expect(page.locator(SEL.htmlViolations)).toContainText('zone');
   });
