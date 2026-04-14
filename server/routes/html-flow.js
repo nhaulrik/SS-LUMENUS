@@ -2,7 +2,14 @@
  * server/routes/html-flow.js
  *
  * Visual Flow (HTML-based) API endpoints.
- * Stage 1: template upload, zone parsing, zone editing, project creation.
+ *
+ * Architecture change: zones are now derived from user *selections* on the
+ * structural tree rather than from data-zone / data-block attributes in the
+ * HTML. The upload endpoint returns a tree + pre-populated selections
+ * (backward-compat: existing data-zone/data-block attrs seed the selections).
+ * The create-project endpoint accepts selections, derives zones via
+ * selectionsToZones(), and writes zones to chain.json — all downstream
+ * consumers (recipe builder, patcher) are unchanged.
  */
 
 import express        from 'express';
@@ -11,175 +18,26 @@ import path           from 'path';
 import { randomUUID } from 'crypto';
 import { parse }      from 'node-html-parser';
 import { CHAINS_DIR } from '../config.js';
+import { buildHtmlRecipe, validateHtmlJson } from '../lib/html-recipe-builder.js';
+import { applyHtmlContent }                  from '../lib/html-patcher.js';
+import { buildSectionTree, flattenTree }      from '../lib/build-tree.js';
+import { selectionsToZones, resolveConflicts } from '../lib/selections-to-zones.js';
 
 const router = express.Router();
 
 // In-memory store for pending template sessions (pre-project-creation).
-// Keyed by templateId (uuid). Entries are small — just HTML string + derived data.
-// They are not persisted; a server restart clears them (acceptable for Stage 1).
+// Keyed by templateId (uuid). Entries expire after 2 hours.
 const pendingTemplates = new Map();
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Infer zone type from a parsed HTML element node. */
-function inferZoneType(node) {
-  const explicit = node.getAttribute('data-type');
-  if (explicit) return explicit;
-  if (node.getAttribute('data-repeatable') === 'true') return 'repeatable';
-  const tag = node.tagName?.toLowerCase();
-  if (tag === 'canvas') return 'chart';
-  if (tag === 'img')    return 'image';
-  if (tag === 'svg' || node.querySelector('svg')) return 'chart';
-  const text = node.text?.trim() ?? '';
-  if (/^\d[\d,.\s%$€£]*$/.test(text)) return 'number';
-  return 'text';
-}
-
-/** Extract the plain text hint from a node (trimmed, max 120 chars).
- *  Replaces non-printable / replacement characters with a plain hyphen so
- *  hints survive JSON serialisation without corruption (e.g. en-dash in
- *  data-hint attributes written by PowerShell). */
-function extractHint(node) {
-  const raw = node.getAttribute('data-hint') ?? node.text ?? '';
-  return raw.trim()
-    .replace(/\u2013|\u2014/g, '-')   // en-dash / em-dash -> hyphen
-    .replace(/\uFFFD/g, '-')           // replacement character -> hyphen
-    .replace(/[^\x20-\x7E\u00A0-\u024F]/g, '')  // strip other non-printable
-    .trim()
-    .slice(0, 120);
-}
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 /**
- * Parse an HTML string and return structured zone data.
- * Returns { slideCount, zones, violations }
+ * Build a preview HTML document for a single slide (first section).
+ *
+ * Injects data-solon-id attributes onto every element matching a tree node
+ * fingerprint so the client can highlight nodes by id via CSS.
  */
-function parseTemplate(html) {
-  const root       = parse(html, { comment: false });
-  const sections   = root.querySelectorAll('section');
-  const violations = [];
-  const zones      = [];
-
-  if (sections.length === 0) {
-    violations.push({
-      rule:    'NO_SECTIONS',
-      message: 'No slides found. Wrap each slide in a <section> element.',
-    });
-    return { slideCount: 0, zones, violations };
-  }
-
-  let hasAnyZone = false;
-
-  sections.forEach((section, sectionIdx) => {
-    const slideIndex    = sectionIdx + 1;
-    const zoneNodes     = section.querySelectorAll('[data-zone]');
-    const keysThisSlide = new Set();
-
-    zoneNodes.forEach((node, nodeIdx) => {
-      const key = node.getAttribute('data-zone')?.trim();
-      if (!key) return;
-
-      hasAnyZone = true;
-
-      // Duplicate key within a slide
-      if (keysThisSlide.has(key)) {
-        violations.push({
-          rule:    'DUPLICATE_ZONE_KEY',
-          message: `Duplicate zone key "${key}" found in slide ${slideIndex}. Zone keys must be unique within a slide.`,
-        });
-        return;
-      }
-      keysThisSlide.add(key);
-
-      const type         = inferZoneType(node);
-      const isRepeatable = node.getAttribute('data-repeatable') === 'true';
-      const autoStr      = node.getAttribute('data-auto');
-      const autoGenerate = autoStr === 'false' ? false : true;
-      const hint         = extractHint(node);
-      const originalText = (node.text?.trim() ?? '').slice(0, 500);
-
-      // Find parent repeatable block key (if this node is inside one)
-      let repeatableKey = null;
-      let ancestor = node.parentNode;
-      while (ancestor && ancestor !== section) {
-        const ancestorZone = ancestor.getAttribute?.('data-zone');
-        const ancestorRep  = ancestor.getAttribute?.('data-repeatable');
-        if (ancestorZone && ancestorRep === 'true') {
-          repeatableKey = ancestorZone;
-          break;
-        }
-        ancestor = ancestor.parentNode;
-      }
-
-      zones.push({
-        key,
-        slideIndex,
-        type,
-        hint,
-        autoGenerate,
-        isRepeatable,
-        repeatableKey,
-        originalText,
-        // elementOrder within slide for stable display ordering
-        elementOrder: nodeIdx,
-      });
-    });
-    // ?? data-label-for: label zones ?????????????????????????????????????????
-    // Elements marked data-label-for="zone_key" are paired label zones.
-    // They appear as sub-zones under their parent in the UI and generate
-    // a sibling field (zone_key + '__label') in the AI JSON output.
-    const labelNodes = section.querySelectorAll('[data-label-for]');
-    labelNodes.forEach((node, nodeIdx) => {
-      const labelFor = node.getAttribute('data-label-for')?.trim();
-      if (!labelFor) return;
-
-      const labelKey     = labelFor + '__label';
-      const originalText = (node.text?.trim() ?? '').slice(0, 200);
-      const hint         = `Label for the ${labelFor} zone`;
-      const autoStr      = node.getAttribute('data-auto');
-      const autoGenerate = autoStr === 'false' ? false : true;
-
-      hasAnyZone = true;
-
-      zones.push({
-        key:          labelKey,
-        slideIndex,
-        type:         'text',
-        hint,
-        autoGenerate,
-        isRepeatable: false,
-        repeatableKey: null,
-        originalText,
-        isLabel:      true,       // marks this as a label sub-zone
-        labelFor,                 // the zone key this labels
-        elementOrder: 1000 + nodeIdx,
-      });
-    });
-  });
-
-  if (!hasAnyZone) {
-    violations.push({
-      rule:    'NO_ZONES',
-      message: 'No content zones found. Add data-zone="your-key" to elements that should receive content.',
-    });
-  }
-
-  // Validate repeatable blocks contain at least one non-repeatable child zone
-  const repeatableParents = zones.filter(z => z.isRepeatable && z.type === 'repeatable');
-  repeatableParents.forEach(parent => {
-    const children = zones.filter(z => z.repeatableKey === parent.key);
-    if (children.length === 0) {
-      violations.push({
-        rule:    'EMPTY_REPEATABLE',
-        message: `Repeatable block "${parent.key}" contains no content zones. Add data-zone attributes inside it.`,
-      });
-    }
-  });
-
-  return { slideCount: sections.length, zones, violations };
-}
-
-/** Build a preview HTML document for a single slide (first section). */
-function buildPreviewHtml(html) {
+function buildPreviewHtml(html, tree) {
   try {
     const root     = parse(html);
     const head     = root.querySelector('head');
@@ -187,7 +45,20 @@ function buildPreviewHtml(html) {
     if (sections.length === 0) return '';
 
     const headContent = head ? head.innerHTML : '';
-    const slideHtml   = sections[0].outerHTML;
+
+    // Inject data-solon-id onto each element in the first section
+    if (tree?.length) {
+      const flatNodes = flattenTree(tree);
+      for (const node of flatNodes) {
+        // Re-query by the node's CSS path — walk by tag+class+position
+        // The simplest reliable approach: annotate by matching the node's id
+        // segments against the live DOM. We use a positional walk that mirrors
+        // the buildTree walk so indices stay in sync.
+        injectSolonId(sections[0], node.id);
+      }
+    }
+
+    const slideHtml = sections[0].outerHTML;
 
     return `<!DOCTYPE html>
 <html>
@@ -207,6 +78,114 @@ ${headContent}
   }
 }
 
+/**
+ * Walk a node-html-parser DOM subtree and inject data-solon-id="<nodeId>"
+ * onto the element that matches the given CSS-path id.
+ *
+ * The id format is "tag.class1.class2[N]>tag.class1[M]>..." where each
+ * segment identifies a child by its tag+sorted-classes+sibling-index.
+ */
+const SKIP_TAGS_SET = new Set(['script','style','svg','defs','symbol','clippath',
+                                'lineargradient','radialgradient','filter','mask'])
+
+function injectSolonId(sectionNode, nodeId) {
+  const segments = nodeId.split('>')
+  let current    = sectionNode
+  const siblingCounters = {}
+
+  for (const segment of segments) {
+    // Parse segment: "tag.class1.class2[N]"
+    const idxMatch = segment.match(/\[(\d+)\]$/)
+    const base     = idxMatch ? segment.slice(0, -idxMatch[0].length) : segment
+    const parts    = base.split('.')
+    const tag      = parts[0]
+    const classes  = parts.slice(1).sort()
+    const wantedIdx = idxMatch ? parseInt(idxMatch[1]) : 0
+
+    const sigKey = `${tag}.${classes.join('.')}`
+    if (!siblingCounters[sigKey]) siblingCounters[sigKey] = {}
+
+    // Find the Nth child matching tag+classes
+    let found    = null
+    let matchIdx = 0
+    for (const child of (current.childNodes ?? [])) {
+      if (child.nodeType !== 1) continue
+      const childTag = child.tagName?.toLowerCase() ?? ''
+      if (SKIP_TAGS_SET.has(childTag)) continue
+      const childClasses = (child.getAttribute?.('class') ?? '').split(/\s+/).filter(Boolean).sort()
+      if (childTag === tag && JSON.stringify(childClasses) === JSON.stringify(classes)) {
+        if (matchIdx === wantedIdx) { found = child; break }
+        matchIdx++
+      }
+    }
+
+    if (!found) return // path not found in live DOM — skip
+    current = found
+  }
+
+  // Inject the attribute onto the matched element
+  if (current && current !== sectionNode) {
+    current.setAttribute('data-solon-id', nodeId)
+  }
+}
+
+/**
+ * Parse the HTML template and return the structural tree + pre-existing
+ * selections (from data-zone / data-block attrs) for each slide.
+ *
+ * Returns:
+ *   { slideCount, trees, selections, violations }
+ *
+ *   trees      — array of per-slide tree node arrays (index = slideIndex - 1)
+ *   selections — flat array of pre-existing selection objects across all slides
+ *   violations — structural problems (no sections, duplicate keys, etc.)
+ */
+function parseTemplate(html) {
+  const root       = parse(html, { comment: false });
+  const sections   = root.querySelectorAll('section');
+  const violations = [];
+
+  if (sections.length === 0) {
+    violations.push({
+      rule:    'NO_SECTIONS',
+      message: 'No slides found. Wrap each slide in a <section> element.',
+    });
+    return { slideCount: 0, trees: [], selections: [], violations };
+  }
+
+  const trees      = [];
+  const selections = [];
+
+  sections.forEach((section, sectionIdx) => {
+    const slideIndex = sectionIdx + 1;
+    const { tree, selections: slideSelections } = buildSectionTree(section, slideIndex);
+    trees.push(tree);
+
+    // Check for duplicate keys within this slide
+    const keysThisSlide = new Set();
+    for (const sel of slideSelections) {
+      if (keysThisSlide.has(sel.key)) {
+        violations.push({
+          rule:    'DUPLICATE_ZONE_KEY',
+          message: `Duplicate zone key "${sel.key}" found in slide ${slideIndex}. Zone keys must be unique within a slide.`,
+        });
+      } else {
+        keysThisSlide.add(sel.key);
+        selections.push(sel);
+      }
+    }
+  });
+
+  if (selections.length === 0) {
+    violations.push({
+      rule:    'NO_ZONES',
+      message: 'No content zones found. Use the tree to assign zones, or add data-zone / data-block attributes to your HTML.',
+    });
+  }
+
+  return { slideCount: sections.length, trees, selections, violations };
+}
+
 // ── POST /api/html-flow/upload-template ──────────────────────────────────────
 
 router.post('/html-flow/upload-template', (req, res) => {
@@ -217,7 +196,6 @@ router.post('/html-flow/upload-template', (req, res) => {
       return res.status(400).json({ ok: false, error: 'Missing html field in request body.' });
     }
 
-    // Size check (~5MB in chars is a reasonable proxy for bytes in UTF-8)
     if (html.length > 5 * 1024 * 1024) {
       return res.status(400).json({
         ok: false,
@@ -226,48 +204,65 @@ router.post('/html-flow/upload-template', (req, res) => {
       });
     }
 
-    const { slideCount, zones, violations } = parseTemplate(html);
+    const { slideCount, trees, selections, violations } = parseTemplate(html);
 
-    if (violations.length > 0) {
+    if (violations.some(v => v.rule === 'NO_SECTIONS')) {
       return res.status(422).json({ ok: false, error: 'VALIDATION_FAILED', violations });
     }
 
-    const templateId = randomUUID();
-    pendingTemplates.set(templateId, { html, fileName: fileName || 'template.html', slideCount, zones });
+    // Non-fatal violations (NO_ZONES, DUPLICATE_ZONE_KEY) are returned
+    // alongside the tree so the client can show warnings without blocking.
 
-    // Expire after 2 hours to avoid unbounded memory growth
+    const templateId = randomUUID();
+    pendingTemplates.set(templateId, {
+      html,
+      fileName:   fileName || 'template.html',
+      slideCount,
+      trees,
+      selections,
+    });
     setTimeout(() => pendingTemplates.delete(templateId), 2 * 60 * 60 * 1000);
 
-    const previewHtml = buildPreviewHtml(html);
+    const previewHtml = buildPreviewHtml(html, trees[0]);
 
-    return res.json({ ok: true, templateId, slideCount, zones, previewHtml });
+    return res.json({
+      ok: true,
+      templateId,
+      slideCount,
+      trees,
+      selections,
+      violations: violations.length ? violations : undefined,
+      previewHtml,
+    });
   } catch (err) {
     console.error('[html-flow] upload-template error:', err);
     return res.status(500).json({ ok: false, error: err.message });
   }
 });
 
-// ── PATCH /api/html-flow/update-zones ────────────────────────────────────────
+// ── PATCH /api/html-flow/update-selections ────────────────────────────────────
+// Replaces update-zones. Persists the user's current selections to the
+// in-memory session so they survive a page refresh before project creation.
 
-router.patch('/html-flow/update-zones', (req, res) => {
+router.patch('/html-flow/update-selections', (req, res) => {
   try {
-    const { templateId, zones } = req.body;
+    const { templateId, selections } = req.body;
 
     if (!templateId || !pendingTemplates.has(templateId)) {
       return res.status(404).json({ ok: false, error: 'Template session not found. Please re-upload.' });
     }
 
-    if (!Array.isArray(zones)) {
-      return res.status(400).json({ ok: false, error: 'zones must be an array.' });
+    if (!Array.isArray(selections)) {
+      return res.status(400).json({ ok: false, error: 'selections must be an array.' });
     }
 
-    const session = pendingTemplates.get(templateId);
-    session.zones = zones;
+    const session      = pendingTemplates.get(templateId);
+    session.selections = selections;
     pendingTemplates.set(templateId, session);
 
-    return res.json({ ok: true, zones });
+    return res.json({ ok: true, selections });
   } catch (err) {
-    console.error('[html-flow] update-zones error:', err);
+    console.error('[html-flow] update-selections error:', err);
     return res.status(500).json({ ok: false, error: err.message });
   }
 });
@@ -276,23 +271,29 @@ router.patch('/html-flow/update-zones', (req, res) => {
 
 router.post('/html-flow/create-project', (req, res) => {
   try {
-    const { templateId, zones, projectName } = req.body;
+    const { templateId, selections, projectName } = req.body;
 
     if (!templateId || !pendingTemplates.has(templateId)) {
       return res.status(404).json({ ok: false, error: 'Template session not found. Please re-upload.' });
     }
 
-    const session    = pendingTemplates.get(templateId);
+    const session = pendingTemplates.get(templateId);
+
+    // Resolve conflicts: block zones supersede descendant leaf zones
+    const rawSelections      = Array.isArray(selections) ? selections : (session.selections ?? []);
+    const { resolved, removed } = resolveConflicts(rawSelections);
+
+    // Derive the zones array that all downstream consumers expect
+    const zones = selectionsToZones(resolved);
+
     const chainId    = 'chain-' + randomUUID();
     const chainDir   = path.join(CHAINS_DIR, chainId);
     fs.mkdirSync(chainDir, { recursive: true });
 
-    // Write the HTML template to disk inside the chain dir
     const templatePath = path.join(chainDir, 'template.html');
     fs.writeFileSync(templatePath, session.html, 'utf8');
 
-    const confirmedZones = Array.isArray(zones) ? zones : session.zones;
-    const name           = projectName?.trim() || session.fileName?.replace('.html', '') || 'html-project';
+    const name = projectName?.trim() || session.fileName?.replace(/\.html?$/, '') || 'html-project';
 
     const chain = {
       id:           chainId,
@@ -303,18 +304,162 @@ router.post('/html-flow/create-project', (req, res) => {
       slideCount:   session.slideCount,
       createdAt:    new Date().toISOString(),
       updatedAt:    new Date().toISOString(),
-      zones:        confirmedZones,
+      selections:   resolved,   // persist selections for future round-trip editing
+      zones,                    // derived; consumed by recipe/validate/apply
       rounds:       [],
     };
 
     fs.writeFileSync(path.join(chainDir, 'chain.json'), JSON.stringify(chain, null, 2), 'utf8');
-
-    // Session is no longer needed
     pendingTemplates.delete(templateId);
 
-    return res.json({ ok: true, chainId, projectName: name, zones: confirmedZones, templatePath });
+    return res.json({
+      ok: true,
+      chainId,
+      projectName: name,
+      selections:  resolved,
+      removedSelections: removed,
+      zones,
+      templatePath,
+    });
   } catch (err) {
     console.error('[html-flow] create-project error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ── POST /api/html-flow/generate-recipe ──────────────────────────────────────
+
+router.post('/html-flow/generate-recipe', (req, res) => {
+  try {
+    const { chainId, globalPrompt } = req.body;
+
+    if (!chainId) {
+      return res.status(400).json({ ok: false, error: 'chainId is required.' });
+    }
+
+    const chainPath = path.join(CHAINS_DIR, chainId, 'chain.json');
+    if (!fs.existsSync(chainPath)) {
+      return res.status(404).json({ ok: false, error: 'Project not found.' });
+    }
+
+    const chain  = JSON.parse(fs.readFileSync(chainPath, 'utf8'));
+    const zones  = chain.zones || [];
+    const prompt = globalPrompt ?? chain.globalPrompt ?? '';
+
+    const recipe = buildHtmlRecipe(zones, prompt);
+
+    if (globalPrompt !== undefined) {
+      chain.globalPrompt = globalPrompt;
+      chain.updatedAt    = new Date().toISOString();
+      fs.writeFileSync(chainPath, JSON.stringify(chain, null, 2), 'utf8');
+    }
+
+    return res.json({ ok: true, recipe });
+  } catch (err) {
+    console.error('[html-flow] generate-recipe error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ── POST /api/html-flow/validate-json ────────────────────────────────────────
+
+router.post('/html-flow/validate-json', (req, res) => {
+  try {
+    const { chainId, jsonString } = req.body;
+
+    if (!chainId || !jsonString) {
+      return res.status(400).json({ ok: false, error: 'chainId and jsonString are required.' });
+    }
+
+    const chainPath = path.join(CHAINS_DIR, chainId, 'chain.json');
+    if (!fs.existsSync(chainPath)) {
+      return res.status(404).json({ ok: false, error: 'Project not found.' });
+    }
+
+    const chain  = JSON.parse(fs.readFileSync(chainPath, 'utf8'));
+    const zones  = chain.zones || [];
+    const result = validateHtmlJson(jsonString, zones);
+
+    return res.json({ ok: true, ...result });
+  } catch (err) {
+    console.error('[html-flow] validate-json error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ── POST /api/html-flow/apply-content ────────────────────────────────────────
+
+router.post('/html-flow/apply-content', (req, res) => {
+  try {
+    const { chainId, jsonString } = req.body;
+
+    if (!chainId || !jsonString) {
+      return res.status(400).json({ ok: false, error: 'chainId and jsonString are required.' });
+    }
+
+    const chainDir  = path.join(CHAINS_DIR, chainId);
+    const chainPath = path.join(chainDir, 'chain.json');
+    if (!fs.existsSync(chainPath)) {
+      return res.status(404).json({ ok: false, error: 'Project not found.' });
+    }
+
+    const chain = JSON.parse(fs.readFileSync(chainPath, 'utf8'));
+    const zones = chain.zones || [];
+
+    const validation = validateHtmlJson(jsonString, zones);
+    if (!validation.valid) {
+      return res.status(422).json({ ok: false, error: 'JSON validation failed', missingFields: validation.missingFields });
+    }
+
+    const data         = JSON.parse(jsonString);
+    const templateHtml = fs.readFileSync(chain.templatePath, 'utf8');
+    const patchedHtml  = applyHtmlContent(templateHtml, data, zones);
+
+    const roundId    = randomUUID();
+    const outputFile = `output-${roundId}.html`;
+    const outputPath = path.join(chainDir, outputFile);
+    fs.writeFileSync(outputPath, patchedHtml, 'utf8');
+
+    const round = {
+      id:         roundId,
+      appliedAt:  new Date().toISOString(),
+      outputFile,
+      outputPath,
+      jsonInput:  jsonString.slice(0, 2000),
+    };
+    chain.rounds    = [...(chain.rounds || []), round];
+    chain.updatedAt = new Date().toISOString();
+    fs.writeFileSync(chainPath, JSON.stringify(chain, null, 2), 'utf8');
+
+    const previewHtml = buildPreviewHtml(patchedHtml);
+
+    return res.json({ ok: true, roundId, outputFile, outputPath, previewHtml });
+  } catch (err) {
+    console.error('[html-flow] apply-content error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ── GET /api/html-flow/download/:chainId/:file ────────────────────────────────
+
+router.get('/html-flow/download/:chainId/:file', (req, res) => {
+  try {
+    const { chainId, file } = req.params;
+
+    if (!/^[\w\-]+\.html$/.test(file)) {
+      return res.status(400).json({ ok: false, error: 'Invalid filename.' });
+    }
+
+    const filePath = path.join(CHAINS_DIR, chainId, file);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ ok: false, error: 'File not found.' });
+    }
+
+    res.setHeader('Content-Disposition', `attachment; filename="${file}"`);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    return res.send(fs.readFileSync(filePath));
+  } catch (err) {
+    console.error('[html-flow] download error:', err);
     return res.status(500).json({ ok: false, error: err.message });
   }
 });

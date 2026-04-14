@@ -246,13 +246,6 @@ export default function HtmlEditorPanel({
   const [applying,     setApplying]     = useState(false)
   const [highlightedKey, setHighlightedKey] = useState(null)
 
-  // ── Click-to-zone modal state ─────────────────────────────────────────────────
-  const [clickedEl,     setClickedEl]     = useState(null)   // { tag, className, textContent, existingZone }
-  const [modalMode,     setModalMode]     = useState('zone') // 'zone' | 'label'
-  const [modalKey,      setModalKey]      = useState('')
-  const [modalLabelFor, setModalLabelFor] = useState('')
-  const [ambiguous,     setAmbiguous]     = useState(false)
-
   // ── Resizable divider ────────────────────────────────────────────────────────
   const [splitPct,   setSplitPct]   = useState(50)
   const dragging     = useRef(false)
@@ -312,28 +305,6 @@ export default function HtmlEditorPanel({
         }
       }
     }
-    if (e.data?.type === 'element-click') {
-      const el = e.data
-      if (el.existingZone && editorViewRef.current) {
-        const idx   = buildZoneLineIndex(editorViewRef.current.state.doc)
-        const entry = idx[el.existingZone]
-        if (entry) {
-          editorViewRef.current.dispatch({
-            selection: { anchor: entry.from },
-            effects:   EditorView.scrollIntoView(entry.from, { y: 'center' }),
-          })
-        }
-        return
-      }
-      if (!el.textContent?.trim() || el.textContent.trim().length < 2) return
-      const suggested = el.textContent.trim()
-        .toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 40)
-      setClickedEl(el)
-      setModalMode('zone')
-      setModalKey(suggested)
-      setModalLabelFor(zonesRef.current.length > 0 ? zonesRef.current[0].key : '')
-      setAmbiguous(false)
-    }
   }
 
   useEffect(() => {
@@ -357,9 +328,7 @@ export default function HtmlEditorPanel({
   z-index: 9999 !important;
 }` : ''
     const injection = `<style>
-[data-zone], [data-label-for] { cursor: pointer; }
-* { cursor: default; }
-[data-zone]:hover, [data-label-for]:hover { outline: 1px dashed rgba(76,175,128,0.5); }
+[data-zone], [data-label-for], [data-block] { outline: 1px dashed rgba(76,175,128,0.3); }
 ${highlightCss}
 </style>
 <script>
@@ -371,27 +340,6 @@ ${highlightCss}
   });
   document.addEventListener('mouseout', function(e) {
     if (!e.relatedTarget || !e.relatedTarget.closest('[data-zone]')) notifyHover(null);
-  });
-  // Click any element to open zone assignment modal
-  document.addEventListener('click', function(e) {
-    var el = e.target;
-    // Walk up to find a meaningful element (stop at section/body)
-    while (el && el !== document.body && !['SECTION','BODY','HTML'].includes(el.tagName)) {
-      var text = (el.innerText || el.textContent || '').trim();
-      if (text.length >= 2) break;
-      el = el.parentElement;
-    }
-    if (!el || !el.innerText) return;
-    var text = (el.innerText || el.textContent || '').trim();
-    if (!text || text.length < 2) return;
-    window.parent.postMessage({
-      type:             'element-click',
-      tag:              el.tagName.toLowerCase(),
-      className:        el.className || '',
-      textContent:      text.slice(0, 100),
-      existingZone:     el.getAttribute('data-zone') || null,
-      existingLabelFor: el.getAttribute('data-label-for') || null,
-    }, '*');
   });
 })();
 </script>`
@@ -481,55 +429,22 @@ ${highlightCss}
         body:    JSON.stringify({ html: draftHtml, fileName: 'template.html' }),
       })
       const data = await res.json()
-      if (!res.ok || !data.ok) {
-        // Surface server-side violations as warnings
+      // Fatal violations (NO_SECTIONS) block apply
+      if (!res.ok || data.violations?.some(v => v.rule === 'NO_SECTIONS')) {
         if (data.violations?.length) setWarnings(data.violations)
         return
       }
-      // Phase C: smart-merge user edits into freshly parsed zones
-      const mergedZones = mergeZoneEdits(zones, data.zones)
-      onApply(draftHtml, mergedZones)
+      // Pass the new HTML and fresh selections (from the re-parsed template)
+      // back to the parent. Non-fatal violations (NO_ZONES) are allowed through.
+      onApply(draftHtml, data.selections ?? [])
     } catch (err) {
       setWarnings([{ rule: 'APPLY_ERROR', message: 'Apply failed: ' + err.message }])
     } finally {
       setApplying(false)
     }
-  }, [draftHtml, zones, hasBlockingError, applying, onApply])
+  }, [draftHtml, hasBlockingError, applying, onApply])
 
-  // ── Zone assignment modal handlers ───────────────────────────────────────────
-  const handleModalClose = useCallback(() => {
-    setClickedEl(null)
-    setAmbiguous(false)
-  }, [])
 
-  const handleModalConfirm = useCallback(() => {
-    if (!clickedEl || !editorViewRef.current) return
-    const attribute = modalMode === 'zone' ? 'data-zone' : 'data-label-for'
-    const value     = modalMode === 'zone' ? modalKey.trim() : modalLabelFor.trim()
-    if (!value) return
-
-    const currentHtml = editorViewRef.current.state.doc.toString()
-    const result = injectAttributeIntoSource(currentHtml, {
-      tag:         clickedEl.tag,
-      className:   clickedEl.className,
-      textContent: clickedEl.textContent,
-      attribute,
-      value,
-    })
-
-    if (!result) { setClickedEl(null); return }
-    if (result.ambiguous) { setAmbiguous(true); return }
-
-    // Replace the full document so CodeMirror undo captures the change
-    editorViewRef.current.dispatch({
-      changes: { from: 0, to: editorViewRef.current.state.doc.length, insert: result.newHtml }
-    })
-    setDraftHtml(result.newHtml)
-    schedulePreview(result.newHtml)
-    scheduleValidation(result.newHtml)
-    setClickedEl(null)
-    setAmbiguous(false)
-  }, [clickedEl, modalMode, modalKey, modalLabelFor, schedulePreview, scheduleValidation])
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
@@ -619,90 +534,10 @@ ${highlightCss}
             />
           </div>
           <p className="html-preview-note">
-            Click any element to make it a zone. Hover to highlight.
+            Hover to highlight. Use the tree panel to assign zones.
           </p>
         </div>
       </div>
-
-      {/* ?? Zone Assignment Modal ??????????????????????????????????????????? */}
-      {clickedEl && (
-        <div className="zone-assign-backdrop" onClick={handleModalClose}>
-          <div className="zone-assign-modal" onClick={e => e.stopPropagation()}>
-            <div className="zone-assign-header">
-              <span className="zone-assign-title">Make element dynamic</span>
-              <button className="zone-assign-close" onClick={handleModalClose}>?</button>
-            </div>
-
-            <div className="zone-assign-element">
-              <code className="zone-assign-tag">&lt;{clickedEl.tag}&gt;</code>
-              <span className="zone-assign-text">{clickedEl.textContent.slice(0, 60)}{clickedEl.textContent.length > 60 ? '?' : ''}</span>
-            </div>
-
-            <div className="zone-assign-options">
-              <label className={`zone-assign-option${modalMode === 'zone' ? ' zone-assign-option--active' : ''}`}>
-                <input type="radio" name="mode" value="zone" checked={modalMode === 'zone'} onChange={() => setModalMode('zone')} />
-                <div>
-                  <strong>Content zone</strong>
-                  <span>AI fills this element directly</span>
-                </div>
-              </label>
-              <label className={`zone-assign-option${modalMode === 'label' ? ' zone-assign-option--active' : ''}`}>
-                <input type="radio" name="mode" value="label" checked={modalMode === 'label'} onChange={() => setModalMode('label')} />
-                <div>
-                  <strong>Label for a zone</strong>
-                  <span>AI names this label alongside its zone</span>
-                </div>
-              </label>
-            </div>
-
-            {modalMode === 'zone' && (
-              <div className="zone-assign-field">
-                <label>Zone key</label>
-                <input
-                  className="zone-assign-input"
-                  value={modalKey}
-                  onChange={e => setModalKey(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_'))}
-                  placeholder="snake_case_key"
-                  autoFocus
-                  onKeyDown={e => e.key === 'Enter' && handleModalConfirm()}
-                />
-              </div>
-            )}
-
-            {modalMode === 'label' && (
-              <div className="zone-assign-field">
-                <label>Label for zone</label>
-                <select
-                  className="zone-assign-input"
-                  value={modalLabelFor}
-                  onChange={e => setModalLabelFor(e.target.value)}
-                >
-                  {zones.filter(z => !z.isLabel).map(z => (
-                    <option key={z.key} value={z.key}>{z.key}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {ambiguous && (
-              <p className="zone-assign-ambiguous">
-                Multiple matching elements found. Edit the HTML directly to add the attribute.
-              </p>
-            )}
-
-            <div className="zone-assign-actions">
-              <button className="btn btn-secondary" onClick={handleModalClose}>Cancel</button>
-              <button
-                className="btn btn-primary"
-                onClick={handleModalConfirm}
-                disabled={modalMode === 'zone' ? !modalKey.trim() : !modalLabelFor.trim()}
-              >
-                Add zone
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

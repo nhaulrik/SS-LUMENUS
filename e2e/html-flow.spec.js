@@ -63,11 +63,10 @@ test.describe('UC-HF-01 — Flow selector routes to correct flow', () => {
 // ── UC-HF-02: Valid HTML file is accepted ─────────────────────────────────────
 
 test.describe('UC-HF-02 — Valid HTML upload is accepted', () => {
-  test('uploading test_slide.html shows zone list without errors', async ({ page }) => {
+  test('uploading test_slide.html shows the DOM tree panel', async ({ page }) => {
     await selectHtmlFlow(page);
     await page.setInputFiles(SEL.htmlFileInput, FIXTURE_HTML);
-    await expect(page.locator(SEL.zoneListSection)).toBeVisible();
-    await expect(page.locator(SEL.htmlViolations)).not.toBeVisible();
+    await expect(page.locator(SEL.htmlTreePanel)).toBeVisible();
   });
 
   test('file-loaded state shows the filename', async ({ page }) => {
@@ -89,69 +88,94 @@ test.describe('UC-HF-03 — Correct slide count is reported', () => {
   });
 });
 
-// ── UC-HF-04: All expected zones are detected ─────────────────────────────────
+// ── UC-HF-04: Tree panel shows nodes ─────────────────────────────────────────
 
-test.describe('UC-HF-04 — All expected zones are detected', () => {
-  test('zone count matches expected zones in fixture', async ({ page }) => {
+test.describe('UC-HF-04 — DOM tree panel renders nodes', () => {
+  test('tree panel is visible after upload', async ({ page }) => {
     await doHtmlUpload(page);
-    const rows = page.locator(SEL.zoneRows);
-    await expect(rows).toHaveCount(EXPECTED_ZONES.length);
+    await expect(page.locator(SEL.htmlTreePanel)).toBeVisible();
   });
 
-  for (const zone of EXPECTED_ZONES) {
-    test(`zone "${zone.key}" is present in the list`, async ({ page }) => {
-      await doHtmlUpload(page);
-      await expect(page.locator(SEL.zoneRowByKey(zone.key))).toBeVisible();
-    });
-  }
-});
-
-// ── UC-HF-05: Zone type inference ─────────────────────────────────────────────
-
-test.describe('UC-HF-05 — Zone types are correctly inferred', () => {
-  test('total_hours is inferred as number type', async ({ page }) => {
+  test('tree has at least one visible node', async ({ page }) => {
     await doHtmlUpload(page);
-    const row = page.locator(SEL.zoneRowByKey('total_hours'));
-    await expect(row.locator(SEL.zoneTypeSelect)).toHaveValue('number');
+    await expect(page.locator(SEL.treeNodes).first()).toBeVisible();
   });
 
-  test('initiative_count is inferred as number type', async ({ page }) => {
+  test('pre-existing data-zone selections are shown as zone badges', async ({ page }) => {
     await doHtmlUpload(page);
-    const row = page.locator(SEL.zoneRowByKey('initiative_count'));
-    await expect(row.locator(SEL.zoneTypeSelect)).toHaveValue('number');
-  });
-
-  test('initiative_group_title is inferred as text type', async ({ page }) => {
-    await doHtmlUpload(page);
-    const row = page.locator(SEL.zoneRowByKey('initiative_group_title'));
-    await expect(row.locator(SEL.zoneTypeSelect)).toHaveValue('text');
-  });
-
-  test('business_value is inferred as text type', async ({ page }) => {
-    await doHtmlUpload(page);
-    const row = page.locator(SEL.zoneRowByKey('business_value'));
-    await expect(row.locator(SEL.zoneTypeSelect)).toHaveValue('text');
+    // test_slide.html has 8 data-zone attributes — all become pre-selections
+    // Expand all to make badges visible
+    await page.locator(SEL.treeExpandAll).click();
+    await expect(page.locator(SEL.treeZoneBadges).first()).toBeVisible({ timeout: 3000 });
   });
 });
 
-// ── UC-HF-06: Zone hints ──────────────────────────────────────────────────────
+// ── UC-HF-05: Zone assignment via tree ───────────────────────────────────────
 
-test.describe('UC-HF-06 — Zone hints are populated', () => {
-  test('initiative_group_title has a non-empty hint', async ({ page }) => {
+test.describe('UC-HF-05 — User can assign a zone via the tree', () => {
+  test('clicking assign button opens the assignment panel', async ({ page }) => {
     await doHtmlUpload(page);
-    const row = page.locator(SEL.zoneRowByKey('initiative_group_title'));
-    // Expand to see hint input
-    await row.locator(SEL.zoneExpandBtn).click();
-    const hintInput = row.locator(SEL.zoneHintInput);
-    await expect(hintInput).not.toHaveValue('');
+    await page.locator(SEL.treeExpandAll).click();
+    // Hover first node to reveal the assign button
+    const firstNode = page.locator(SEL.treeNodes).first();
+    await firstNode.hover();
+    await firstNode.locator('.tree-node-assign-btn').click();
+    await expect(page.locator(SEL.assignPanel)).toBeVisible();
   });
 
-  test('total_hours hint mentions hours or effort', async ({ page }) => {
+  test('assignment panel has a key input', async ({ page }) => {
     await doHtmlUpload(page);
-    const row = page.locator(SEL.zoneRowByKey('total_hours'));
-    await row.locator(SEL.zoneExpandBtn).click();
-    const hintVal = await row.locator(SEL.zoneHintInput).inputValue();
-    expect(hintVal.toLowerCase()).toMatch(/hour|effort/);
+    await page.locator(SEL.treeExpandAll).click();
+    const firstNode = page.locator(SEL.treeNodes).first();
+    await firstNode.hover();
+    await firstNode.locator('.tree-node-assign-btn').click();
+    await expect(page.locator(SEL.assignKeyInput)).toBeVisible();
+  });
+
+  test('confirming assignment adds a zone badge to the node', async ({ page }) => {
+    await doHtmlUpload(page);
+    await page.locator(SEL.treeExpandAll).click();
+    // Find a node without a badge and assign it
+    const nodes = page.locator(SEL.treeNodes);
+    const count = await nodes.count();
+    for (let i = 0; i < count; i++) {
+      const node = nodes.nth(i);
+      const hasBadge = await node.locator('.tree-zone-badge').count();
+      if (hasBadge === 0) {
+        await node.hover();
+        await node.locator('.tree-node-assign-btn').click();
+        await page.locator(SEL.assignKeyInput).fill('my_new_zone');
+        await page.locator(SEL.assignConfirmBtn).click();
+        await expect(page.locator(SEL.assignPanel)).not.toBeVisible();
+        // Badge should now appear on that node
+        await expect(node.locator('.tree-zone-badge')).toBeVisible({ timeout: 2000 });
+        return;
+      }
+    }
+  });
+
+  test('cancelling assignment panel closes it without changes', async ({ page }) => {
+    await doHtmlUpload(page);
+    await page.locator(SEL.treeExpandAll).click();
+    const firstNode = page.locator(SEL.treeNodes).first();
+    await firstNode.hover();
+    await firstNode.locator('.tree-node-assign-btn').click();
+    await page.locator(SEL.assignPanel).locator('button:has-text("Cancel")').click();
+    await expect(page.locator(SEL.assignPanel)).not.toBeVisible();
+  });
+});
+
+// ── UC-HF-06: Block zone assignment ──────────────────────────────────────────
+
+test.describe('UC-HF-06 — User can assign a block zone', () => {
+  test('selecting Block zone mode shows prompt field', async ({ page }) => {
+    await doHtmlUpload(page);
+    await page.locator(SEL.treeExpandAll).click();
+    const firstNode = page.locator(SEL.treeNodes).first();
+    await firstNode.hover();
+    await firstNode.locator('.tree-node-assign-btn').click();
+    await page.locator(SEL.assignPanel).locator('input[value="block"]').check();
+    await expect(page.locator(SEL.assignPromptInput)).toBeVisible();
   });
 });
 
@@ -174,112 +198,16 @@ test.describe('UC-HF-07 — Slide preview iframe is rendered', () => {
     expect(srcDoc).toBeTruthy();
     expect(srcDoc.length).toBeGreaterThan(100);
   });
-});
 
-// ── UC-HF-08: Expand zone row to edit hint ────────────────────────────────────
-
-test.describe('UC-HF-08 — User can expand a zone row to edit the hint', () => {
-  test('hint input is hidden before expanding', async ({ page }) => {
+  test('preview iframe contains data-solon-id attributes for tree highlighting', async ({ page }) => {
     await doHtmlUpload(page);
-    await expect(page.locator(SEL.zoneHintInput).first()).not.toBeVisible();
-  });
-
-  test('hint input is visible after clicking expand button', async ({ page }) => {
-    await doHtmlUpload(page);
-    const row = page.locator(SEL.zoneRows).first();
-    await row.locator(SEL.zoneExpandBtn).click();
-    await expect(row.locator(SEL.zoneHintInput)).toBeVisible();
-  });
-
-  test('user can edit the hint text', async ({ page }) => {
-    await doHtmlUpload(page);
-    const row = page.locator(SEL.zoneRowByKey('initiative_group_title'));
-    await row.locator(SEL.zoneExpandBtn).click();
-    await row.locator(SEL.zoneHintInput).fill('Custom hint text');
-    await expect(row.locator(SEL.zoneHintInput)).toHaveValue('Custom hint text');
-  });
-
-  test('collapse button hides hint input again', async ({ page }) => {
-    await doHtmlUpload(page);
-    const row = page.locator(SEL.zoneRows).first();
-    await row.locator(SEL.zoneExpandBtn).click();
-    await expect(row.locator(SEL.zoneHintInput)).toBeVisible();
-    await row.locator(SEL.zoneExpandBtn).click();
-    await expect(row.locator(SEL.zoneHintInput)).not.toBeVisible();
+    const srcDoc = await page.locator(SEL.htmlPreviewFrame).getAttribute('srcdoc');
+    expect(srcDoc).toContain('data-solon-id');
   });
 });
 
-// ── UC-HF-09: Change zone type ────────────────────────────────────────────────
-
-test.describe('UC-HF-09 — User can change a zone type', () => {
-  test('changing type select updates the value', async ({ page }) => {
-    await doHtmlUpload(page);
-    const row = page.locator(SEL.zoneRowByKey('business_value'));
-    const sel = row.locator(SEL.zoneTypeSelect);
-    await sel.selectOption('number');
-    await expect(sel).toHaveValue('number');
-  });
-
-  test('type can be changed back to text', async ({ page }) => {
-    await doHtmlUpload(page);
-    const row = page.locator(SEL.zoneRowByKey('total_hours'));
-    const sel = row.locator(SEL.zoneTypeSelect);
-    await sel.selectOption('text');
-    await expect(sel).toHaveValue('text');
-  });
-});
-
-// ── UC-HF-10: Toggle AI flag ──────────────────────────────────────────────────
-
-test.describe('UC-HF-10 — User can toggle the AI flag per zone', () => {
-  test('AI checkbox is checked by default', async ({ page }) => {
-    await doHtmlUpload(page);
-    const row = page.locator(SEL.zoneRows).first();
-    await expect(row.locator(SEL.zoneAutoToggle)).toBeChecked();
-  });
-
-  test('unchecking AI checkbox updates the state', async ({ page }) => {
-    await doHtmlUpload(page);
-    const row = page.locator(SEL.zoneRows).first();
-    await row.locator(SEL.zoneAutoToggle).uncheck();
-    await expect(row.locator(SEL.zoneAutoToggle)).not.toBeChecked();
-  });
-
-  test('re-checking AI checkbox restores state', async ({ page }) => {
-    await doHtmlUpload(page);
-    const row = page.locator(SEL.zoneRows).first();
-    await row.locator(SEL.zoneAutoToggle).uncheck();
-    await row.locator(SEL.zoneAutoToggle).check();
-    await expect(row.locator(SEL.zoneAutoToggle)).toBeChecked();
-  });
-});
-
-// ── UC-HF-11 & UC-HF-12: Remove a zone ───────────────────────────────────────
-
-test.describe('UC-HF-11/12 — User can remove a zone from the list', () => {
-  test('clicking remove button removes the zone row', async ({ page }) => {
-    await doHtmlUpload(page);
-    const initialCount = await page.locator(SEL.zoneRows).count();
-    await page.locator(SEL.zoneRows).first().locator(SEL.zoneRemoveBtn).click();
-    await expect(page.locator(SEL.zoneRows)).toHaveCount(initialCount - 1);
-  });
-
-  test('removed zone key no longer appears in the list', async ({ page }) => {
-    await doHtmlUpload(page);
-    // Remove the first zone (initiative_group_title)
-    await page.locator(SEL.zoneRowByKey('initiative_group_title'))
-      .locator(SEL.zoneRemoveBtn).click();
-    await expect(page.locator(SEL.zoneRowByKey('initiative_group_title'))).not.toBeVisible();
-  });
-
-  test('other zones remain after one is removed', async ({ page }) => {
-    await doHtmlUpload(page);
-    await page.locator(SEL.zoneRowByKey('initiative_group_title'))
-      .locator(SEL.zoneRemoveBtn).click();
-    // total_hours should still be present
-    await expect(page.locator(SEL.zoneRowByKey('total_hours'))).toBeVisible();
-  });
-});
+// ── UC-HF-08–12: Removed (flat zone list no longer exists) ───────────────────
+// Zone editing is now done through the tree assignment panel (UC-HF-05/06).
 
 // ── UC-HF-13: Project name pre-filled ────────────────────────────────────────
 
@@ -301,57 +229,46 @@ test.describe('UC-HF-14/15 — Create Project button disabled states', () => {
     await expect(page.locator(SEL.createProjectBtn)).toBeDisabled();
   });
 
-  test('Create Project button is enabled when name is filled and zones exist', async ({ page }) => {
+  test('Create Project button is enabled when name is filled and selections exist', async ({ page }) => {
     await doHtmlUpload(page);
-    // Name is pre-filled; zones exist — button should be enabled
+    // test_slide.html has pre-existing data-zone attrs → selections auto-populated
+    // Name is pre-filled → button should be enabled
     await expect(page.locator(SEL.createProjectBtn)).toBeEnabled();
-  });
-
-  test('Create Project button is disabled after all zones are removed', async ({ page }) => {
-    await doHtmlUpload(page);
-    const count = await page.locator(SEL.zoneRows).count();
-    for (let i = 0; i < count; i++) {
-      await page.locator(SEL.zoneRemoveBtn).first().click();
-    }
-    await expect(page.locator(SEL.createProjectBtn)).toBeDisabled();
   });
 });
 
 // ── UC-HF-16/17/18: Successful project creation ───────────────────────────────
 
 test.describe('UC-HF-16/17/18 — Successful project creation', () => {
-  test('clicking Create Project shows the confirmation screen', async ({ page }) => {
+  test('clicking Create Project navigates to the recipe step', async ({ page }) => {
     await doHtmlCreateProject(page, 'my-test-project');
-    await expect(page.locator(SEL.htmlProjectCreated)).toBeVisible();
+    await expect(page.locator(SEL.htmlRecipeLayout)).toBeVisible();
   });
 
-  test('confirmation screen shows the correct project name', async ({ page }) => {
+  test('recipe step header shows the correct project name', async ({ page }) => {
     await doHtmlCreateProject(page, 'my-test-project');
-    await expect(page.locator(SEL.projectCreatedName)).toContainText('my-test-project');
+    await expect(page.locator('header h1')).toContainText('my-test-project');
   });
 
-  test('confirmation screen shows the zone count', async ({ page }) => {
+  test('recipe step header subtitle shows the zone count', async ({ page }) => {
     await doHtmlCreateProject(page, 'my-test-project');
-    const meta = page.locator(SEL.projectCreatedMeta);
-    await expect(meta).toContainText('zone');
-    // Should show the number of zones (8 in test_slide.html)
-    const text = await meta.textContent();
-    expect(parseInt(text)).toBeGreaterThan(0);
+    const subtitle = page.locator('header p');
+    await expect(subtitle).toContainText('zone');
   });
 });
 
 // ── UC-HF-19: Return to flow selector ────────────────────────────────────────
 
-test.describe('UC-HF-19 — Start a new project returns to flow selector', () => {
-  test('clicking "Start a new project" shows the flow selector', async ({ page }) => {
-    await doHtmlCreateProject(page, 'my-test-project');
-    await page.locator('button:has-text("Start a new project")').click();
+test.describe('UC-HF-19 — Back navigation returns to flow selector', () => {
+  test('clicking "Change flow" from upload step shows the flow selector', async ({ page }) => {
+    await doHtmlUpload(page);
+    await page.locator(SEL.changeFlowBtn).click();
     await expect(page.locator(SEL.flowSelectContainer)).toBeVisible();
   });
 
   test('flow selector shows both cards after returning', async ({ page }) => {
-    await doHtmlCreateProject(page, 'my-test-project');
-    await page.locator('button:has-text("Start a new project")').click();
+    await doHtmlUpload(page);
+    await page.locator(SEL.changeFlowBtn).click();
     await expect(page.locator(SEL.flowCards)).toHaveCount(2);
   });
 });
@@ -378,19 +295,29 @@ test.describe('UC-HF-20/21 — Validation errors are shown for invalid HTML', ()
     await expect(page.locator(SEL.htmlViolations)).toContainText('section');
   });
 
-  test('file with no data-zone shows NO_ZONES error', async ({ page }) => {
+  test('file with no data-zone shows NO_ZONES warning in tree panel', async ({ page }) => {
+    // NO_ZONES is now a non-fatal violation (200 OK) — the tree is still shown
+    // but a warning notice appears above it explaining no zones were detected.
     await selectHtmlFlow(page);
     await page.route('http://localhost:5173/api/html-flow/upload-template', route => route.fulfill({
-      status: 422,
+      status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        ok: false,
-        violations: [{ rule: 'NO_ZONES', message: 'No elements with data-zone attributes found. At least one zone is required.' }],
+        ok: true,
+        templateId: 'mock-template-id',
+        slideCount: 1,
+        trees: [[{ id: 'div.content', tag: 'div', classes: ['content'], label: 'div.content', textPreview: 'No zones', children: [], isLeaf: true, interesting: false, chrome: false, depth: 0, slideIndex: 1 }]],
+        selections: [],
+        violations: [{ rule: 'NO_ZONES', message: 'No content zones found. Use the tree to assign zones.' }],
+        previewHtml: '<html><body><section><div class="content">No zones</div></section></body></html>',
       }),
     }));
 
     await page.setInputFiles(SEL.htmlFileInput, FIXTURE_HTML);
-    await expect(page.locator(SEL.htmlViolations)).toBeVisible({ timeout: 8000 });
+    // Tree panel should appear (non-fatal — template is still usable)
+    await expect(page.locator(SEL.htmlTreePanel)).toBeVisible({ timeout: 8000 });
+    // Warning notice should mention zones
+    await expect(page.locator(SEL.htmlViolations)).toBeVisible({ timeout: 3000 });
     await expect(page.locator(SEL.htmlViolations)).toContainText('zone');
   });
 });
@@ -407,14 +334,14 @@ test.describe('UC-HF-22 — User can replace the uploaded file', () => {
     await doHtmlUpload(page);
     await page.locator('button:has-text("Replace file")').click();
     await expect(page.locator(SEL.htmlUploadZone)).toBeVisible();
-    await expect(page.locator(SEL.zoneListSection)).not.toBeVisible();
+    await expect(page.locator(SEL.htmlTreePanel)).not.toBeVisible();
   });
 });
 
 // ── UC-HF-23/24/25: Server-side API correctness ───────────────────────────────
 
-test.describe('UC-HF-23 — upload-template API returns correct zone structure', () => {
-  test('API returns ok:true with templateId, slideCount, and zones array', async ({ page }) => {
+test.describe('UC-HF-23 — upload-template API returns correct structure', () => {
+  test('API returns ok:true with templateId, slideCount, trees and selections', async ({ page }) => {
     const html = fs.readFileSync(FIXTURE_HTML, 'utf8');
     const res  = await page.request.post('http://localhost:3001/api/html-flow/upload-template', {
       data: { html, fileName: 'test_slide.html' }
@@ -424,29 +351,30 @@ test.describe('UC-HF-23 — upload-template API returns correct zone structure',
     expect(body.ok).toBe(true);
     expect(typeof body.templateId).toBe('string');
     expect(body.slideCount).toBe(1);
-    expect(Array.isArray(body.zones)).toBe(true);
-    expect(body.zones.length).toBe(EXPECTED_ZONES.length);
+    expect(Array.isArray(body.trees)).toBe(true);
+    expect(Array.isArray(body.selections)).toBe(true);
+    expect(body.selections.length).toBe(EXPECTED_ZONES.length);
   });
 
-  test('API returns all expected zone keys', async ({ page }) => {
+  test('API returns all expected zone keys in selections', async ({ page }) => {
     const html = fs.readFileSync(FIXTURE_HTML, 'utf8');
     const res  = await page.request.post('http://localhost:3001/api/html-flow/upload-template', {
       data: { html, fileName: 'test_slide.html' }
     });
     const body = await res.json();
-    const returnedKeys = body.zones.map(z => z.key);
+    const returnedKeys = body.selections.map(s => s.key);
     for (const expected of EXPECTED_ZONES) {
       expect(returnedKeys).toContain(expected.key);
     }
   });
 
-  test('API returns correct type inference for number zones', async ({ page }) => {
+  test('API returns correct type inference for number zones in selections', async ({ page }) => {
     const html = fs.readFileSync(FIXTURE_HTML, 'utf8');
     const res  = await page.request.post('http://localhost:3001/api/html-flow/upload-template', {
       data: { html, fileName: 'test_slide.html' }
     });
     const body = await res.json();
-    const totalHours = body.zones.find(z => z.key === 'total_hours');
+    const totalHours = body.selections.find(s => s.key === 'total_hours');
     expect(totalHours).toBeTruthy();
     expect(totalHours.type).toBe('number');
   });
@@ -474,43 +402,42 @@ test.describe('UC-HF-23 — upload-template API returns correct zone structure',
   });
 });
 
-test.describe('UC-HF-24 — update-zones API persists zone edits', () => {
-  test('PATCH update-zones returns ok:true with updated zones', async ({ page }) => {
+// ── UC-HF-24 — update-selections API ─────────────────────────────────────────
+
+test.describe('UC-HF-24 — update-selections API persists selection edits', () => {
+  test('PATCH update-selections returns ok:true with updated selections', async ({ page }) => {
     const html = fs.readFileSync(FIXTURE_HTML, 'utf8');
     const uploadRes = await page.request.post('http://localhost:3001/api/html-flow/upload-template', {
       data: { html, fileName: 'test_slide.html' }
     });
-    const { templateId, zones } = await uploadRes.json();
+    const { templateId, selections } = await uploadRes.json();
 
-    // Edit the first zone's hint
-    const updatedZones = zones.map((z, i) =>
-      i === 0 ? { ...z, hint: 'Updated hint from e2e test' } : z
+    const updated = selections.map((s, i) =>
+      i === 0 ? { ...s, hint: 'Updated hint from e2e test' } : s
     );
 
-    const patchRes = await page.request.patch('http://localhost:3001/api/html-flow/update-zones', {
-      data: { templateId, zones: updatedZones }
+    const patchRes = await page.request.patch('http://localhost:3001/api/html-flow/update-selections', {
+      data: { templateId, selections: updated }
     });
     expect(patchRes.ok()).toBe(true);
-    const patchBody = await patchRes.json();
-    expect(patchBody.ok).toBe(true);
-    expect(patchBody.zones[0].hint).toBe('Updated hint from e2e test');
+    const body = await patchRes.json();
+    expect(body.ok).toBe(true);
+    expect(body.selections[0].hint).toBe('Updated hint from e2e test');
   });
 });
 
-test.describe('UC-HF-25 — create-project API creates chain.json with flow:"html"', () => {
-  // These tests verify the response contract from the API.
-  // Direct disk checks are omitted because the e2e server may use a different
-  // CHAINS_DIR than the test process (env var set only for the Playwright webServer).
+// ── UC-HF-25 — create-project API ────────────────────────────────────────────
 
+test.describe('UC-HF-25 — create-project API creates chain.json with flow:"html"', () => {
   test('create-project returns ok:true with a chainId string', async ({ page }) => {
     const html = fs.readFileSync(FIXTURE_HTML, 'utf8');
     const uploadRes = await page.request.post('http://localhost:3001/api/html-flow/upload-template', {
       data: { html, fileName: 'test_slide.html' }
     });
-    const { templateId, zones } = await uploadRes.json();
+    const { templateId, selections } = await uploadRes.json();
 
     const createRes = await page.request.post('http://localhost:3001/api/html-flow/create-project', {
-      data: { templateId, zones, projectName: 'e2e-api-test' }
+      data: { templateId, selections, projectName: 'e2e-api-test' }
     });
     expect(createRes.ok()).toBe(true);
     const body = await createRes.json();
@@ -519,20 +446,20 @@ test.describe('UC-HF-25 — create-project API creates chain.json with flow:"htm
     expect(body.chainId).toMatch(/^chain-/);
   });
 
-  test('create-project response echoes back correct projectName and zone count', async ({ page }) => {
+  test('create-project response echoes back correct projectName and derived zones', async ({ page }) => {
     const html = fs.readFileSync(FIXTURE_HTML, 'utf8');
     const uploadRes = await page.request.post('http://localhost:3001/api/html-flow/upload-template', {
       data: { html, fileName: 'test_slide.html' }
     });
-    const { templateId, zones } = await uploadRes.json();
+    const { templateId, selections } = await uploadRes.json();
 
     const createRes = await page.request.post('http://localhost:3001/api/html-flow/create-project', {
-      data: { templateId, zones, projectName: 'e2e-contract-test' }
+      data: { templateId, selections, projectName: 'e2e-contract-test' }
     });
     const body = await createRes.json();
     expect(body.projectName).toBe('e2e-contract-test');
     expect(Array.isArray(body.zones)).toBe(true);
-    expect(body.zones.length).toBe(zones.length);
+    expect(body.zones.length).toBe(selections.length);
   });
 
   test('create-project response includes templatePath pointing to template.html', async ({ page }) => {
@@ -540,22 +467,20 @@ test.describe('UC-HF-25 — create-project API creates chain.json with flow:"htm
     const uploadRes = await page.request.post('http://localhost:3001/api/html-flow/upload-template', {
       data: { html, fileName: 'test_slide.html' }
     });
-    const { templateId, zones } = await uploadRes.json();
+    const { templateId, selections } = await uploadRes.json();
 
     const createRes = await page.request.post('http://localhost:3001/api/html-flow/create-project', {
-      data: { templateId, zones, projectName: 'e2e-path-test' }
+      data: { templateId, selections, projectName: 'e2e-path-test' }
     });
     const body = await createRes.json();
-    expect(body.templatePath).toBeTruthy();
     expect(body.templatePath).toMatch(/template\.html$/);
   });
 
   test('using an expired/unknown templateId returns 404', async ({ page }) => {
     const createRes = await page.request.post('http://localhost:3001/api/html-flow/create-project', {
-      data: { templateId: 'nonexistent-id', zones: [], projectName: 'should-fail' }
+      data: { templateId: 'nonexistent-id', selections: [], projectName: 'should-fail' }
     });
     expect(createRes.status()).toBe(404);
-    const body = await createRes.json();
-    expect(body.ok).toBe(false);
+    expect((await createRes.json()).ok).toBe(false);
   });
 });

@@ -1,163 +1,35 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
-import AppHeader from '../components/AppHeader.jsx'
+/**
+ * HtmlUploadStep — Stage 1 of the HTML Visual Flow.
+ *
+ * Architecture: zones are now derived from user *selections* on the structural
+ * DOM tree (HtmlTreePanel). The flat ZoneRow list is replaced by the tree.
+ *
+ * State:
+ *   templateId   — pending template session id (pre-project-creation)
+ *   trees        — per-slide DOM tree arrays from the server
+ *   selections   — user's zone assignments on the tree (controlled)
+ *   previewHtml  — first-slide preview HTML for the iframe
+ *   rawHtml      — full HTML string (for the editor)
+ */
+
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
+import AppHeader    from '../components/AppHeader.jsx'
+import Breadcrumbs  from '../components/Breadcrumbs.jsx'
+import HtmlTreePanel from '../components/HtmlTreePanel.jsx'
 import { lazy, Suspense } from 'react'
 const HtmlEditorPanel = lazy(() => import('../components/HtmlEditorPanel.jsx'))
-import { mergeZoneEdits } from '../utils/mergeZoneEdits.js'
 
-const TYPE_LABELS   = { text: 'Text', number: 'Number', chart: 'Chart', image: 'Image', repeatable: 'Repeatable Block' }
-const TYPE_OPTIONS  = ['text', 'number', 'chart', 'image', 'repeatable']
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-/** Convert a zone key to a valid snake_case identifier as the user types. */
-function sanitizeKey(raw) {
-  return raw.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
-}
-
-// ── ZoneRow ───────────────────────────────────────────────────────────────────
-
-function ZoneRow({ zone, onChange, onRemove, highlighted, onMouseEnter, onMouseLeave }) {
-  const [expanded,  setExpanded]  = useState(false)
-  const [editingKey, setEditingKey] = useState(false)
-  const [keyDraft,   setKeyDraft]   = useState(zone.key)
-  const keyInputRef = useRef(null)
-
-  // Keep draft in sync if parent changes the key externally
-  useEffect(() => { if (!editingKey) setKeyDraft(zone.key) }, [zone.key, editingKey])
-
-  const commitKey = () => {
-    const cleaned = sanitizeKey(keyDraft).trim()
-    const final   = cleaned || zone.key // don't allow empty
-    setKeyDraft(final)
-    setEditingKey(false)
-    if (final !== zone.key) onChange({ ...zone, key: final })
-  }
-
-  return (
-    <div
-      className={`zone-row${highlighted ? ' zone-row--highlighted' : ''}`}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-    >
-      <div className="zone-row-main">
-        <div className="zone-row-key">
-
-          {/* ── Editable key badge ─────────────────────────────── */}
-          {editingKey ? (
-            <input
-              ref={keyInputRef}
-              className="zone-key-input"
-              value={keyDraft}
-              onChange={e => setKeyDraft(e.target.value)}
-              onBlur={commitKey}
-              onKeyDown={e => {
-                if (e.key === 'Enter') { e.preventDefault(); commitKey() }
-                if (e.key === 'Escape') { setKeyDraft(zone.key); setEditingKey(false) }
-              }}
-              spellCheck={false}
-              autoFocus
-            />
-          ) : (
-            <code
-              className="zone-key-badge zone-key-badge--editable"
-              title="Click to edit zone ID"
-              onClick={() => { setEditingKey(true); setTimeout(() => keyInputRef.current?.select(), 0) }}
-            >
-              {zone.key}
-              <span className="zone-key-edit-icon">✎</span>
-            </code>
-          )}
-
-          <span className="zone-slide-label">Slide {zone.slideIndex}</span>
-          {zone.isLabel     && <span className="zone-tag zone-tag--label">label</span>}
-          {zone.isRepeatable && <span className="zone-tag zone-tag--repeatable">Repeatable</span>}
-          {zone.repeatableKey && <span className="zone-tag zone-tag--child">inside {zone.repeatableKey}</span>}
-        </div>
-
-        <div className="zone-row-controls">
-          <select
-            className="zone-type-select"
-            value={zone.type}
-            onChange={e => onChange({ ...zone, type: e.target.value })}
-          >
-            {TYPE_OPTIONS.map(t => <option key={t} value={t}>{TYPE_LABELS[t]}</option>)}
-          </select>
-
-          <label className="zone-auto-toggle" title="AI generates this value">
-            <input
-              type="checkbox"
-              checked={zone.autoGenerate}
-              onChange={e => onChange({ ...zone, autoGenerate: e.target.checked })}
-            />
-            <span>AI</span>
-          </label>
-
-          <button className="zone-expand-btn" onClick={() => setExpanded(v => !v)} title={expanded ? 'Collapse' : 'Edit hint'}>
-            {expanded ? '▲' : '▼'}
-          </button>
-
-          <button className="zone-remove-btn" onClick={onRemove} title="Exclude this zone from the recipe">✕</button>
-        </div>
-      </div>
-
-      {expanded && (
-        <div className="zone-row-detail">
-          <label className="zone-hint-label">
-            Hint
-            <span className="zone-hint-sub">Shown to the AI as guidance for what content belongs here</span>
-          </label>
-          <input
-            className="zone-hint-input"
-            type="text"
-            value={zone.hint}
-            maxLength={120}
-            onChange={e => onChange({ ...zone, hint: e.target.value })}
-            placeholder="Describe what content goes in this zone…"
-          />
-          {zone.originalText && (
-            <p className="zone-original-text">
-              Original text: <em>{zone.originalText.slice(0, 80)}{zone.originalText.length > 80 ? '…' : ''}</em>
-            </p>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── HtmlUploadStep ────────────────────────────────────────────────────────────
-
-export default function HtmlUploadStep({ stepAnimClass, debugContext, onProjectCreated, onBack, setToast }) {
+export default function HtmlUploadStep({
+  step, canNavigateTo, navigateTo,
+  stepAnimClass, debugContext,
+  initialSession, onSessionChange,
+  onProjectCreated, onBack, setToast,
+}) {
   const fileInputRef = useRef(null)
   const wrapperRef   = useRef(null)
 
-  // Preview scale (driven by ResizeObserver)
+  // ── Preview scale ─────────────────────────────────────────────────────────
   const [previewScale, setPreviewScale] = useState(0.46)
-
-  // Hover cross-highlight: stores the zone key currently highlighted
-  const [highlightedKey, setHighlightedKey] = useState(null)
-
-  // Stage A: file selection
-  const [fileName,   setFileName]   = useState('')
-  const [uploading,  setUploading]  = useState(false)
-
-  // Stage B: zone review
-  const [templateId,  setTemplateId]  = useState(null)
-  const [slideCount,  setSlideCount]  = useState(0)
-  const [zones,       setZones]       = useState([])
-  const [previewHtml, setPreviewHtml] = useState('')
-  const [violations,  setViolations]  = useState([])
-  const [promptCopied, setPromptCopied] = useState(false)
-
-  // Stage C: create project
-  const [creating,    setCreating]    = useState(false)
-  const [projectName, setProjectName] = useState('')
-
-  // Editor (opt-in)
-  const [rawHtml,    setRawHtml]    = useState('')   // committed HTML text for the editor
-  const [editorOpen, setEditorOpen] = useState(false)
-
-  // ── Responsive preview scale ──────────────────────────────────────────────
   useEffect(() => {
     const el = wrapperRef.current
     if (!el) return
@@ -166,21 +38,36 @@ export default function HtmlUploadStep({ stepAnimClass, debugContext, onProjectC
     const ro = new ResizeObserver(measure)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [previewHtml])
-
-  // ── postMessage listener: preview → list highlight ───────────────────────
-  // The sandboxed iframe posts { type:'zone-hover', key } messages when the
-  // user hovers a [data-zone] element. We update highlightedKey from here so
-  // both directions (list→preview and preview→list) share the same state.
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.data?.type === 'zone-hover') {
-        setHighlightedKey(e.data.key || null)
-      }
-    }
-    window.addEventListener('message', handler)
-    return () => window.removeEventListener('message', handler)
   }, [])
+
+  // ── Highlight: tree hover → preview iframe ────────────────────────────────
+  const [highlightNodeId, setHighlightNodeId] = useState(null)
+
+  // ── Stage A: file selection ───────────────────────────────────────────────
+  const [fileName,  setFileName]  = useState(initialSession?.fileName  ?? '')
+  const [uploading, setUploading] = useState(false)
+
+  // ── Stage B: tree + selections ────────────────────────────────────────────
+  const [templateId,  setTemplateId]  = useState(initialSession?.templateId  ?? null)
+  const [slideCount,  setSlideCount]  = useState(initialSession?.slideCount  ?? 0)
+  const [trees,       setTrees]       = useState(initialSession?.trees       ?? [])
+  const [selections,  setSelections]  = useState(initialSession?.selections  ?? [])
+  const [previewHtml, setPreviewHtml] = useState(initialSession?.previewHtml ?? '')
+  const [violations,  setViolations]  = useState([])
+  const [promptCopied, setPromptCopied] = useState(false)
+
+  // ── Stage C: create project ───────────────────────────────────────────────
+  const [creating,     setCreating]     = useState(false)
+  const [projectName,  setProjectName]  = useState(initialSession?.projectName ?? '')
+
+  // ── Editor (opt-in) ───────────────────────────────────────────────────────
+  const [rawHtml,    setRawHtml]    = useState(initialSession?.rawHtml ?? '')
+  const [editorOpen, setEditorOpen] = useState(false)
+
+  // ── Sync session state up to App.jsx ─────────────────────────────────────
+  const syncSession = useCallback((patch) => {
+    onSessionChange?.(prev => ({ ...prev, ...patch }))
+  }, [onSessionChange])
 
   // ── File upload ───────────────────────────────────────────────────────────
   const handleFile = useCallback(async (file) => {
@@ -188,8 +75,10 @@ export default function HtmlUploadStep({ stepAnimClass, debugContext, onProjectC
     if (!file.name.endsWith('.html') && !file.name.endsWith('.htm')) {
       setToast({ message: 'Please upload an .html file', type: 'error' }); return
     }
+
     setFileName(file.name); setUploading(true); setViolations([])
-    setTemplateId(null); setZones([]); setPreviewHtml('')
+    setTemplateId(null); setTrees([]); setSelections([]); setPreviewHtml('')
+
     try {
       const html = await file.text()
       const res  = await fetch('/api/html-flow/upload-template', {
@@ -197,134 +86,147 @@ export default function HtmlUploadStep({ stepAnimClass, debugContext, onProjectC
         body: JSON.stringify({ html, fileName: file.name })
       })
       const data = await res.json()
-      if (!res.ok || !data.ok) {
-        if (data.violations?.length) setViolations(data.violations)
-        else setToast({ message: data.error || 'Upload failed', type: 'error' })
+
+      if (!res.ok && data.violations?.some(v => v.rule === 'NO_SECTIONS')) {
+        setViolations(data.violations)
         return
       }
-      setTemplateId(data.templateId); setSlideCount(data.slideCount)
-      setZones(data.zones.map(z => ({ ...z, htmlKey: z.key }))); setPreviewHtml(data.previewHtml)
+      if (!res.ok) {
+        setToast({ message: data.error || 'Upload failed', type: 'error' })
+        return
+      }
+
+      // Non-fatal violations (NO_ZONES) — show warning but still load tree
+      if (data.violations?.length) setViolations(data.violations)
+
+      const derivedName = file.name.replace(/\.html?$/, '')
+      setTemplateId(data.templateId)
+      setSlideCount(data.slideCount)
+      setTrees(data.trees ?? [])
+      setSelections(data.selections ?? [])
+      setPreviewHtml(data.previewHtml)
       setRawHtml(html)
-      setProjectName(file.name.replace(/\.html?$/, ''))
+      setProjectName(derivedName)
+
+      syncSession({
+        templateId:  data.templateId,
+        fileName:    file.name,
+        slideCount:  data.slideCount,
+        trees:       data.trees ?? [],
+        selections:  data.selections ?? [],
+        previewHtml: data.previewHtml,
+        rawHtml:     html,
+        projectName: derivedName,
+      })
     } catch (err) {
       setToast({ message: 'Upload error: ' + err.message, type: 'error' })
     } finally {
       setUploading(false)
     }
-  }, [setToast])
+  }, [setToast, syncSession])
 
   const handleDrop        = useCallback((e) => { e.preventDefault(); handleFile(e.dataTransfer?.files?.[0]) }, [handleFile])
   const handleInputChange = useCallback((e) => { handleFile(e.target.files?.[0]) }, [handleFile])
 
-  // ── Zone editing ──────────────────────────────────────────────────────────
-  const handleZoneChange = useCallback((idx, updated) => setZones(prev => prev.map((z, i) => i === idx ? updated : z)), [])
-  const handleZoneRemove = useCallback((idx) => setZones(prev => prev.filter((_, i) => i !== idx)), [])
-
-  // ── Save zones + create project ───────────────────────────────────────────
-  const handleSaveZones = useCallback(async () => {
-    if (!templateId) return
-    try {
-      await fetch('/api/html-flow/update-zones', {
+  // ── Selections change (from tree panel) ──────────────────────────────────
+  const handleSelectionsChange = useCallback((newSelections) => {
+    setSelections(newSelections)
+    syncSession({ selections: newSelections })
+    // Best-effort persist to server session
+    if (templateId) {
+      fetch('/api/html-flow/update-selections', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ templateId, zones })
-      })
-    } catch { /* best-effort */ }
-  }, [templateId, zones])
+        body: JSON.stringify({ templateId, selections: newSelections })
+      }).catch(() => {})
+    }
+  }, [templateId, syncSession])
 
+  // ── Create project ────────────────────────────────────────────────────────
   const handleCreateProject = useCallback(async () => {
     if (!templateId) return
     setCreating(true)
     try {
-      await handleSaveZones()
       const res  = await fetch('/api/html-flow/create-project', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ templateId, zones, projectName })
+        body: JSON.stringify({ templateId, selections, projectName })
       })
       const data = await res.json()
       if (!res.ok || !data.ok) throw new Error(data.error || 'Failed to create project')
-      onProjectCreated({ chainId: data.chainId, projectName: data.projectName, zones: data.zones, templatePath: data.templatePath })
+      onProjectCreated({
+        chainId:     data.chainId,
+        projectName: data.projectName,
+        selections:  data.selections,
+        zones:       data.zones,
+        templatePath: data.templatePath,
+      })
     } catch (err) {
       setToast({ message: 'Create project failed: ' + err.message, type: 'error' })
     } finally {
       setCreating(false)
     }
-  }, [templateId, zones, projectName, handleSaveZones, onProjectCreated, setToast])
+  }, [templateId, selections, projectName, onProjectCreated, setToast])
 
   // ── Copy AI fix prompt ────────────────────────────────────────────────────
   const handleCopyPrompt = useCallback(() => {
     const issueList = violations.map(v => v.rule).join(', ')
-    const prompt = `You are an expert HTML developer helping to prepare a slide template for use with an AI content generation tool.\n\nThe following validation issues were found:\n${issueList}\n\nPlease fix the HTML file so that:\n- Each slide is wrapped in a <section> element\n- Each dynamic content zone has a data-zone attribute with a unique snake_case key\n- data-hint attributes provide context for the AI\n- data-type="number" is used for numeric fields\n\nReturn only the corrected HTML.`
+    const prompt = `You are an expert HTML developer helping to prepare a slide template for use with an AI content generation tool.\n\nThe following validation issues were found:\n${issueList}\n\nPlease fix the HTML file so that:\n- Each slide is wrapped in a <section> element\n\nReturn only the corrected HTML.`
     navigator.clipboard.writeText(prompt).then(() => {
       setPromptCopied(true)
       setTimeout(() => setPromptCopied(false), 2000)
     }).catch(() => {})
   }, [violations])
 
-  // ── Editor apply ───────────────────────────────────────────────
-  const handleEditorApply = useCallback((newHtml, newZones) => {
+  // ── Editor apply ──────────────────────────────────────────────────────────
+  // Called by HtmlEditorPanel with (newHtml, newSelections).
+  // newSelections comes from re-parsing the edited HTML on the server.
+  const handleEditorApply = useCallback((newHtml, newSelections) => {
     setRawHtml(newHtml)
     setPreviewHtml(newHtml)
-    setZones(newZones)
     setEditorOpen(false)
-  }, [])
+    if (Array.isArray(newSelections) && newSelections.length > 0) {
+      setSelections(newSelections)
+      syncSession({ rawHtml: newHtml, previewHtml: newHtml, selections: newSelections })
+    } else {
+      syncSession({ rawHtml: newHtml, previewHtml: newHtml })
+    }
+  }, [syncSession])
 
-  // ── Derived ───────────────────────────────────────────────────────────────
-  const zonesBySlide = zones.reduce((acc, z) => { (acc[z.slideIndex] ??= []).push(z); return acc }, {})
-  const canProceed   = templateId && zones.length > 0 && projectName.trim().length > 0
-
-  // Build a map from zone key → bounding box selector for preview highlighting.
-  // The previewHtml is rendered in a sandboxed iframe so we can't query its DOM
-  // directly. Instead we inject a <style> block into previewHtml that uses the
-  // data-zone attribute to highlight the hovered element.
-  // Always inject into the iframe:
-  //   1. A <script> that posts zone key on mouseover/mouseout to the parent
-  //      (preview → list direction). Requires sandbox="allow-scripts".
-  //   2. A <style> that highlights the currently hovered zone key
-  //      (list → preview direction, driven by highlightedKey state).
-  const highlightedPreviewHtml = !previewHtml ? '' : (() => {
-    const highlightCss = highlightedKey ? `
-[data-zone="${highlightedKey}"] {
+  // ── Preview HTML with highlight injection ─────────────────────────────────
+  // Inject a <style> that highlights the hovered tree node by data-solon-id,
+  // and a <script> that posts back when the user hovers elements in the iframe.
+  const highlightedPreviewHtml = useMemo(() => {
+    if (!previewHtml) return ''
+    const highlightCss = highlightNodeId ? `
+[data-solon-id="${CSS.escape(highlightNodeId)}"] {
   outline: 3px solid #4CAF80 !important;
   outline-offset: 2px !important;
-  box-shadow: 0 0 0 4px #4CAF80, 0 4px 12px rgba(115,170,135,0.4) !important;
-  background: rgba(115,170,135,0.2) !important;
+  box-shadow: 0 0 0 4px rgba(76,175,128,0.4), 0 4px 12px rgba(115,170,135,0.4) !important;
+  background: rgba(115,170,135,0.15) !important;
   position: relative !important;
   z-index: 9999 !important;
 }` : ''
 
     const injection = `<style>
-[data-zone] { cursor: pointer; }
+[data-solon-id] { cursor: pointer; }
+[data-solon-id]:hover { outline: 1px dashed rgba(76,175,128,0.5); }
 ${highlightCss}
-</style>
-<script>
-(function() {
-  function notify(key) {
-    window.parent.postMessage({ type: 'zone-hover', key: key }, '*');
-  }
-  document.addEventListener('mouseover', function(e) {
-    var el = e.target.closest('[data-zone]');
-    notify(el ? el.getAttribute('data-zone') : null);
-  });
-  document.addEventListener('mouseout', function(e) {
-    if (!e.relatedTarget || !e.relatedTarget.closest('[data-zone]')) {
-      notify(null);
-    }
-  });
-})();
-</script>`
+</style>`
 
     return previewHtml.includes('</head>')
       ? previewHtml.replace('</head>', injection + '</head>')
       : injection + previewHtml
-  })()
+  }, [previewHtml, highlightNodeId])
 
-  // ── Editor overlay (opt-in) ───────────────────────────────────────────────
+  // ── Can proceed ───────────────────────────────────────────────────────────
+  const canProceed = templateId && selections.length > 0 && projectName.trim().length > 0
+
+  // ── Editor overlay ────────────────────────────────────────────────────────
   if (editorOpen && rawHtml) {
     return (
-      <Suspense fallback={<div className="html-editor-overlay" style={{display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text-muted)'}}>Loading editor?</div>}>
+      <Suspense fallback={<div className="html-editor-overlay" style={{display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text-muted)'}}>Loading editor…</div>}>
         <HtmlEditorPanel
           uploadedHtml={rawHtml}
-          zones={zones}
+          zones={[]}
           onApply={handleEditorApply}
           onClose={() => setEditorOpen(false)}
         />
@@ -338,19 +240,13 @@ ${highlightCss}
 
       <div className="html-upload-back">
         <button className="btn btn-link" onClick={onBack}>← Change flow</button>
-        <div className="html-upload-breadcrumb">
-          <span className="breadcrumb-item active"><span className="breadcrumb-number">1</span>Upload Template</span>
-          <span className="breadcrumb-divider">›</span>
-          <span className="breadcrumb-item"><span className="breadcrumb-number">2</span>Review Zones</span>
-          <span className="breadcrumb-divider">›</span>
-          <span className="breadcrumb-item"><span className="breadcrumb-number">3</span>Generate Content</span>
-        </div>
+        <Breadcrumbs step={step} canNavigateTo={canNavigateTo} navigateTo={navigateTo} flow="html" />
       </div>
 
       <div className={stepAnimClass}>
         <div className="html-upload-layout">
 
-          {/* ── Left: upload + zone list ──────────────────────────── */}
+          {/* ── Left: upload zone / tree panel ─────────────────────────── */}
           <div className="html-upload-left">
 
             {/* Upload zone */}
@@ -380,46 +276,112 @@ ${highlightCss}
                 )}
               </div>
             ) : (
-              <div className="html-file-loaded">
-                <div className="html-file-loaded-info">
-                  <span className="html-file-icon">📄</span>
-                  <div>
-                    <p className="html-file-name">{fileName}</p>
-                    <p className="html-file-meta">{slideCount} slide{slideCount !== 1 ? 's' : ''} · {zones.length} zone{zones.length !== 1 ? 's' : ''} detected</p>
+              <>
+                {/* File loaded header */}
+                <div className="html-file-loaded">
+                  <div className="html-file-loaded-info">
+                    <span className="html-file-icon">📄</span>
+                    <div>
+                      <p className="html-file-name">{fileName}</p>
+                      <p className="html-file-meta">
+                        {slideCount} slide{slideCount !== 1 ? 's' : ''} · {selections.length} zone{selections.length !== 1 ? 's' : ''} assigned
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => setEditorOpen(true)}
+                      title="Open HTML editor"
+                    >
+                      ✎ Edit HTML
+                    </button>
+                    <button className="btn btn-link" onClick={() => {
+                      setTemplateId(null); setTrees([]); setSelections([])
+                      setPreviewHtml(''); setRawHtml(''); setFileName(''); setViolations([])
+                      syncSession({ templateId: null, trees: [], selections: [], previewHtml: '', rawHtml: '', fileName: '' })
+                    }}>
+                      Replace file
+                    </button>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+
+                {/* Non-fatal violations (e.g. NO_ZONES warning) */}
+                {violations.length > 0 && (
+                  <div className="html-violations">
+                    <div className="html-violations-header">
+                      <div className="html-violations-title-row">
+                        <span className="html-violations-icon">⚠</span>
+                        <p className="html-violations-title">Template notice</p>
+                      </div>
+                      <p className="html-violations-subtitle">
+                        No zones were detected in your HTML. Use the tree below to assign zones.
+                      </p>
+                    </div>
+                    <ul className="html-violations-list">
+                      {violations.map((v, i) => (
+                        <li key={i} className="html-violation-item">
+                          <span className="html-violation-bullet">·</span>
+                          <div>
+                            <span className="html-violation-rule">{v.rule}</span>
+                            <span className="html-violation-message">{v.message}</span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* DOM Tree panel */}
+                <HtmlTreePanel
+                  trees={trees}
+                  selections={selections}
+                  onSelections={handleSelectionsChange}
+                  slideCount={slideCount}
+                  highlightNodeId={highlightNodeId}
+                  onHighlight={setHighlightNodeId}
+                />
+
+                {/* Project footer */}
+                <div className="html-project-footer">
+                  <div className="form-group">
+                    <label className="form-label">Project name</label>
+                    <input
+                      className="form-input"
+                      type="text"
+                      value={projectName}
+                      onChange={e => { setProjectName(e.target.value); syncSession({ projectName: e.target.value }) }}
+                      placeholder="my-presentation"
+                    />
+                  </div>
                   <button
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => setEditorOpen(true)}
-                    title="Open HTML editor to tweak layout and content"
+                    className="btn btn-primary"
+                    disabled={!canProceed || creating}
+                    onClick={handleCreateProject}
+                    data-testid="create-project-btn"
                   >
-                    ✎ Edit HTML
-                  </button>
-                  <button className="btn btn-link" onClick={() => { setTemplateId(null); setZones([]); setPreviewHtml(''); setRawHtml(''); setFileName(''); setViolations([]) }}>
-                    Replace file
+                    {creating ? 'Creating…' : 'Create Project →'}
                   </button>
                 </div>
-              </div>
+              </>
             )}
 
-            {/* Validation errors */}
-            {violations.length > 0 && (
+            {/* Fatal violations (NO_SECTIONS) */}
+            {!templateId && violations.length > 0 && (
               <div className="html-violations">
                 <div className="html-violations-header">
                   <div className="html-violations-title-row">
-                    <span className="html-violations-icon">?</span>
+                    <span className="html-violations-icon">✕</span>
                     <p className="html-violations-title">Template issues found</p>
                   </div>
                   <p className="html-violations-subtitle">
-                    Your HTML file needs a few adjustments before it can be used as a slide template.
+                    Your HTML file needs adjustments before it can be used as a slide template.
                   </p>
                 </div>
-
                 <ul className="html-violations-list">
                   {violations.map((v, i) => (
                     <li key={i} className="html-violation-item">
-                      <span className="html-violation-bullet">?</span>
+                      <span className="html-violation-bullet">✕</span>
                       <div>
                         <span className="html-violation-rule">{v.rule}</span>
                         <span className="html-violation-message">{v.message}</span>
@@ -427,126 +389,45 @@ ${highlightCss}
                     </li>
                   ))}
                 </ul>
-
                 <div className="html-violations-prompt-section">
                   <div className="html-violations-prompt-header">
                     <div>
                       <p className="html-violations-prompt-title">Fix with AI</p>
                       <p className="html-violations-prompt-desc">
                         Copy this prompt and send it to your AI assistant along with your HTML file.
-                        Paste the fixed file back and re-upload.
                       </p>
                     </div>
                     <button
                       className={`btn html-violations-copy-btn${promptCopied ? ' html-violations-copy-btn--copied' : ''}`}
                       onClick={handleCopyPrompt}
                     >
-                      {promptCopied ? '? Copied' : 'Copy prompt'}
+                      {promptCopied ? '✓ Copied' : 'Copy prompt'}
                     </button>
                   </div>
                   <div className="html-violations-prompt-preview">
                     <code>
-                      You are an expert HTML developer helping to prepare a slide template?
+                      You are an expert HTML developer…
                       <br />
                       <span className="html-violations-prompt-issues">
-                        Issues: {violations.map(v => v.rule).join(' ? ')}
+                        Issues: {violations.map(v => v.rule).join(' · ')}
                       </span>
                     </code>
                   </div>
                 </div>
               </div>
             )}
-
-            {/* Zone list */}
-            {templateId && (
-              <div className="zone-list-section">
-                <div className="zone-list-header">
-                  <h3>Content Zones</h3>
-                  <p className="zone-list-sub">
-                    Click a zone ID to rename it. Hover a row to highlight it in the preview.
-                    Click ▼ to edit the AI hint. Remove zones you do not want the AI to fill.
-                  </p>
-                </div>
-
-                {Object.entries(zonesBySlide).map(([slideIdx, slideZones]) => (
-                  <div key={slideIdx} className="zone-slide-group">
-                    <div className="zone-slide-label-header">Slide {slideIdx}</div>
-                    {slideZones
-                      .filter(z => !z.isLabel)
-                      .map((zone) => {
-                        const globalIdx  = zones.indexOf(zone)
-                        // Find label sub-zones attached to this zone
-                        const labelZones = slideZones.filter(z => z.isLabel && z.labelFor === zone.key)
-                        return (
-                          <div key={zone.key + '-' + slideIdx + '-' + globalIdx}>
-                            <ZoneRow
-                              zone={zone}
-                              highlighted={highlightedKey === zone.key}
-                              onMouseEnter={() => setHighlightedKey(zone.key)}
-                              onMouseLeave={() => setHighlightedKey(null)}
-                              onChange={updated => handleZoneChange(globalIdx, updated)}
-                              onRemove={() => handleZoneRemove(globalIdx)}
-                            />
-                            {labelZones.map(lz => {
-                              const lIdx = zones.indexOf(lz)
-                              return (
-                                <div key={lz.key} className="zone-label-child">
-                                  <div className="zone-label-child-indent" />
-                                  <ZoneRow
-                                    zone={lz}
-                                    highlighted={highlightedKey === lz.key}
-                                    onMouseEnter={() => setHighlightedKey(lz.key)}
-                                    onMouseLeave={() => setHighlightedKey(null)}
-                                    onChange={updated => handleZoneChange(lIdx, updated)}
-                                    onRemove={() => handleZoneRemove(lIdx)}
-                                  />
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )
-                      })}
-                    {/* Orphaned label zones (labelFor points to a zone not on this slide) */}
-                    {slideZones.filter(z => z.isLabel && !slideZones.find(p => p.key === z.labelFor)).map(lz => {
-                      const lIdx = zones.indexOf(lz)
-                      return (
-                        <ZoneRow
-                          key={lz.key}
-                          zone={lz}
-                          highlighted={highlightedKey === lz.key}
-                          onMouseEnter={() => setHighlightedKey(lz.key)}
-                          onMouseLeave={() => setHighlightedKey(null)}
-                          onChange={updated => handleZoneChange(lIdx, updated)}
-                          onRemove={() => handleZoneRemove(lIdx)}
-                        />
-                      )
-                    })}
-                  </div>
-                ))}
-
-                {zones.length === 0 && (
-                  <p className="zone-list-empty">All zones removed. Add data-zone attributes to your HTML and re-upload.</p>
-                )}
-
-                <div className="html-project-footer">
-                  <div className="form-group">
-                    <label className="form-label">Project name</label>
-                    <input className="form-input" type="text" value={projectName} onChange={e => setProjectName(e.target.value)} placeholder="my-presentation" />
-                  </div>
-                  <button className="btn btn-primary" disabled={!canProceed || creating} onClick={handleCreateProject}>
-                    {creating ? 'Creating…' : 'Create Project →'}
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
 
-          {/* ── Right: slide preview ──────────────────────────────── */}
+          {/* ── Right: slide preview ──────────────────────────────────── */}
           {previewHtml && (
             <div className="html-preview-panel" ref={wrapperRef}>
               <div className="html-preview-label">
                 Slide 1 preview
-                {highlightedKey && <span className="html-preview-highlight-label">· highlighting <code>{highlightedKey}</code></span>}
+                {highlightNodeId && (
+                  <span className="html-preview-highlight-label">
+                    · <code>{highlightNodeId.split('>').pop()}</code>
+                  </span>
+                )}
               </div>
               <div
                 className="html-preview-frame-wrapper"
@@ -561,7 +442,7 @@ ${highlightCss}
                 />
               </div>
               <p className="html-preview-note">
-                Hover a zone row to highlight it here. Click a zone ID to rename it.
+                Hover a tree node to highlight it here.
               </p>
             </div>
           )}

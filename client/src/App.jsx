@@ -3,13 +3,15 @@ import Toast            from './components/Toast.jsx'
 import FlowSelectStep   from './steps/FlowSelectStep.jsx'
 import UploadStep       from './steps/UploadStep.jsx'
 import HtmlUploadStep   from './steps/HtmlUploadStep.jsx'
+import HtmlRecipeStep   from './steps/HtmlRecipeStep.jsx'
+import HtmlPreviewStep  from './steps/HtmlPreviewStep.jsx'
 import TagStep          from './steps/TagStep.jsx'
 import RecipeStep       from './steps/RecipeStep.jsx'
 import PreviewStep      from './steps/PreviewStep.jsx'
 import { mergeTagsWithSlides } from './utils/tagUtils.js'
 
 // All steps including the shared entry points
-const ALL_STEPS  = ['flow-select', 'upload', 'html-upload', 'tag', 'recipe', 'preview']
+const ALL_STEPS  = ['flow-select', 'upload', 'html-upload', 'html-recipe', 'html-preview', 'tag', 'recipe', 'preview']
 
 export default function App() {
   // ── Step navigation ────────────────────────────────────────────
@@ -36,24 +38,35 @@ export default function App() {
 
   const handleBackToFlowSelect = useCallback(() => {
     setActiveFlow(null)
-    // Reset HTML flow state
+    setHtmlUploadSession(null)
     setHtmlProject(null)
+    setHtmlApplied(null)
     navigateTo('flow-select')
   }, [navigateTo])
 
   // ── HTML flow state ────────────────────────────────────────────
-  // Set when the user completes HtmlUploadStep (project created on server)
-  const [htmlProject, setHtmlProject] = useState(null)
-  // { chainId, projectName, zones, templatePath }
+  // htmlUploadSession persists the upload/tree state so back-navigation
+  // from recipe or preview restores the tree without re-uploading.
+  const [htmlUploadSession, setHtmlUploadSession] = useState(null)
+  // { templateId, fileName, slideCount, trees, selections, previewHtml, rawHtml, projectName }
+
+  const [htmlProject,  setHtmlProject]  = useState(null)  // { chainId, projectName, zones, templatePath }
+  const [htmlApplied,  setHtmlApplied]  = useState(null)  // { outputFile, previewHtml, roundId }
 
   const handleHtmlProjectCreated = useCallback((project) => {
     setHtmlProject(project)
-    // Stage 2+ (recipe / content generation) is not yet implemented.
-    // For now, show a success state within HtmlUploadStep by staying on
-    // 'html-upload' — the step will detect htmlProject != null and render
-    // a "project created" confirmation. Future stages will navigate forward.
-    setStep('html-upload')
-  }, [])
+    navigateTo('html-recipe')
+  }, [navigateTo])
+
+  const handleHtmlApplied = useCallback((result) => {
+    setHtmlApplied(result)
+    navigateTo('html-preview')
+  }, [navigateTo])
+
+  const handleBackToHtmlRecipe = useCallback(() => {
+    setHtmlApplied(null)
+    navigateTo('html-recipe')
+  }, [navigateTo])
 
   // ── PPTX flow: Template data ───────────────────────────────────
   const [templateFile, setTemplateFile] = useState(null)
@@ -89,16 +102,20 @@ export default function App() {
   // ── Global toast notification ──────────────────────────────────
   const [toast, setToast] = useState(null)
 
-  // ── canNavigateTo guard (PPTX flow) ───────────────────────────
+  // ── canNavigateTo guard ───────────────────────────────────────
   const canNavigateTo = useCallback((s) => {
-    if (s === 'flow-select') return true
-    if (s === 'upload')      return activeFlow === 'pptx'
-    if (s === 'html-upload') return activeFlow === 'html'
-    if (s === 'tag')         return !!(templateFile)
-    if (s === 'recipe')      return !!(templateFile && tags.length > 0)
-    if (s === 'preview')     return !!(templateFile && tags.length > 0 && jsonInput && validation?.valid)
+    if (s === 'flow-select')  return true
+    // PPTX flow
+    if (s === 'upload')       return activeFlow === 'pptx'
+    if (s === 'tag')          return !!(templateFile)
+    if (s === 'recipe')       return !!(templateFile && tags.length > 0)
+    if (s === 'preview')      return !!(templateFile && tags.length > 0 && jsonInput && validation?.valid)
+    // HTML flow
+    if (s === 'html-upload')  return activeFlow === 'html'
+    if (s === 'html-recipe')  return !!(htmlProject)
+    if (s === 'html-preview') return !!(htmlProject && htmlApplied)
     return false
-  }, [activeFlow, templateFile, tags.length, jsonInput, validation])
+  }, [activeFlow, templateFile, tags.length, jsonInput, validation, htmlProject, htmlApplied])
 
   // ── Load patches on mount ──────────────────────────────────────
   useEffect(() => {
@@ -549,39 +566,53 @@ export default function App() {
   }
 
   if (step === 'html-upload') {
-    // Show project-created confirmation if project already exists
-    if (htmlProject) {
-      return (
-        <>
-          <Toast toast={toast} onDismiss={() => setToast(null)} />
-          <div className="app">
-            <div className="html-project-created">
-              <div className="html-project-created-icon">✓</div>
-              <h2>Project created</h2>
-              <p className="html-project-created-name">{htmlProject.projectName}</p>
-              <p className="html-project-created-meta">
-                {htmlProject.zones?.length} zones · Content generation coming in Stage 2
-              </p>
-              <button
-                className="btn btn-link"
-                onClick={handleBackToFlowSelect}
-              >
-                ← Start a new project
-              </button>
-            </div>
-          </div>
-        </>
-      )
-    }
-
     return (
       <>
         <Toast toast={toast} onDismiss={() => setToast(null)} />
         <HtmlUploadStep
           {...sharedProps}
+          initialSession={htmlUploadSession}
+          onSessionChange={setHtmlUploadSession}
           onProjectCreated={handleHtmlProjectCreated}
           onBack={handleBackToFlowSelect}
           setToast={setToast}
+        />
+      </>
+    )
+  }
+
+  if (step === 'html-recipe' && htmlProject) {
+    return (
+      <>
+        <Toast toast={toast} onDismiss={() => setToast(null)} />
+        <HtmlRecipeStep
+          project={htmlProject}
+          step={step}
+          canNavigateTo={canNavigateTo}
+          navigateTo={navigateTo}
+          onBack={() => navigateTo('html-upload')}
+          onApplied={handleHtmlApplied}
+          setToast={setToast}
+          debugContext={debugContext}
+        />
+      </>
+    )
+  }
+
+  if (step === 'html-preview' && htmlProject && htmlApplied) {
+    return (
+      <>
+        <Toast toast={toast} onDismiss={() => setToast(null)} />
+        <HtmlPreviewStep
+          project={htmlProject}
+          applied={htmlApplied}
+          step={step}
+          canNavigateTo={canNavigateTo}
+          navigateTo={navigateTo}
+          onBack={handleBackToHtmlRecipe}
+          onStartNew={handleBackToFlowSelect}
+          setToast={setToast}
+          debugContext={debugContext}
         />
       </>
     )

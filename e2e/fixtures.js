@@ -76,33 +76,54 @@ export const SEL = {
   htmlViolations:   '.html-violations',
   htmlViolationItems: '.html-violation-item',
 
-  // Zone list
-  zoneListSection:  '.zone-list-section',
-  zoneRows:         '.zone-row',
-  zoneRowByKey:     (key) => `.zone-row:has(.zone-key-badge:text("${key}"))`,
-  zoneKeyBadge:     '.zone-key-badge',
-  zoneTypeSelect:   '.zone-type-select',
-  zoneAutoToggle:   '.zone-auto-toggle input[type="checkbox"]',
-  zoneExpandBtn:    '.zone-expand-btn',
-  zoneRemoveBtn:    '.zone-remove-btn',
-  zoneHintInput:    '.zone-hint-input',
-  zoneOriginalText: '.zone-original-text',
-  zoneTagRepeatable: '.zone-tag--repeatable',
-  zoneTagChild:     '.zone-tag--child',
-  zoneListEmpty:    '.zone-list-empty',
+  // DOM Tree panel (replaces flat zone list)
+  htmlTreePanel:    '[data-testid="html-tree-panel"]',
+  treeNodes:        '.tree-node',
+  treeNodeById:     (id) => `[data-node-id="${id}"]`,
+  treeNodeByTag:    (tag) => `.tree-node[data-node-id^="${tag}"]`,
+  treeAssignBtn:    (id) => `[data-testid="tree-assign-btn-${id}"]`,
+  treeCheckbox:     (id) => `[data-testid="tree-check-${id}"]`,
+  treeGroupAssignBtn: '[data-testid="tree-group-assign-btn"]',
+  treeExpandAll:    'button:has-text("Expand all")',
+  treeZoneBadges:   '.tree-zone-badge',
+  treeConflictWarning: '[data-testid="tree-conflict-warning"]',
+
+  // Assignment panel
+  assignPanel:      '[data-testid="tree-assign-panel"]',
+  assignKeyInput:   '[data-testid="tree-assign-key"]',
+  assignHintInput:  '[data-testid="tree-assign-hint"]',
+  assignPromptInput:'[data-testid="tree-assign-prompt"]',
+  assignTypeSelect: '[data-testid="tree-assign-type"]',
+  assignAiToggle:   '[data-testid="tree-assign-ai"]',
+  assignConfirmBtn: '[data-testid="tree-assign-confirm"]',
+  assignClearBtn:   '[data-testid="tree-assign-clear"]',
 
   // Project footer
   projectNameInput: '.html-project-footer .form-input',
-  createProjectBtn: 'button:has-text("Create Project")',
+  createProjectBtn: '[data-testid="create-project-btn"]',
 
   // Preview panel
   htmlPreviewPanel: '.html-preview-panel',
   htmlPreviewFrame: '.html-preview-frame',
 
-  // Project created confirmation
-  htmlProjectCreated: '.html-project-created',
-  projectCreatedName: '.html-project-created-name',
-  projectCreatedMeta: '.html-project-created-meta',
+  // Breadcrumbs (HTML flow)
+  breadcrumbs:         '.breadcrumbs',
+  breadcrumbItems:     '.breadcrumb-item',
+  breadcrumbActive:    '.breadcrumb-item.active',
+  breadcrumbCompleted: '.breadcrumb-item.completed',
+  breadcrumbClickable: '.breadcrumb-item.clickable',
+
+  // HTML recipe step
+  htmlRecipeLayout:    '.html-recipe-layout',
+  htmlGenerateRecipeBtn: 'button:has-text("Generate recipe")',
+  htmlRecipeArea:      '.html-recipe-area',
+  htmlJsonInput:       '.html-recipe-right .json-input',
+  htmlApplyBtn:        'button:has-text("Apply content")',
+
+  // HTML preview step
+  htmlPreviewStepLayout: '.html-preview-step-layout',
+  htmlDownloadBtn:     'button:has-text("Download HTML")',
+  htmlStartNewBtn:     'button:has-text("Start new project")',
 
   // Change flow link (shared)
   changeFlowBtn:    'button:has-text("Change flow")',
@@ -202,26 +223,26 @@ export async function doUpload(page) {
 }
 
 /**
- * Upload the fixture HTML template and wait for the zone list to appear.
- * Returns after the server has parsed zones and the zone list is visible.
+ * Upload the fixture HTML template and wait for the tree panel to appear.
+ * Returns after the server has parsed the template and the tree is visible.
  */
 export async function doHtmlUpload(page) {
   await page.request.delete('http://localhost:3001/api/patches');
   await page.request.delete('http://localhost:3001/api/patch-chains');
   await selectHtmlFlow(page);
   await page.setInputFiles(SEL.htmlFileInput, FIXTURE_HTML);
-  await page.waitForSelector(SEL.zoneListSection);
+  await page.waitForSelector(SEL.htmlTreePanel);
 }
 
 /**
  * Upload the fixture HTML, fill the project name, and create the project.
- * Returns after the project-created confirmation screen is shown.
+ * Returns after the HTML recipe step is shown (Stage 2 entry point).
  */
 export async function doHtmlCreateProject(page, projectName = 'test-project') {
   await doHtmlUpload(page);
   await page.locator(SEL.projectNameInput).fill(projectName);
   await page.locator(SEL.createProjectBtn).click();
-  await page.waitForSelector(SEL.htmlProjectCreated);
+  await page.waitForSelector(SEL.htmlRecipeLayout);
 }
 
 /** Select slide N (1-based) in the carousel. */
@@ -348,7 +369,7 @@ export const test = base.extend({
 
   /**
    * Visual flow: test_slide.html uploaded + project created.
-   * App is on the project-created confirmation screen.
+   * App is on the HTML recipe step (Stage 2).
    */
   htmlProjectPage: async ({ page }, use) => {
     await doHtmlCreateProject(page, 'test-project');

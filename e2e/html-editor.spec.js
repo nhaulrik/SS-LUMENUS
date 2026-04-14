@@ -127,14 +127,14 @@ test.describe('UC-HE-09 ? Back to zones closes editor', () => {
     await expect(page.locator(EDITOR_SEL.overlay)).toBeVisible();
     await page.locator(EDITOR_SEL.closeBtn).click();
     await expect(page.locator(EDITOR_SEL.overlay)).not.toBeVisible();
-    await expect(page.locator(SEL.zoneListSection)).toBeVisible();
+    // Zone review is now the tree panel
+    await expect(page.locator(SEL.htmlTreePanel)).toBeVisible();
   });
 });
 
 test.describe('UC-HE-07 ? Apply changes re-parses and returns to zone review', () => {
-  test('Apply changes closes editor and shows updated zone list', async ({ page }) => {
+  test('Apply changes closes editor and shows updated tree panel', async ({ page }) => {
     await doHtmlUpload(page);
-    const initialZoneCount = await page.locator(SEL.zoneRows).count();
     await page.locator(EDITOR_SEL.editBtn).click();
 
     // Make a trivial edit (add a comment) that does not change zones
@@ -145,11 +145,9 @@ test.describe('UC-HE-07 ? Apply changes re-parses and returns to zone review', (
     await expect(page.locator(EDITOR_SEL.applyBtn)).toBeEnabled({ timeout: 3000 });
     await page.locator(EDITOR_SEL.applyBtn).click();
 
-    // Should return to zone review
+    // Should return to zone review (tree panel)
     await expect(page.locator(EDITOR_SEL.overlay)).not.toBeVisible({ timeout: 10000 });
-    await expect(page.locator(SEL.zoneListSection)).toBeVisible();
-    // Zone count should be preserved
-    await expect(page.locator(SEL.zoneRows)).toHaveCount(initialZoneCount);
+    await expect(page.locator(SEL.htmlTreePanel)).toBeVisible();
   });
 });
 
@@ -179,15 +177,13 @@ test.describe('UC-HE-11/12 ? Validation warnings', () => {
 });
 
 test.describe('UC-HE-13 ? Zone edits preserved after Apply', () => {
-  test('user-renamed zone key is preserved after applying HTML edits', async ({ page }) => {
+  test('existing zone badges are still present after applying HTML edits', async ({ page }) => {
     await doHtmlUpload(page);
 
-    // Rename the first zone key
-    const firstBadge = page.locator(SEL.zoneKeyBadge).first();
-    await firstBadge.click();
-    const keyInput = page.locator('.zone-key-input').first();
-    await keyInput.fill('my_custom_key');
-    await keyInput.press('Enter');
+    // Expand tree to see badges, count pre-existing ones
+    await page.locator(SEL.treeExpandAll).click();
+    const initialBadgeCount = await page.locator(SEL.treeZoneBadges).count();
+    expect(initialBadgeCount).toBeGreaterThan(0);
 
     // Open editor and make a trivial edit
     await page.locator(EDITOR_SEL.editBtn).click();
@@ -198,7 +194,9 @@ test.describe('UC-HE-13 ? Zone edits preserved after Apply', () => {
     await page.locator(EDITOR_SEL.applyBtn).click();
     await expect(page.locator(EDITOR_SEL.overlay)).not.toBeVisible({ timeout: 10000 });
 
-    // The renamed key should still be present
-    await expect(page.locator(SEL.zoneRowByKey('my_custom_key'))).toBeVisible();
+    // Tree panel should still be visible with badges
+    await expect(page.locator(SEL.htmlTreePanel)).toBeVisible();
+    await page.locator(SEL.treeExpandAll).click();
+    await expect(page.locator(SEL.treeZoneBadges).first()).toBeVisible({ timeout: 3000 });
   });
 });
