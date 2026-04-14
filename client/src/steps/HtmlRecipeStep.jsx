@@ -220,7 +220,7 @@ export default function HtmlRecipeStep({
 
             <div className="html-recipe-actions">
               <button className="btn btn-link" onClick={onBack}>
-                ← Back to zones
+                ← Back to template
               </button>
               <button
                 className="btn btn-primary"

@@ -71,11 +71,8 @@ beforeAll(async () => {
     fs.mkdirSync(d, { recursive: true });
   }
 
-  process.env.NODE_ENV    = 'test';
-  process.env.CHAINS_DIR  = chainsDir;
-  process.env.TEMP_DIR    = tempDir;
-  process.env.OUTPUT_DIR  = outputDir;
-  process.env.PATCHES_DIR = patchesDir;
+  process.env.NODE_ENV   = 'test';
+  process.env.CHAINS_DIR = chainsDir;
 
   const mod = await import('../index.js');
   app = mod.app;
@@ -200,6 +197,36 @@ describe('POST /api/html-flow/upload-template', () => {
       .post('/api/html-flow/upload-template')
       .send({});
     expect(res.status).toBe(400);
+  });
+
+  it('returns 400 for a file exceeding 5MB', async () => {
+    const largeHtml = `<section><p data-zone="x">${'A'.repeat(5 * 1024 * 1024 + 1)}</p></section>`;
+    const res = await request(app)
+      .post('/api/html-flow/upload-template')
+      .send({ html: largeHtml });
+    expect(res.status).toBe(400);
+    expect(res.body.violations?.some(v => v.rule === 'FILE_TOO_LARGE')).toBe(true);
+  });
+
+  it('previewHtml contains data-solon-id attributes for tree node highlighting', async () => {
+    const res = await request(app)
+      .post('/api/html-flow/upload-template')
+      .send({ html: LEAF_HTML });
+    expect(res.body.previewHtml).toContain('data-solon-id');
+  });
+
+  it('detects DUPLICATE_ZONE_KEY violation', async () => {
+    const html = `<!DOCTYPE html><html><body>
+      <section>
+        <p data-zone="title">First</p>
+        <p data-zone="title">Duplicate</p>
+      </section>
+    </body></html>`;
+    const res = await request(app)
+      .post('/api/html-flow/upload-template')
+      .send({ html });
+    expect(res.status).toBe(200);
+    expect(res.body.violations?.some(v => v.rule === 'DUPLICATE_ZONE_KEY')).toBe(true);
   });
 });
 
@@ -511,5 +538,72 @@ describe('GET /api/html-flow/download/:chainId/:file', () => {
     const res = await request(app)
       .get(`/api/html-flow/download/${chainId}/..%2Fchain.json`);
     expect(res.status).toBe(400);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Security — path traversal via chainId
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('Security — chainId path traversal', () => {
+  const traversalIds = [
+    '../other-chain',
+    '../../etc',
+    'chain-abc/../../../etc',
+    'chain-abc%2F..%2F..%2Fetc',
+  ];
+
+  for (const badId of traversalIds) {
+    it(`rejects chainId "${badId}" in generate-recipe`, async () => {
+      const res = await request(app)
+        .post('/api/html-flow/generate-recipe')
+        .send({ chainId: badId });
+      expect([400, 404]).toContain(res.status);
+    });
+
+    it(`rejects chainId "${badId}" in validate-json`, async () => {
+      const res = await request(app)
+        .post('/api/html-flow/validate-json')
+        .send({ chainId: badId, jsonString: '{}' });
+      expect([400, 404]).toContain(res.status);
+    });
+
+    it(`rejects chainId "${badId}" in apply-content`, async () => {
+      const res = await request(app)
+        .post('/api/html-flow/apply-content')
+        .send({ chainId: badId, jsonString: '{}' });
+      expect([400, 404]).toContain(res.status);
+    });
+
+    it(`rejects chainId "${badId}" in download`, async () => {
+      const res = await request(app)
+        .get(`/api/html-flow/download/${encodeURIComponent(badId)}/output-test.html`);
+      expect([400, 404]).toContain(res.status);
+    });
+  }
+
+  it('create-project does not leak templatePath in response', async () => {
+    const { chainId } = await createProject(LEAF_HTML);
+    // templatePath is a server-side path — should not appear in response
+    const res = await request(app)
+      .post('/api/html-flow/create-project')
+      .send({ templateId: 'nope', selections: [], projectName: 'x' });
+    // Even in the success case, templatePath should be absent
+    const { chainId: cid } = await createProject(LEAF_HTML);
+    void cid; // used above
+    const successBody = (await request(app)
+      .post('/api/html-flow/create-project')
+      .send({ templateId: (await uploadTemplate(LEAF_HTML)).templateId, selections: [], projectName: 'test' })).body;
+    expect(successBody.templatePath).toBeUndefined();
+  });
+
+  it('apply-content does not leak outputPath in response', async () => {
+    const { chainId } = await createProject(LEAF_HTML);
+    const json = JSON.stringify({ static: { title: 'T', body: 'B' } });
+    const res = await request(app)
+      .post('/api/html-flow/apply-content')
+      .send({ chainId, jsonString: json });
+    expect(res.body.outputPath).toBeUndefined();
+    expect(res.body.outputFile).toBeTruthy(); // filename only is fine
   });
 });

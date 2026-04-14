@@ -185,8 +185,10 @@ test.describe('UC-HE-13 ? Zone edits preserved after Apply', () => {
     const initialBadgeCount = await page.locator(SEL.treeZoneBadges).count();
     expect(initialBadgeCount).toBeGreaterThan(0);
 
-    // Open editor and make a trivial edit
+    // Open editor — lazy-loaded via Suspense; wait for CodeMirror to mount
     await page.locator(EDITOR_SEL.editBtn).click();
+    await expect(page.locator(EDITOR_SEL.overlay)).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(EDITOR_SEL.cmContent)).toBeVisible({ timeout: 15000 });
     await page.locator(EDITOR_SEL.cmContent).click();
     await page.keyboard.press('End');
     await page.keyboard.type(' ');

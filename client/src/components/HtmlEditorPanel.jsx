@@ -160,86 +160,17 @@ function validateHtml(html) {
   return warnings
 }
 
-// ── Source injection ─────────────────────────────────────────────────────────
-// Finds an element in the HTML source by (tag + class + textContent) fingerprint
-// and injects a data attribute into its opening tag.
-// Returns { newHtml, from, to } on success, { ambiguous, count } if multiple
-// matches, or null if not found.
-function injectAttributeIntoSource(html, { tag, className, textContent, attribute, value }) {
-  const escapedClass = (className || '').trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const escapedText  = (textContent || '').trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&').slice(0, 40)
-
-  // Match the opening tag: <TAG ... class="...CLASS..."...>
-  // Allow any attributes before/after class, and class to be anywhere in the tag.
-  const tagPattern = new RegExp(
-    `(<${tag}(?=[^>]*\\bclass="[^"]*${escapedClass}[^"]*")[^>]*?)(\\/?>)`,
-    'gi'
-  )
-
-  const matches = []
-  let m
-  while ((m = tagPattern.exec(html)) !== null) {
-    // Verify the text content follows immediately after this opening tag
-    const afterTag = html.slice(m.index + m[0].length, m.index + m[0].length + 200)
-    if (escapedText && !afterTag.includes(textContent.trim().slice(0, 20))) continue
-    matches.push({ index: m.index, len: m[0].length, prefix: m[1], close: m[2] })
-  }
-
-  if (matches.length === 0) return null
-  if (matches.length > 1)   return { ambiguous: true, count: matches.length }
-
-  const { index, prefix, close } = matches[0]
-  const newTag  = `${prefix} ${attribute}="${value}"${close}`
-  const newHtml = html.slice(0, index) + newTag + html.slice(index + prefix.length + close.length)
-  return { newHtml, from: index, to: index + prefix.length + close.length }
-}
-
-// ── Smart zone merge ──────────────────────────────────────────────────────────
-// Merges user edits (key renames, hint changes, type overrides, autoGenerate)
-// from the old zone list into the freshly parsed new zone list.
-// Matching is by original key (before user rename). We track the mapping via
-// zone.originalKey which is the key as parsed from the HTML (data-zone value).
-export function mergeZoneEdits(oldZones, newZones) {
-  // Build a lookup: originalKey → user edits from old list
-  // The "original key" is what the HTML actually has (data-zone="x").
-  // The user may have renamed it in the UI — we store the rename as zone.key.
-  // We match by the HTML key (zone.originalKey if present, else zone.key).
-  const editsByHtmlKey = {}
-  oldZones.forEach(z => {
-    const htmlKey = z.htmlKey ?? z.key  // htmlKey = the data-zone value in the HTML
-    editsByHtmlKey[htmlKey] = {
-      key:          z.key,          // user-renamed key (may differ from htmlKey)
-      hint:         z.hint,
-      type:         z.type,
-      autoGenerate: z.autoGenerate,
-    }
-  })
-
-  return newZones.map(z => {
-    const edits = editsByHtmlKey[z.key]  // z.key from fresh parse = the data-zone value
-    if (!edits) return { ...z, htmlKey: z.key }  // new zone, no prior edits
-    return {
-      ...z,
-      htmlKey:      z.key,          // remember the HTML key for future merges
-      key:          edits.key,      // preserve user rename
-      hint:         edits.hint,
-      type:         edits.type,
-      autoGenerate: edits.autoGenerate,
-    }
-  })
-}
-
 // ── HtmlEditorPanel ───────────────────────────────────────────────────────────
 
 export default function HtmlEditorPanel({
   uploadedHtml,       // the committed HTML (from last upload or last apply)
-  zones,              // current zone list (with user edits)
-  onApply,            // (newHtml, newZones) => void — called when user applies
+  onApply,            // (newHtml, newSelections) => void — called when user applies
   onClose,            // () => void — close the editor, return to zone review
 }) {
   // ── Editor state ────────────────────────────────────────────────────────────
   const editorHostRef  = useRef(null)   // DOM node for CodeMirror mount
   const editorViewRef  = useRef(null)   // EditorView instance
+  const iframeRef      = useRef(null)   // preview iframe element
   const [draftHtml,    setDraftHtml]    = useState(uploadedHtml)
   const [previewHtml,  setPreviewHtml]  = useState(uploadedHtml)
   const [warnings,     setWarnings]     = useState([])
@@ -280,10 +211,6 @@ export default function HtmlEditorPanel({
   }, [])
 
   // ── postMessage listener (preview → editor cursor sync) ──────────────────────
-  // Keep a ref to the latest zones so the stable handler can read current state
-  const iframeRef = useRef(null)
-  const zonesRef  = useRef(zones)
-  useEffect(() => { zonesRef.current = zones }, [zones])
 
   // Register a stable window message handler using the ref-forwarding pattern.
   // dispatchRef.current always points to the latest handler function, so

@@ -77,7 +77,11 @@ function AssignmentPanel({ nodes, existingSel, onAssign, onClear, onClose }) {
   }
 
   return (
-    <div className="tree-assign-panel" data-testid="tree-assign-panel">
+    <div
+      className="tree-assign-panel"
+      data-testid="tree-assign-panel"
+      onKeyDown={e => e.key === 'Escape' && onClose()}
+    >
       <div className="tree-assign-header">
         <span className="tree-assign-title">
           {isGroup ? `Assign ${nodes.length} elements` : `Assign: ${firstNode.label}`}
@@ -474,6 +478,15 @@ export default function HtmlTreePanel({
           >
             Expand all
           </button>
+          {expandedIds.size > 0 && (
+            <button
+              className="btn btn-link html-tree-expand-btn"
+              onClick={() => setExpandedIds(new Set())}
+              title="Collapse all"
+            >
+              Collapse
+            </button>
+          )}
         </div>
       </div>
 

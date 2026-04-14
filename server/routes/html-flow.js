@@ -17,7 +17,7 @@ import fs             from 'fs';
 import path           from 'path';
 import { randomUUID } from 'crypto';
 import { parse }      from 'node-html-parser';
-import { CHAINS_DIR } from '../config.js';
+import { CHAINS_DIR, RESOLVED_CHAINS_DIR, isInsideDir } from '../config.js';
 import { buildHtmlRecipe, validateHtmlJson } from '../lib/html-recipe-builder.js';
 import { applyHtmlContent }                  from '../lib/html-patcher.js';
 import { buildSectionTree, flattenTree }      from '../lib/build-tree.js';
@@ -28,6 +28,18 @@ const router = express.Router();
 // In-memory store for pending template sessions (pre-project-creation).
 // Keyed by templateId (uuid). Entries expire after 2 hours.
 const pendingTemplates = new Map();
+
+// ── Security helpers ──────────────────────────────────────────────────────────
+
+/** Validate a chainId and return the safe chain directory path, or null. */
+function resolveChainDir(chainId) {
+  if (!chainId || typeof chainId !== 'string') return null;
+  // Only allow safe characters — UUIDs and our chain- prefix
+  if (!/^[\w\-]{1,100}$/.test(chainId)) return null;
+  const chainDir = path.join(CHAINS_DIR, chainId);
+  if (!isInsideDir(chainDir, RESOLVED_CHAINS_DIR)) return null;
+  return chainDir;
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -284,8 +296,10 @@ router.patch('/html-flow/update-selections', (req, res) => {
 // ── POST /api/html-flow/create-project ───────────────────────────────────────
 
 router.post('/html-flow/create-project', (req, res) => {
+  let templateId;
   try {
-    const { templateId, selections, projectName } = req.body;
+    templateId = req.body.templateId;
+    const { selections, projectName } = req.body;
 
     if (!templateId || !pendingTemplates.has(templateId)) {
       return res.status(404).json({ ok: false, error: 'Template session not found. Please re-upload.' });
@@ -294,14 +308,14 @@ router.post('/html-flow/create-project', (req, res) => {
     const session = pendingTemplates.get(templateId);
 
     // Resolve conflicts: block zones supersede descendant leaf zones
-    const rawSelections      = Array.isArray(selections) ? selections : (session.selections ?? []);
+    const rawSelections         = Array.isArray(selections) ? selections : (session.selections ?? []);
     const { resolved, removed } = resolveConflicts(rawSelections);
 
     // Derive the zones array that all downstream consumers expect
     const zones = selectionsToZones(resolved);
 
-    const chainId    = 'chain-' + randomUUID();
-    const chainDir   = path.join(CHAINS_DIR, chainId);
+    const chainId  = 'chain-' + randomUUID();
+    const chainDir = path.join(CHAINS_DIR, chainId);
     fs.mkdirSync(chainDir, { recursive: true });
 
     const templatePath = path.join(chainDir, 'template.html');
@@ -318,12 +332,14 @@ router.post('/html-flow/create-project', (req, res) => {
       slideCount:   session.slideCount,
       createdAt:    new Date().toISOString(),
       updatedAt:    new Date().toISOString(),
-      selections:   resolved,   // persist selections for future round-trip editing
-      zones,                    // derived; consumed by recipe/validate/apply
+      selections:   resolved,
+      zones,
+      trees:        session.trees ?? [],  // stored for data-solon-id injection at apply time
       rounds:       [],
     };
 
     fs.writeFileSync(path.join(chainDir, 'chain.json'), JSON.stringify(chain, null, 2), 'utf8');
+    // Only delete the session after both writes succeed
     pendingTemplates.delete(templateId);
 
     return res.json({
@@ -333,10 +349,11 @@ router.post('/html-flow/create-project', (req, res) => {
       selections:  resolved,
       removedSelections: removed,
       zones,
-      templatePath,
+      // templatePath intentionally omitted — server-side path not for clients
     });
   } catch (err) {
     console.error('[html-flow] create-project error:', err);
+    // Do not delete session on failure — allow client to retry
     return res.status(500).json({ ok: false, error: err.message });
   }
 });
@@ -347,11 +364,12 @@ router.post('/html-flow/generate-recipe', (req, res) => {
   try {
     const { chainId, globalPrompt } = req.body;
 
-    if (!chainId) {
-      return res.status(400).json({ ok: false, error: 'chainId is required.' });
-    }
+    if (!chainId) return res.status(400).json({ ok: false, error: 'chainId is required.' });
 
-    const chainPath = path.join(CHAINS_DIR, chainId, 'chain.json');
+    const chainDir = resolveChainDir(chainId);
+    if (!chainDir) return res.status(400).json({ ok: false, error: 'Invalid chainId.' });
+
+    const chainPath = path.join(chainDir, 'chain.json');
     if (!fs.existsSync(chainPath)) {
       return res.status(404).json({ ok: false, error: 'Project not found.' });
     }
@@ -385,7 +403,10 @@ router.post('/html-flow/validate-json', (req, res) => {
       return res.status(400).json({ ok: false, error: 'chainId and jsonString are required.' });
     }
 
-    const chainPath = path.join(CHAINS_DIR, chainId, 'chain.json');
+    const chainDir = resolveChainDir(chainId);
+    if (!chainDir) return res.status(400).json({ ok: false, error: 'Invalid chainId.' });
+
+    const chainPath = path.join(chainDir, 'chain.json');
     if (!fs.existsSync(chainPath)) {
       return res.status(404).json({ ok: false, error: 'Project not found.' });
     }
@@ -410,8 +431,13 @@ router.post('/html-flow/apply-content', (req, res) => {
     if (!chainId || !jsonString) {
       return res.status(400).json({ ok: false, error: 'chainId and jsonString are required.' });
     }
+    if (typeof jsonString === 'string' && jsonString.length > 2 * 1024 * 1024) {
+      return res.status(400).json({ ok: false, error: 'JSON response too large (max 2MB).' });
+    }
 
-    const chainDir  = path.join(CHAINS_DIR, chainId);
+    const chainDir = resolveChainDir(chainId);
+    if (!chainDir) return res.status(400).json({ ok: false, error: 'Invalid chainId.' });
+
     const chainPath = path.join(chainDir, 'chain.json');
     if (!fs.existsSync(chainPath)) {
       return res.status(404).json({ ok: false, error: 'Project not found.' });
@@ -434,20 +460,23 @@ router.post('/html-flow/apply-content', (req, res) => {
     const outputPath = path.join(chainDir, outputFile);
     fs.writeFileSync(outputPath, patchedHtml, 'utf8');
 
+    // Pass the chain's stored tree (first slide) for data-solon-id injection
+    const firstTree  = chain.trees?.[0] ?? null;
+    const previewHtml = buildPreviewHtml(patchedHtml, firstTree);
+
     const round = {
       id:         roundId,
       appliedAt:  new Date().toISOString(),
       outputFile,
-      outputPath,
+      // outputPath intentionally not stored — can be derived from chainDir + outputFile
       jsonInput:  jsonString.slice(0, 2000),
     };
     chain.rounds    = [...(chain.rounds || []), round];
     chain.updatedAt = new Date().toISOString();
     fs.writeFileSync(chainPath, JSON.stringify(chain, null, 2), 'utf8');
 
-    const previewHtml = buildPreviewHtml(patchedHtml);
-
-    return res.json({ ok: true, roundId, outputFile, outputPath, previewHtml });
+    // outputPath intentionally omitted from response — server-side path not for clients
+    return res.json({ ok: true, roundId, outputFile, previewHtml });
   } catch (err) {
     console.error('[html-flow] apply-content error:', err);
     return res.status(500).json({ ok: false, error: err.message });
@@ -464,14 +493,20 @@ router.get('/html-flow/download/:chainId/:file', (req, res) => {
       return res.status(400).json({ ok: false, error: 'Invalid filename.' });
     }
 
-    const filePath = path.join(CHAINS_DIR, chainId, file);
+    const chainDir = resolveChainDir(chainId);
+    if (!chainDir) return res.status(400).json({ ok: false, error: 'Invalid chainId.' });
+
+    const filePath = path.join(chainDir, file);
+    if (!isInsideDir(filePath, chainDir)) {
+      return res.status(400).json({ ok: false, error: 'Invalid path.' });
+    }
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ ok: false, error: 'File not found.' });
     }
 
     res.setHeader('Content-Disposition', `attachment; filename="${file}"`);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    return res.send(fs.readFileSync(filePath));
+    return res.sendFile(path.resolve(filePath));
   } catch (err) {
     console.error('[html-flow] download error:', err);
     return res.status(500).json({ ok: false, error: err.message });

@@ -209,25 +209,31 @@ test.describe('UC-HF-07 — Slide preview iframe is rendered', () => {
     const iBox = await page.locator(SEL.htmlPreviewFrame).boundingBox();
     expect(wBox).not.toBeNull();
     expect(iBox).not.toBeNull();
-    // Allow 3px tolerance for sub-pixel rounding from aspect-ratio computation
-    expect(Math.abs(iBox.height - wBox.height)).toBeLessThanOrEqual(3);
-    expect(Math.abs(iBox.width  - wBox.width )).toBeLessThanOrEqual(3);
+    // Allow 8px tolerance: iframe border (1px each side) + sub-pixel rounding
+    expect(Math.abs(iBox.height - wBox.height)).toBeLessThanOrEqual(8);
+    expect(Math.abs(iBox.width  - wBox.width )).toBeLessThanOrEqual(8);
   });
 
   test('slide shell is scaled to fit the iframe bounds', async ({ page }) => {
     await doHtmlUpload(page);
-    const iBox  = await page.locator(SEL.htmlPreviewFrame).boundingBox();
+    const iBox = await page.locator(SEL.htmlPreviewFrame).boundingBox();
     expect(iBox).not.toBeNull();
 
-    // Scale is injected as a <style> block onto #solon-slide-shell — read computed matrix
-    const shell  = page.frameLocator(SEL.htmlPreviewFrame).locator('#solon-slide-shell');
-    const matrix = await shell.evaluate(el => window.getComputedStyle(el).transform);
-    expect(matrix).not.toBe('none');
-    const scaleMatch = matrix.match(/matrix\(([^,]+)/);
-    expect(scaleMatch).not.toBeNull();
-    const scale = parseFloat(scaleMatch[1]);
+    // Scale is injected as a <style> block onto #solon-slide-shell via the
+    // ResizeObserver callback ref. Poll until the real scale (< 1) is applied.
+    const shell = page.frameLocator(SEL.htmlPreviewFrame).locator('#solon-slide-shell');
+    let scale;
+    await expect(async () => {
+      const matrix = await shell.evaluate(el => window.getComputedStyle(el).transform);
+      expect(matrix).not.toBe('none');
+      const m = matrix.match(/matrix\(([^,]+)/);
+      expect(m).not.toBeNull();
+      scale = parseFloat(m[1]);
+      // The real scale must be < 1 (the 1280px slide is wider than the ~710px iframe)
+      expect(scale).toBeLessThan(1);
+    }).toPass({ timeout: 5000 });
+
     expect(scale).toBeGreaterThan(0);
-    expect(scale).toBeLessThanOrEqual(1);
     // Visual dimensions must fit within the iframe (±4px for float rounding)
     expect(1280 * scale).toBeLessThanOrEqual(iBox.width  + 4);
     expect(720  * scale).toBeLessThanOrEqual(iBox.height + 4);
@@ -372,6 +378,8 @@ test.describe('UC-HF-22 — User can replace the uploaded file', () => {
 
   test('clicking "Replace file" returns to the upload zone', async ({ page }) => {
     await doHtmlUpload(page);
+    // Auto-accept the confirmation dialog (selections.length > 0 triggers it)
+    page.on('dialog', dialog => dialog.accept());
     await page.locator('button:has-text("Replace file")').click();
     await expect(page.locator(SEL.htmlUploadZone)).toBeVisible();
     await expect(page.locator(SEL.htmlTreePanel)).not.toBeVisible();
@@ -502,7 +510,8 @@ test.describe('UC-HF-25 — create-project API creates chain.json with flow:"htm
     expect(body.zones.length).toBe(selections.length);
   });
 
-  test('create-project response includes templatePath pointing to template.html', async ({ page }) => {
+  test('create-project response does not leak server-side templatePath', async ({ page }) => {
+    // templatePath is a server filesystem path — it must not be returned to clients
     const html = fs.readFileSync(FIXTURE_HTML, 'utf8');
     const uploadRes = await page.request.post('http://localhost:3001/api/html-flow/upload-template', {
       data: { html, fileName: 'test_slide.html' }
@@ -513,7 +522,9 @@ test.describe('UC-HF-25 — create-project API creates chain.json with flow:"htm
       data: { templateId, selections, projectName: 'e2e-path-test' }
     });
     const body = await createRes.json();
-    expect(body.templatePath).toMatch(/template\.html$/);
+    expect(body.ok).toBe(true);
+    expect(body.templatePath).toBeUndefined(); // security: no server paths in responses
+    expect(body.chainId).toMatch(/^chain-/);   // chainId is the safe public identifier
   });
 
   test('using an expired/unknown templateId returns 404', async ({ page }) => {

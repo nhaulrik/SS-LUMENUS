@@ -60,7 +60,9 @@ export default function HtmlPreviewStep({
             <button className="btn btn-secondary" onClick={handleDownload}>
               Download HTML
             </button>
-            <button className="btn btn-primary" onClick={onStartNew}>
+            <button className="btn btn-primary" onClick={() => {
+              if (window.confirm('Start a new project? This will clear the current session.')) onStartNew()
+            }}>
               Start new project
             </button>
           </div>

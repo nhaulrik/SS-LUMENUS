@@ -234,7 +234,6 @@ ${highlightCss}
       <Suspense fallback={<div className="html-editor-overlay" style={{display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text-muted)'}}>Loading editor…</div>}>
         <HtmlEditorPanel
           uploadedHtml={rawHtml}
-          zones={[]}
           onApply={handleEditorApply}
           onClose={() => setEditorOpen(false)}
         />
@@ -261,7 +260,11 @@ ${highlightCss}
             {!templateId ? (
               <div
                 className={`upload-zone html-upload-zone${uploading ? ' upload-zone--loading' : ''}`}
+                role="button"
+                tabIndex={uploading ? -1 : 0}
+                aria-label="Upload HTML template file"
                 onClick={() => !uploading && fileInputRef.current?.click()}
+                onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && !uploading && fileInputRef.current?.click()}
                 onDragOver={e => e.preventDefault()}
                 onDrop={handleDrop}
               >
@@ -305,6 +308,7 @@ ${highlightCss}
                       ✎ Edit HTML
                     </button>
                     <button className="btn btn-link" onClick={() => {
+                      if (selections.length > 0 && !window.confirm('Replace file? Your current zone assignments will be lost.')) return
                       setTemplateId(null); setTrees([]); setSelections([])
                       setPreviewHtml(''); setRawHtml(''); setFileName(''); setViolations([])
                       syncSession({ templateId: null, trees: [], selections: [], previewHtml: '', rawHtml: '', fileName: '' })
