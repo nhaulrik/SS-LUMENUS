@@ -64,14 +64,28 @@ function buildPreviewHtml(html, tree) {
 <html>
 <head>
 <meta charset="UTF-8"/>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { width: 1280px; height: 720px; overflow: hidden; background: #000; }
-  section { width: 1280px; height: 720px; position: relative; overflow: hidden; display: block; }
-</style>
 ${headContent}
+<style>
+  /* Solon preview shell — controls the viewport, not the slide content */
+  html, body {
+    margin: 0; padding: 0;
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #000;
+    display: block;
+  }
+  #solon-slide-shell {
+    position: absolute;
+    top: 0; left: 0;
+    width: 1280px; height: 720px;
+    overflow: hidden;
+    transform-origin: top left;
+  }
+</style>
 </head>
-<body>${slideHtml}</body>
+<body>
+  <div id="solon-slide-shell">${slideHtml}</div>
+</body>
 </html>`;
   } catch {
     return '';

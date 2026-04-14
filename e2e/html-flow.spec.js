@@ -204,6 +204,48 @@ test.describe('UC-HF-07 — Slide preview iframe is rendered', () => {
     const srcDoc = await page.locator(SEL.htmlPreviewFrame).getAttribute('srcdoc');
     expect(srcDoc).toContain('data-solon-id');
   });
+
+  test('preview iframe fills its wrapper (no whitespace gap below)', async ({ page }) => {
+    await doHtmlUpload(page);
+    const wBox = await page.locator(SEL.htmlPreviewFrameWrapper).boundingBox();
+    const iBox = await page.locator(SEL.htmlPreviewFrame).boundingBox();
+    expect(wBox).not.toBeNull();
+    expect(iBox).not.toBeNull();
+    // Allow 2px tolerance for sub-pixel rounding
+    expect(Math.abs(iBox.height - wBox.height)).toBeLessThanOrEqual(2);
+    expect(Math.abs(iBox.width  - wBox.width )).toBeLessThanOrEqual(2);
+  });
+
+  test('slide shell is scaled to fit the iframe bounds', async ({ page }) => {
+    await doHtmlUpload(page);
+    const iBox  = await page.locator(SEL.htmlPreviewFrame).boundingBox();
+    expect(iBox).not.toBeNull();
+
+    // Scale is injected as a <style> block onto #solon-slide-shell — read computed matrix
+    const shell  = page.frameLocator(SEL.htmlPreviewFrame).locator('#solon-slide-shell');
+    const matrix = await shell.evaluate(el => window.getComputedStyle(el).transform);
+    expect(matrix).not.toBe('none');
+    const scaleMatch = matrix.match(/matrix\(([^,]+)/);
+    expect(scaleMatch).not.toBeNull();
+    const scale = parseFloat(scaleMatch[1]);
+    expect(scale).toBeGreaterThan(0);
+    expect(scale).toBeLessThanOrEqual(1);
+    // Visual dimensions must fit within the iframe (±4px for float rounding)
+    expect(1280 * scale).toBeLessThanOrEqual(iBox.width  + 4);
+    expect(720  * scale).toBeLessThanOrEqual(iBox.height + 4);
+  });
+
+  test('slide shell is anchored to top-left corner of the iframe (no offset)', async ({ page }) => {
+    await doHtmlUpload(page);
+    const iBox  = await page.locator(SEL.htmlPreviewFrame).boundingBox();
+    const shell = page.frameLocator(SEL.htmlPreviewFrame).locator('#solon-slide-shell');
+    const sBox  = await shell.boundingBox();
+    expect(sBox).not.toBeNull();
+    // Shell top-left in page coords must match iframe top-left.
+    // Allow 4px for the iframe border and sub-pixel rounding.
+    expect(Math.abs(sBox.x - iBox.x)).toBeLessThanOrEqual(4);
+    expect(Math.abs(sBox.y - iBox.y)).toBeLessThanOrEqual(4);
+  });
 });
 
 // ── UC-HF-08–12: Removed (flat zone list no longer exists) ───────────────────

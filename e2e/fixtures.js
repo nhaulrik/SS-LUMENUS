@@ -103,8 +103,9 @@ export const SEL = {
   createProjectBtn: '[data-testid="create-project-btn"]',
 
   // Preview panel
-  htmlPreviewPanel: '.html-preview-panel',
-  htmlPreviewFrame: '.html-preview-frame',
+  htmlPreviewPanel:        '.html-preview-panel',
+  htmlPreviewFrameWrapper: '.html-preview-frame-wrapper',
+  htmlPreviewFrame:        '.html-preview-frame',
 
   // Breadcrumbs (HTML flow)
   breadcrumbs:         '.breadcrumbs',

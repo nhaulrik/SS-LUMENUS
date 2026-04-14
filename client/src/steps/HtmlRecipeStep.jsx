@@ -133,9 +133,6 @@ export default function HtmlRecipeStep({
           <div className="html-recipe-panel">
             <div className="html-recipe-panel-header">
               <h3>Recipe Prompt</h3>
-              {recipe && (
-                <button className="copy-btn" onClick={handleCopyRecipe} title="Copy to clipboard">⧉</button>
-              )}
             </div>
 
             {/* Global prompt */}
@@ -162,7 +159,10 @@ export default function HtmlRecipeStep({
             </button>
 
             {recipe ? (
-              <div className="html-recipe-area">{recipe}</div>
+              <div className="html-recipe-area-wrapper">
+                <button className="copy-btn" onClick={handleCopyRecipe} title="Copy to clipboard">⧉</button>
+                <div className="html-recipe-area">{recipe}</div>
+              </div>
             ) : (
               <div className="html-recipe-empty">
                 <p>Click "Generate recipe" to build the AI prompt from your {zones.length} zones.</p>
@@ -182,12 +182,10 @@ export default function HtmlRecipeStep({
           <div className="html-recipe-panel">
             <div className="html-recipe-panel-header">
               <h3>JSON Response</h3>
-              {jsonInput && (
-                <button className="copy-btn" onClick={handleCopyJson} title="Copy to clipboard">⧉</button>
-              )}
             </div>
 
             <div className="html-recipe-json-wrapper">
+              <button className="copy-btn" onClick={handleCopyJson} title="Copy to clipboard">⧉</button>
               <textarea
                 className={`json-input${validation?.valid === false ? ' has-error' : ''}`}
                 value={jsonInput}

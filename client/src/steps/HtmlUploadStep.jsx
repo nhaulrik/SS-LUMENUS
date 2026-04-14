@@ -12,7 +12,7 @@
  *   rawHtml      — full HTML string (for the editor)
  */
 
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react'
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react'
 import AppHeader    from '../components/AppHeader.jsx'
 import Breadcrumbs  from '../components/Breadcrumbs.jsx'
 import HtmlTreePanel from '../components/HtmlTreePanel.jsx'
@@ -25,19 +25,23 @@ export default function HtmlUploadStep({
   initialSession, onSessionChange,
   onProjectCreated, onBack, setToast,
 }) {
-  const fileInputRef = useRef(null)
-  const wrapperRef   = useRef(null)
+  const fileInputRef  = useRef(null)
 
-  // ── Preview scale ─────────────────────────────────────────────────────────
-  const [previewScale, setPreviewScale] = useState(0.46)
-  useEffect(() => {
-    const el = wrapperRef.current
+  // ── Preview scale: measure wrapper width, inject scale into srcDoc ──────
+  // Use a callback ref so the ResizeObserver attaches as soon as the wrapper
+  // div mounts (which only happens after previewHtml is set).
+  const [previewScale, setPreviewScale] = useState(1)
+  const roRef = useRef(null)
+  const wrapperCallbackRef = useCallback((el) => {
+    if (roRef.current) { roRef.current.disconnect(); roRef.current = null }
     if (!el) return
-    const measure = () => { const w = el.getBoundingClientRect().width; if (w > 0) setPreviewScale(w / 1280) }
+    const measure = () => {
+      const { width } = el.getBoundingClientRect()
+      if (width > 0) setPreviewScale(width / 1280)
+    }
     measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(el)
-    return () => ro.disconnect()
+    roRef.current = new ResizeObserver(measure)
+    roRef.current.observe(el)
   }, [])
 
   // ── Highlight: tree hover → preview iframe ────────────────────────────────
@@ -206,7 +210,11 @@ export default function HtmlUploadStep({
   z-index: 9999 !important;
 }` : ''
 
+    // Bake the scale into the srcDoc as a <style> block.
+    // previewScale = wrapperWidth / 1280 — computed by ResizeObserver.
+    // This avoids any iframe scripts or sandbox permissions.
     const injection = `<style>
+#solon-slide-shell { transform: scale(${previewScale}); }
 [data-solon-id] { cursor: pointer; }
 [data-solon-id]:hover { outline: 1px dashed rgba(76,175,128,0.5); }
 ${highlightCss}
@@ -215,7 +223,7 @@ ${highlightCss}
     return previewHtml.includes('</head>')
       ? previewHtml.replace('</head>', injection + '</head>')
       : injection + previewHtml
-  }, [previewHtml, highlightNodeId])
+  }, [previewHtml, highlightNodeId, previewScale])
 
   // ── Can proceed ───────────────────────────────────────────────────────────
   const canProceed = templateId && selections.length > 0 && projectName.trim().length > 0
@@ -420,7 +428,7 @@ ${highlightCss}
 
           {/* ── Right: slide preview ──────────────────────────────────── */}
           {previewHtml && (
-            <div className="html-preview-panel" ref={wrapperRef}>
+            <div className="html-preview-panel">
               <div className="html-preview-label">
                 Slide 1 preview
                 {highlightNodeId && (
@@ -429,16 +437,12 @@ ${highlightCss}
                   </span>
                 )}
               </div>
-              <div
-                className="html-preview-frame-wrapper"
-                style={{ height: Math.round(1280 * 0.5625 * previewScale) + 'px' }}
-              >
+              <div className="html-preview-frame-wrapper" ref={wrapperCallbackRef}>
                 <iframe
                   className="html-preview-frame"
                   srcDoc={highlightedPreviewHtml}
-                  sandbox="allow-same-origin allow-scripts"
+                  sandbox="allow-same-origin"
                   title="Slide preview"
-                  style={{ transform: `scale(${previewScale})` }}
                 />
               </div>
               <p className="html-preview-note">
