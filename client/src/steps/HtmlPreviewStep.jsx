@@ -84,14 +84,14 @@ export default function HtmlPreviewStep({
 
       <div className="html-preview-step-layout">
         {/* ── Preview ─────────────────────────────────────────────── */}
-        <div className="html-preview-step-frame-wrap" ref={wrapperCallbackRef}>
-          <iframe
-            className="html-preview-step-frame"
-            srcDoc={scaledPreviewHtml}
-            sandbox="allow-same-origin"
-            title="Output preview"
-          />
-        </div>
+         <div className="html-preview-step-frame-wrap" ref={wrapperCallbackRef}>
+           <iframe
+             className="html-preview-step-frame"
+             srcDoc={scaledPreviewHtml}
+             sandbox="allow-same-origin allow-scripts"
+             title="Output preview"
+           />
+         </div>
 
         {/* ── Slide navigation (multi-slide only) ─────────────────── */}
         {isMultiSlide && (
