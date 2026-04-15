@@ -130,34 +130,24 @@ function walkNode(node, parentId, depth, siblingMap, slideIndex, selections) {
 
   const id = makeNodeId(parentId, tag, classes, siblingIdx)
 
-  // Detect pre-existing zone assignments (backward compat)
+  // Detect pre-existing zone assignments
+  // Support both data-zone (legacy) and data-block (current) — treat both as block zones
   const existingZone  = node.getAttribute?.('data-zone')?.trim()
   const existingBlock = node.getAttribute?.('data-block')?.trim()
   const existingHint  = node.getAttribute?.('data-hint')?.trim() ?? ''
   const existingPrompt = node.getAttribute?.('data-prompt')?.trim() ?? ''
-  const existingType  = node.getAttribute?.('data-type')?.trim() ?? 'text'
   const existingAuto  = node.getAttribute?.('data-auto')
 
-  if (existingZone) {
-    selections.push({
-      nodeId:       id,
-      slideIndex,
-      zoneType:     'leaf',
-      key:          existingZone,
-      hint:         existingHint || fullTextPreview(node, 120),
-      prompt:       '',
-      autoGenerate: existingAuto === 'false' ? false : true,
-      type:         existingType,
-    })
-  } else if (existingBlock) {
+  const zoneKey = existingBlock || existingZone
+  if (zoneKey) {
     selections.push({
       nodeId:       id,
       slideIndex,
       zoneType:     'block',
-      key:          existingBlock,
-      hint:         existingPrompt || `Generate content for ${tag}`,
+      key:          zoneKey,
+      hint:         existingHint || existingPrompt || `Generate content for ${tag}`,
       prompt:       existingPrompt,
-      autoGenerate: true,
+      autoGenerate: existingAuto === 'false' ? false : true,
       type:         'block',
       exampleHtml:  node.innerHTML?.trim() || undefined,
     })

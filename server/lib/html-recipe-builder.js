@@ -4,9 +4,7 @@
  * Recipe generation and JSON validation for the HTML Visual Flow.
  *
  * Zone model:
- *   - leaf  (zoneType:'leaf')  : data-zone — AI fills a single value (text/number)
  *   - block (zoneType:'block') : data-block — AI fills the entire innerHTML
- *   - label (zoneType:'label') : data-label-for — paired label, treated as leaf
  *
  * Repeatable slides: sections marked repeatable via repeatableSlides[].
  * Each zone on a repeatable slide carries:
@@ -17,7 +15,7 @@
  *   slides[key].shared    — one value per non-unique zone
  *   slides[key].instances — array of objects, one per slide clone
  *
- * Block zones always include their full exampleHtml — no truncation.
+ * All zones include their full exampleHtml — no truncation.
  */
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
