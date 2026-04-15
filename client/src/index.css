@@ -1478,12 +1478,15 @@ select:focus-visible {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex: 1;
 }
 
 .html-tree-header-right {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding-left: 8px;
+  border-left: 1px solid var(--border-subtle);
 }
 
 .html-tree-title {
@@ -1724,11 +1727,32 @@ select:focus-visible {
 .tree-node {
   display: flex;
   align-items: center;
-  gap: 4px;
-  min-height: 28px;
+  gap: 6px;
+  min-height: 26px;
   padding-right: 8px;
   cursor: default;
-  transition: background 0.08s;
+  transition: background var(--transition-fast);
+  position: relative;
+}
+
+/* Vertical indent guide line — drawn as a left border on the scroll area
+   positioned at each indent level. Implemented via a pseudo-element on the
+   node itself so it tracks the exact indent position. */
+.tree-node::before {
+  content: '';
+  position: absolute;
+  left: calc(var(--tree-indent, 8px) - 8px);
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-subtle);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* No guide line at depth 0 */
+.tree-node[style*="padding-left: 8px"]::before {
+  display: none;
 }
 
 .tree-node:hover {
@@ -1742,29 +1766,37 @@ select:focus-visible {
 }
 
 .tree-node--selected {
-  background: rgba(76,175,128,0.06);
+  background: rgba(76,175,128,0.08);
 }
 
 .tree-node--interesting > .tree-node-label {
   color: var(--text-primary);
 }
 
-.tree-node--chrome > .tree-node-label {
-  opacity: 0.45;
+/* Chrome nodes: de-emphasise the whole row, not just the label */
+.tree-node--chrome {
+  opacity: 0.4;
 }
 
+.tree-node--chrome:hover {
+  opacity: 0.7;
+}
+
+/* Assigned rows: slightly stronger tint so zones are scannable */
 .tree-node--assigned-leaf {
-  background: rgba(76,175,128,0.04);
+  background: rgba(76,175,128,0.07);
 }
 
 .tree-node--assigned-block {
-  background: rgba(255,160,80,0.04);
+  background: rgba(255,160,80,0.07);
 }
 
 .tree-node--conflict > .tree-node-label {
   text-decoration: line-through;
   opacity: 0.4;
 }
+
+/* ── Expand toggle — CSS chevron, rotates on expand ─────────────────────────── */
 
 .tree-node-expand {
   width: 16px;
@@ -1774,7 +1806,6 @@ select:focus-visible {
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 10px;
   /* Minimum 44×44px touch target via padding compensation */
   padding: 14px;
   margin: -14px;
@@ -1783,13 +1814,57 @@ select:focus-visible {
   justify-content: center;
 }
 
+/* Replace Unicode glyphs with a CSS chevron */
+.tree-node-expand span {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 150ms ease;
+  font-size: 0; /* hide the Unicode character */
+  color: transparent;
+  position: relative;
+}
+
+.tree-node-expand span::after {
+  content: '';
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid var(--text-muted);
+  border-bottom: 1.5px solid var(--text-muted);
+  transform: rotate(-45deg);
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* Expanded state: chevron points down */
+.tree-node-expand[aria-expanded="true"] span::after {
+  transform: rotate(45deg);
+  top: -2px;
+}
+
+/* ── Checkbox — subtle until interacted with ─────────────────────────────────── */
+
 .tree-node-check {
   flex-shrink: 0;
   width: 13px;
   height: 13px;
   accent-color: var(--accent-primary);
   cursor: pointer;
+  opacity: 0.3;
+  transition: opacity var(--transition-fast);
 }
+
+.tree-node:hover .tree-node-check,
+.tree-node-check:checked {
+  opacity: 1;
+}
+
+/* ── Node label (now a <button>) ─────────────────────────────────────────────── */
 
 .tree-node-label {
   display: flex;
@@ -1802,6 +1877,13 @@ select:focus-visible {
   font-size: 0.78rem;
   overflow: hidden;
   white-space: nowrap;
+  /* Reset browser button defaults */
+  background: transparent;
+  border: none;
+  padding: 0;
+  text-align: left;
+  font-family: inherit;
+  line-height: inherit;
 }
 
 .tree-node-label:hover {
@@ -1819,6 +1901,7 @@ select:focus-visible {
   font-family: var(--font-mono);
   font-size: 0.72rem;
   color: var(--syntax-attr);
+  opacity: 0.8;
   flex-shrink: 0;
 }
 
@@ -1829,8 +1912,10 @@ select:focus-visible {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-style: italic;
-  margin-left: 4px;
+  margin-left: 2px;
 }
+
+/* ── Assign / edit button ─────────────────────────────────────────────────────── */
 
 .tree-node-assign-btn {
   flex-shrink: 0;
@@ -1838,7 +1923,7 @@ select:focus-visible {
   height: 20px;
   border-radius: var(--radius-xs);
   border: 1px solid var(--border-subtle);
-  background: var(--bg-tertiary);
+  background: var(--bg-elevated);
   color: var(--text-muted);
   font-size: 11px;
   cursor: pointer;
@@ -1846,13 +1931,15 @@ select:focus-visible {
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: opacity 0.1s;
+  transition: opacity var(--transition-fast);
   /* Minimum 44×44px touch target via padding compensation */
   padding: 12px;
   margin: -12px;
 }
 
-.tree-node:hover .tree-node-assign-btn {
+.tree-node:hover .tree-node-assign-btn,
+.tree-node--assigned-leaf .tree-node-assign-btn,
+.tree-node--assigned-block .tree-node-assign-btn {
   opacity: 1;
 }
 
@@ -1871,12 +1958,12 @@ select:focus-visible {
 }
 
 .tree-zone-badge--leaf {
-  background: rgba(76,175,128,0.15);
+  background: rgba(76,175,128,0.18);
   color: var(--accent-primary);
 }
 
 .tree-zone-badge--block {
-  background: rgba(255,160,80,0.15);
+  background: rgba(255,160,80,0.18);
   color: var(--accent-block);
 }
 

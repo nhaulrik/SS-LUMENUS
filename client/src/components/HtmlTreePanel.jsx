@@ -17,6 +17,7 @@
  */
 
 import { useState, useCallback, useMemo, memo } from 'react'
+import { useFocusTrap } from '../utils/useFocusTrap'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -157,6 +158,9 @@ function AssignmentPanel({ nodes, existingSel, isRepeatableSlide, onAssign, onCl
   // unique: true = different per instance, false = same on every clone
   // Only meaningful for zones on repeatable slides
   const [unique,   setUnique]     = useState(existingSel?.unique !== false)
+  
+  // Focus trapping: constrains Tab/Shift+Tab within modal, restores focus on close
+  const panelRef = useFocusTrap()
 
   const handleConfirm = () => {
     if (!key.trim()) return
@@ -167,6 +171,7 @@ function AssignmentPanel({ nodes, existingSel, isRepeatableSlide, onAssign, onCl
 
   return (
     <div
+      ref={panelRef}
       className="tree-assign-panel"
       data-testid="tree-assign-panel"
       role="dialog"

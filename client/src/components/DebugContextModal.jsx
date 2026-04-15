@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useFocusTrap } from '../utils/useFocusTrap'
 
 /**
  * Debug context modal — shows a JSON snapshot of the current app state
@@ -13,11 +14,12 @@ export default function DebugContextModal({ context, onClose }) {
   const [includeHtml,    setIncludeHtml]    = useState(false)
   const [includeRecipe,  setIncludeRecipe]  = useState(true)
   const [includeOutput,  setIncludeOutput]  = useState(false)
-  const firstFocusRef = useRef(null)
+  
+  // Focus trapping: constrains Tab/Shift+Tab within modal, restores focus on close
+  const modalRef = useFocusTrap()
 
-  // Focus first interactive element on mount; close on Escape
+  // Close on Escape key
   useEffect(() => {
-    firstFocusRef.current?.focus()
     const handleKey = (e) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', handleKey)
     return () => document.removeEventListener('keydown', handleKey)
@@ -72,6 +74,7 @@ export default function DebugContextModal({ context, onClose }) {
   return (
     <div className="modal-overlay" onClick={onClose} aria-hidden="true">
       <div
+        ref={modalRef}
         className="modal-content debug-modal"
         role="dialog"
         aria-modal="true"
@@ -88,7 +91,6 @@ export default function DebugContextModal({ context, onClose }) {
             </p>
           </div>
           <button
-            ref={firstFocusRef}
             className={"btn btn-sm " + (copied ? 'btn-primary' : 'btn-secondary') + " debug-copy-btn"}
             onClick={handleCopy}
             aria-live="polite"
