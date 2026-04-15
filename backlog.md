@@ -21,11 +21,17 @@
   - 93 E2E tests ✅ (html-flow, html-preview-step, html-ignore-zones, html-repeatable, html-breadcrumbs, html-clear-all, html-editor)
   - All test fixtures updated to new recipe format
 
-### 🎯 Next Steps
+### 🎯 Next Steps (Immediate)
 1. **Merge to main**: PR review and merge of html-flow branch
-2. **Phase 2**: Advanced Zone Management (bulk operations, templates, conditional zones)
-3. **Phase 3**: Recipe Intelligence (AI suggestions, LLM integration)
-4. **Phase 4**: Output & Export (PDF, PPTX)
+2. **Phase 2.1 - Critical Features** (2–3 weeks):
+   - ✅ **Full-Slide Content Generation** — Implementation plan ready (see `IMPLEMENTATION_PLAN_FULL_SLIDE_GENERATION.md`)
+   - [ ] Auto-Expand to Show Assigned Zones
+3. **Phase 2.2 - Advanced Zone Management** (3–4 weeks):
+   - Bulk zone operations
+   - Zone templates & presets
+   - Conditional zones
+4. **Phase 3**: Recipe Intelligence (AI suggestions, LLM integration)
+5. **Phase 4**: Output & Export (PDF, PPTX)
 
 ---
 
