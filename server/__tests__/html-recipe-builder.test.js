@@ -11,7 +11,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { buildHtmlRecipe, validateHtmlJson } from '../lib/html-recipe-builder.js';
+import { buildHtmlRecipe, generateFullSlideRecipe, validateHtmlJson } from '../lib/html-recipe-builder.js';
 
 // ── Zone factories ─────────────────────────────────────────────────────────────
 
@@ -624,5 +624,187 @@ describe('validateHtmlJson — repeatableSlides', () => {
     });
     const result = validateHtmlJson(json, zones);
     expect(result.valid).toBe(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// generateFullSlideRecipe
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('generateFullSlideRecipe', () => {
+  it('generates recipe with all zones on slide', () => {
+    const zones = [
+      zone('title', 'title', 1),
+      zone('subtitle', 'subtitle', 1),
+      zone('body', 'body', 1),
+    ];
+    const recipe = generateFullSlideRecipe(zones, 1);
+    expect(recipe).toContain('GENERATE ALL ZONES FOR THIS SLIDE');
+    expect(recipe).toContain('"title"');
+    expect(recipe).toContain('"subtitle"');
+    expect(recipe).toContain('"body"');
+  });
+
+  it('excludes zones from other slides', () => {
+    const zones = [
+      zone('title', 'title', 1),
+      zone('subtitle', 'subtitle', 2),
+    ];
+    const recipe = generateFullSlideRecipe(zones, 1);
+    expect(recipe).toContain('"title"');
+    expect(recipe).not.toContain('"subtitle"');
+  });
+
+  it('excludes ignored zones', () => {
+    const zones = [
+      zone('title', 'title', 1),
+      { ...zone('ignored_zone', 'ignored', 1), ignored: true },
+      zone('body', 'body', 1),
+    ];
+    const recipe = generateFullSlideRecipe(zones, 1);
+    expect(recipe).toContain('"title"');
+    expect(recipe).toContain('"body"');
+    expect(recipe).not.toContain('"ignored_zone"');
+  });
+
+  it('includes repeatable zones in correct format', () => {
+    const zones = [
+      zone('title', 'title', 1),
+      repZone('item_name', 'item name', 1, '', true),
+      repZone('item_desc', 'item desc', 1, '', false),
+    ];
+    const repSlides = [{ slideIndex: 1, key: 'item', prompt: 'one per item' }];
+    const recipe = generateFullSlideRecipe(zones, 1, '', repSlides);
+    expect(recipe).toContain('REPEATABLE SLIDE');
+    expect(recipe).toContain('INSTANCE VALUES');
+    expect(recipe).toContain('SHARED VALUES');
+  });
+
+  it('returns error message for slide with no zones', () => {
+    const zones = [zone('title', 'title', 1)];
+    const recipe = generateFullSlideRecipe(zones, 2);
+    expect(recipe).toContain('ERROR');
+    expect(recipe).toContain('No zones found');
+  });
+
+  it('includes global prompt when provided', () => {
+    const zones = [zone('title', 'title', 1)];
+    const recipe = generateFullSlideRecipe(zones, 1, 'Use professional tone');
+    expect(recipe).toContain('GLOBAL GUIDANCE');
+    expect(recipe).toContain('Use professional tone');
+  });
+
+  it('includes zone prompts and examples', () => {
+    const zones = [
+      { ...zone('title', 'Main heading', 1), exampleHtml: '<h1>Example Title</h1>' },
+    ];
+    const recipe = generateFullSlideRecipe(zones, 1);
+    expect(recipe).toContain('Main heading');
+    expect(recipe).toContain('<h1>Example Title</h1>');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// validateHtmlJson with fullSlide option
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('validateHtmlJson with fullSlide option', () => {
+  it('validates all zones are present for full-slide', () => {
+    const zones = [
+      zone('title', 'title', 1),
+      zone('subtitle', 'subtitle', 1),
+      zone('body', 'body', 1),
+    ];
+    const json = JSON.stringify({
+      blocks: {
+        title: { value: 'Title' },
+        subtitle: { value: 'Subtitle' },
+        body: { value: 'Body' },
+      }
+    });
+    const result = validateHtmlJson(json, zones, [], { fullSlide: true, slideIndex: 1 });
+    expect(result.valid).toBe(true);
+  });
+
+  it('fails validation if zones are missing', () => {
+    const zones = [
+      zone('title', 'title', 1),
+      zone('subtitle', 'subtitle', 1),
+      zone('body', 'body', 1),
+    ];
+    const json = JSON.stringify({
+      blocks: {
+        title: { value: 'Title' },
+        // Missing subtitle and body
+      }
+    });
+    const result = validateHtmlJson(json, zones, [], { fullSlide: true, slideIndex: 1 });
+    expect(result.valid).toBe(false);
+    expect(result.missingFields.length).toBeGreaterThan(0);
+  });
+
+  it('only validates zones on target slide', () => {
+    const zones = [
+      zone('title', 'title', 1),
+      zone('other', 'other', 2),
+    ];
+    const json = JSON.stringify({
+      blocks: {
+        title: { value: 'Title' },
+        // other zone on slide 2 is not required
+      }
+    });
+    const result = validateHtmlJson(json, zones, [], { fullSlide: true, slideIndex: 1 });
+    expect(result.valid).toBe(true);
+  });
+
+  it('excludes ignored zones from validation', () => {
+    const zones = [
+      zone('title', 'title', 1),
+      { ...zone('ignored', 'ignored', 1), ignored: true },
+    ];
+    const json = JSON.stringify({
+      blocks: {
+        title: { value: 'Title' },
+        // ignored zone not required
+      }
+    });
+    const result = validateHtmlJson(json, zones, [], { fullSlide: true, slideIndex: 1 });
+    expect(result.valid).toBe(true);
+  });
+
+  it('provides clear error message for missing fields', () => {
+    const zones = [
+      zone('title', 'title', 1),
+      zone('subtitle', 'subtitle', 1),
+    ];
+    const json = JSON.stringify({
+      blocks: {
+        title: { value: 'Title' },
+      }
+    });
+    const result = validateHtmlJson(json, zones, [], { fullSlide: true, slideIndex: 1 });
+    expect(result.error).toContain('Missing fields');
+    expect(result.error).toContain('subtitle');
+  });
+
+  it('validates repeatable slides in full-slide mode', () => {
+    const zones = [
+      repZone('item_name', 'item name', 1, '', true),
+    ];
+    const repSlides = [{ slideIndex: 1, key: 'item', prompt: 'one per item' }];
+    const json = JSON.stringify({
+      slides: {
+        item: {
+          instances: [
+            { item_name: 'Item 1' },
+            { item_name: 'Item 2' },
+          ]
+        }
+      }
+    });
+    const result = validateHtmlJson(json, zones, repSlides, { fullSlide: true, slideIndex: 1 });
+    expect(result.valid).toBe(true);
+    expect(result.instanceCount).toBe(2);
   });
 });

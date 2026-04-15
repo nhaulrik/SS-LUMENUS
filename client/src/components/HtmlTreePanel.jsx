@@ -63,7 +63,7 @@ function isAncestorIgnored(nodeId, selections) {
 
 // ── Slide control bar ─────────────────────────────────────────────────────────
 
-function SlideControlBar({ slideIndex, repeatableSlides, onRepeatableSlides, hasZones }) {
+function SlideControlBar({ slideIndex, repeatableSlides, onRepeatableSlides, hasZones, onGenerateFullSlide }) {
   const existing = repeatableSlides.find(rs => rs.slideIndex === slideIndex)
   const isRep    = !!existing
 
@@ -72,6 +72,12 @@ function SlideControlBar({ slideIndex, repeatableSlides, onRepeatableSlides, has
       onRepeatableSlides([...repeatableSlides, { slideIndex, key: `slide_${slideIndex}`, prompt: '' }])
     } else {
       onRepeatableSlides(repeatableSlides.filter(rs => rs.slideIndex !== slideIndex))
+    }
+  }
+
+  const handleGenerateFullSlide = () => {
+    if (onGenerateFullSlide) {
+      onGenerateFullSlide(slideIndex)
     }
   }
 
@@ -91,21 +97,33 @@ function SlideControlBar({ slideIndex, repeatableSlides, onRepeatableSlides, has
   return (
     <div className={`html-tree-slide-bar${isRep ? ' html-tree-slide-bar--repeatable' : ''}`}
          data-testid={`slide-bar-${slideIndex}`}>
-      <div className="html-tree-slide-bar-header">
-        <span className="html-tree-slide-bar-label">
-          Slide {slideIndex}
-          {isRep && <span className="html-tree-slide-bar-badge" data-testid={`slide-repeatable-badge-${slideIndex}`}>repeatable</span>}
-        </span>
-        <label className="html-tree-slide-bar-toggle" title="Mark this entire slide as repeatable">
-          <input
-            type="checkbox"
-            checked={isRep}
-            onChange={handleToggle}
-            data-testid={`slide-repeatable-toggle-${slideIndex}`}
-          />
-          <span>Repeatable</span>
-        </label>
-      </div>
+       <div className="html-tree-slide-bar-header">
+         <span className="html-tree-slide-bar-label">
+           Slide {slideIndex}
+           {isRep && <span className="html-tree-slide-bar-badge" data-testid={`slide-repeatable-badge-${slideIndex}`}>repeatable</span>}
+         </span>
+         <div className="html-tree-slide-bar-controls">
+           {onGenerateFullSlide && hasZones && (
+             <button
+               className="btn btn-sm btn-secondary"
+               onClick={handleGenerateFullSlide}
+               title="Generate content for all zones on this slide"
+               data-testid={`generate-full-slide-btn-${slideIndex}`}
+             >
+               ⚡ Generate Full Slide
+             </button>
+           )}
+           <label className="html-tree-slide-bar-toggle" title="Mark this entire slide as repeatable">
+             <input
+               type="checkbox"
+               checked={isRep}
+               onChange={handleToggle}
+               data-testid={`slide-repeatable-toggle-${slideIndex}`}
+             />
+             <span>Repeatable</span>
+           </label>
+         </div>
+       </div>
 
       {isRep && (
         <div className="html-tree-slide-bar-fields">
@@ -450,6 +468,7 @@ export default function HtmlTreePanel({
   slideCount,
   highlightNodeId,
   onHighlight,
+  onGenerateFullSlide,
 }) {
   const [slideIdx,      setSlideIdx]      = useState(0)   // 0-based
   const [expandedIds,   setExpandedIds]   = useState(() => new Set())
@@ -629,15 +648,16 @@ export default function HtmlTreePanel({
         </div>
       )}
 
-      {/* ── Slide control bar (repeatable toggle) ────────────────────────── */}
-      {onRepeatableSlides && (
-        <SlideControlBar
-          slideIndex={slideIndex}
-          repeatableSlides={repeatableSlides}
-          onRepeatableSlides={onRepeatableSlides}
-          hasZones={selections.some(s => s.slideIndex === slideIndex && s.unique !== false)}
-        />
-      )}
+       {/* ── Slide control bar (repeatable toggle + full-slide generation) ──── */}
+       {onRepeatableSlides && (
+         <SlideControlBar
+           slideIndex={slideIndex}
+           repeatableSlides={repeatableSlides}
+           onRepeatableSlides={onRepeatableSlides}
+           hasZones={selections.some(s => s.slideIndex === slideIndex)}
+           onGenerateFullSlide={onGenerateFullSlide}
+         />
+       )}
 
       {/* ── Tree ─────────────────────────────────────────────────────────── */}
       <div className="html-tree-scroll">

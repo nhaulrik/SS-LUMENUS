@@ -18,7 +18,7 @@ import path           from 'path';
 import { randomUUID } from 'crypto';
 import { parse }      from 'node-html-parser';
 import { CHAINS_DIR, RESOLVED_CHAINS_DIR, isInsideDir } from '../config.js';
-import { buildHtmlRecipe, validateHtmlJson } from '../lib/html-recipe-builder.js';
+import { buildHtmlRecipe, generateFullSlideRecipe, validateHtmlJson } from '../lib/html-recipe-builder.js';
 import { applyHtmlContent }                  from '../lib/html-patcher.js';
 import { buildSectionTree, flattenTree }      from '../lib/build-tree.js';
 import { selectionsToZones, resolveConflicts } from '../lib/selections-to-zones.js';
@@ -473,11 +473,55 @@ router.post('/html-flow/generate-recipe', (req, res) => {
   }
 });
 
+// ── POST /api/html-flow/generate-full-slide ──────────────────────────────────
+
+router.post('/html-flow/generate-full-slide', (req, res) => {
+  try {
+    const { chainId, slideIndex, globalPrompt } = req.body;
+
+    if (!chainId || slideIndex === undefined) {
+      return res.status(400).json({ ok: false, error: 'chainId and slideIndex are required.' });
+    }
+
+    const chainDir = resolveChainDir(chainId);
+    if (!chainDir) return res.status(400).json({ ok: false, error: 'Invalid chainId.' });
+
+    const chainPath = path.join(chainDir, 'chain.json');
+    if (!fs.existsSync(chainPath)) {
+      return res.status(404).json({ ok: false, error: 'Project not found.' });
+    }
+
+    const chain          = JSON.parse(fs.readFileSync(chainPath, 'utf8'));
+    const zones          = chain.zones || [];
+    const repSlides      = chain.repeatableSlides || [];
+    const prompt         = globalPrompt ?? chain.globalPrompt ?? '';
+
+    // Get zones for this slide
+    const slideZones = zones.filter(z => z.slideIndex === slideIndex);
+    if (slideZones.length === 0) {
+      return res.status(400).json({ ok: false, error: `No zones found on slide ${slideIndex}.` });
+    }
+
+    const recipe = generateFullSlideRecipe(zones, slideIndex, prompt, repSlides);
+
+    return res.json({
+      ok: true,
+      recipe,
+      slideIndex,
+      zoneCount: slideZones.length,
+      zones: slideZones.map(z => ({ key: z.key, prompt: z.prompt })),
+    });
+  } catch (err) {
+    console.error('[html-flow] generate-full-slide error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // ── POST /api/html-flow/validate-json ────────────────────────────────────────
 
 router.post('/html-flow/validate-json', (req, res) => {
   try {
-    const { chainId, jsonString } = req.body;
+    const { chainId, jsonString, fullSlide = false, slideIndex = null } = req.body;
 
     if (!chainId || !jsonString) {
       return res.status(400).json({ ok: false, error: 'chainId and jsonString are required.' });
@@ -494,7 +538,8 @@ router.post('/html-flow/validate-json', (req, res) => {
     const chain          = JSON.parse(fs.readFileSync(chainPath, 'utf8'));
     const zones          = chain.zones || [];
     const repSlides      = chain.repeatableSlides || [];
-    const result         = validateHtmlJson(jsonString, zones, repSlides);
+    const options        = fullSlide ? { fullSlide: true, slideIndex } : {};
+    const result         = validateHtmlJson(jsonString, zones, repSlides, options);
 
     return res.json({ ok: true, ...result });
   } catch (err) {

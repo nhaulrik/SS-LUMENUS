@@ -167,6 +167,16 @@ export default function HtmlUploadStep({
     }
   }, [templateId, syncSession])
 
+  // ── Generate full slide ────────────────────────────────────────────────────
+  const handleGenerateFullSlide = useCallback(async (slideIndex) => {
+    // This will be called when user clicks "Generate Full Slide" button
+    // The actual recipe generation happens in HtmlRecipeStep
+    // For now, just navigate to the recipe step
+    if (onStep) {
+      onStep('recipe')
+    }
+  }, [onStep])
+
   // ── Create project ────────────────────────────────────────────────────────
   const handleCreateProject = useCallback(async () => {
     if (!templateId) return
@@ -387,6 +397,7 @@ ${highlightCss}
                   slideCount={slideCount}
                   highlightNodeId={highlightNodeId}
                   onHighlight={setHighlightNodeId}
+                  onGenerateFullSlide={handleGenerateFullSlide}
                 />
 
                 {/* Project footer */}
