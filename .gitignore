@@ -19,6 +19,11 @@ output/
 *.xml
 test-*.json
 
+# Sample and working files (local use only)
+samples/
+features\ to\ implement.md
+features to implement.md
+
 # Environment
 .env
 .env.local
