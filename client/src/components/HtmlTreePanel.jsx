@@ -63,9 +63,10 @@ function isAncestorIgnored(nodeId, selections) {
 
 // ── Slide control bar ─────────────────────────────────────────────────────────
 
-function SlideControlBar({ slideIndex, repeatableSlides, onRepeatableSlides, hasZones, onGenerateFullSlide }) {
+function SlideControlBar({ slideIndex, repeatableSlides, onRepeatableSlides, fullSlideGeneration = [], onFullSlideGeneration, hasZones }) {
   const existing = repeatableSlides.find(rs => rs.slideIndex === slideIndex)
   const isRep    = !!existing
+  const isFullSlide = fullSlideGeneration.includes(slideIndex)
 
   const handleToggle = (e) => {
     if (e.target.checked) {
@@ -75,9 +76,13 @@ function SlideControlBar({ slideIndex, repeatableSlides, onRepeatableSlides, has
     }
   }
 
-  const handleGenerateFullSlide = () => {
-    if (onGenerateFullSlide) {
-      onGenerateFullSlide(slideIndex)
+  const handleFullSlideToggle = (e) => {
+    if (onFullSlideGeneration) {
+      if (e.target.checked) {
+        onFullSlideGeneration([...fullSlideGeneration, slideIndex])
+      } else {
+        onFullSlideGeneration(fullSlideGeneration.filter(idx => idx !== slideIndex))
+      }
     }
   }
 
@@ -103,17 +108,7 @@ function SlideControlBar({ slideIndex, repeatableSlides, onRepeatableSlides, has
            {isRep && <span className="html-tree-slide-bar-badge" data-testid={`slide-repeatable-badge-${slideIndex}`}>repeatable</span>}
          </span>
          <div className="html-tree-slide-bar-controls">
-           {onGenerateFullSlide && hasZones && (
-             <button
-               className="btn btn-sm btn-secondary"
-               onClick={handleGenerateFullSlide}
-               title="Generate content for all zones on this slide"
-               data-testid={`generate-full-slide-btn-${slideIndex}`}
-             >
-               ⚡ Generate Full Slide
-             </button>
-           )}
-           <label className="html-tree-slide-bar-toggle" title="Mark this entire slide as repeatable">
+           <label className="html-tree-slide-bar-toggle" title="Mark this slide to be generated in multiple instances">
              <input
                type="checkbox"
                checked={isRep}
@@ -121,6 +116,15 @@ function SlideControlBar({ slideIndex, repeatableSlides, onRepeatableSlides, has
                data-testid={`slide-repeatable-toggle-${slideIndex}`}
              />
              <span>Repeatable</span>
+           </label>
+           <label className="html-tree-slide-bar-toggle" title="Generate all zones on this slide as a single content block">
+             <input
+               type="checkbox"
+               checked={isFullSlide}
+               onChange={handleFullSlideToggle}
+               data-testid={`slide-full-slide-toggle-${slideIndex}`}
+             />
+             <span>Generate Full Slide</span>
            </label>
          </div>
        </div>
@@ -465,10 +469,11 @@ export default function HtmlTreePanel({
   onClearAll,
   repeatableSlides = [],
   onRepeatableSlides,
+  fullSlideGeneration = [],
+  onFullSlideGeneration,
   slideCount,
   highlightNodeId,
   onHighlight,
-  onGenerateFullSlide,
 }) {
   const [slideIdx,      setSlideIdx]      = useState(0)   // 0-based
   const [expandedIds,   setExpandedIds]   = useState(() => new Set())
@@ -655,7 +660,8 @@ export default function HtmlTreePanel({
            repeatableSlides={repeatableSlides}
            onRepeatableSlides={onRepeatableSlides}
            hasZones={selections.some(s => s.slideIndex === slideIndex)}
-           onGenerateFullSlide={onGenerateFullSlide}
+           fullSlideGeneration={fullSlideGeneration}
+           onFullSlideGeneration={onFullSlideGeneration}
          />
        )}
 

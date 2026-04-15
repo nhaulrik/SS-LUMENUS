@@ -34,7 +34,7 @@ test.describe('UC-FSG-01 — Full-Slide Content Generation', () => {
     // Toggle "Generate Full Slide" checkbox
     const fullSlideToggle = page.locator('[data-testid^="slide-full-slide-toggle-"]').first();
     await expect(fullSlideToggle).toBeVisible({ timeout: 10000 });
-    await fullSlideToggle.check();
+    await fullSlideToggle.click();
 
     // Verify toggle is now checked
     await expect(fullSlideToggle).toBeChecked();
@@ -60,7 +60,7 @@ test.describe('UC-FSG-01 — Full-Slide Content Generation', () => {
 
     // Toggle "Generate Full Slide"
     const fullSlideToggle = page.locator('[data-testid^="slide-full-slide-toggle-"]').first();
-    await fullSlideToggle.check();
+    await fullSlideToggle.click();
 
     // Wait for UI to update
     await page.waitForTimeout(500);
@@ -103,7 +103,7 @@ test.describe('UC-FSG-01 — Full-Slide Content Generation', () => {
 
     // Toggle "Generate Full Slide"
     const fullSlideToggle = page.locator('[data-testid^="slide-full-slide-toggle-"]').first();
-    await fullSlideToggle.check();
+    await fullSlideToggle.click();
 
     // Wait for UI to update
     await page.waitForTimeout(500);
@@ -147,7 +147,7 @@ test.describe('UC-FSG-02 — Validation for Full-Slide Generation', () => {
 
     // Toggle "Generate Full Slide"
     const fullSlideToggle = page.locator('[data-testid^="slide-full-slide-toggle-"]').first();
-    await fullSlideToggle.check();
+    await fullSlideToggle.click();
 
     // Wait for UI to update
     await page.waitForTimeout(500);
@@ -191,7 +191,7 @@ test.describe('UC-FSG-02 — Validation for Full-Slide Generation', () => {
 
     // Toggle "Generate Full Slide"
     const fullSlideToggle = page.locator('[data-testid^="slide-full-slide-toggle-"]').first();
-    await fullSlideToggle.check();
+    await fullSlideToggle.click();
 
     // Wait for UI to update
     await page.waitForTimeout(500);
@@ -247,7 +247,7 @@ test.describe('UC-FSG-03 — Full-Slide Generation with Repeatable Slides', () =
 
     // Also toggle "Generate Full Slide"
     const fullSlideToggle = page.locator('[data-testid^="slide-full-slide-toggle-"]').first();
-    await fullSlideToggle.check();
+    await fullSlideToggle.click();
 
     // Wait for UI to update
     await page.waitForTimeout(500);
@@ -296,7 +296,7 @@ test.describe('UC-FSG-04 — Ignored Zones Excluded from Full-Slide Generation',
 
     // Toggle "Generate Full Slide"
     const fullSlideToggle = page.locator('[data-testid^="slide-full-slide-toggle-"]').first();
-    await fullSlideToggle.check();
+    await fullSlideToggle.click();
 
     // Wait for UI to update
     await page.waitForTimeout(500);
@@ -331,7 +331,7 @@ test.describe('UC-FSG-05 — Full-Slide Mode Visual Indicator', () => {
 
     // Toggle "Generate Full Slide"
     const fullSlideToggle = page.locator('[data-testid^="slide-full-slide-toggle-"]').first();
-    await fullSlideToggle.check();
+    await fullSlideToggle.click();
 
     // Verify toggle shows checked state
     await expect(fullSlideToggle).toBeChecked();

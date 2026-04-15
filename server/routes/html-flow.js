@@ -363,13 +363,84 @@ router.patch('/html-flow/update-selections', (req, res) => {
   }
 });
 
+// ── Auto-discovery helper ────────────────────────────────────────────────────
+
+/**
+ * Auto-discover zones for slides marked with fullSlideGeneration.
+ * Walks the tree and creates selections for all elements with data-zone or data-block,
+ * plus any elements that would be good candidates for generation.
+ *
+ * @param {Array} trees - array of tree nodes (one per slide)
+ * @param {Array} fullSlideGeneration - array of slide indices to auto-discover
+ * @param {Array} existingSelections - existing selections to merge with
+ * @returns {Array} merged selections
+ */
+function autoDiscoverZonesForFullSlide(trees, fullSlideGeneration, existingSelections) {
+  if (!Array.isArray(fullSlideGeneration) || fullSlideGeneration.length === 0) {
+    return existingSelections;
+  }
+
+  const result = [...existingSelections];
+  const existingNodeIds = new Set(existingSelections.map(s => s.nodeId));
+
+  function flattenTree(nodes) {
+    const flat = [];
+    function visit(arr) {
+      for (const n of arr) {
+        flat.push(n);
+        if (n.children?.length) visit(n.children);
+      }
+    }
+    visit(nodes);
+    return flat;
+  }
+
+  for (const slideIdx of fullSlideGeneration) {
+    // slideIdx is 1-based, but trees array is 0-based
+    const treeIdx = slideIdx - 1;
+    if (treeIdx < 0 || treeIdx >= trees.length) continue;
+
+    const tree = trees[treeIdx];
+    const allNodes = flattenTree(tree);
+
+    // Auto-discover zones: any node that is "interesting" (container-like)
+    // or has data-zone/data-block attributes
+    for (const node of allNodes) {
+      // Skip if already has a selection
+      if (existingNodeIds.has(node.id)) continue;
+
+      // Skip leaf nodes (text-only)
+      if (node.leaf) continue;
+
+      // Create a selection for interesting nodes
+      if (node.interesting || node.children?.length > 0) {
+        const key = `auto_${node.id.replace(/[^a-z0-9]/gi, '_').toLowerCase()}`;
+        const sel = {
+          nodeId: node.id,
+          slideIndex: slideIdx,
+          zoneType: 'block',
+          key: key,
+          prompt: '',
+          autoGenerate: true,
+          type: 'block',
+          ...(node.innerHTML ? { exampleHtml: node.innerHTML } : {}),
+        };
+        result.push(sel);
+        existingNodeIds.add(node.id);
+      }
+    }
+  }
+
+  return result;
+}
+
 // ── POST /api/html-flow/create-project ───────────────────────────────────────
 
 router.post('/html-flow/create-project', (req, res) => {
   let templateId;
   try {
     templateId = req.body.templateId;
-    const { selections, projectName } = req.body;
+    const { selections, projectName, fullSlideGeneration } = req.body;
 
     if (!templateId || !pendingTemplates.has(templateId)) {
       return res.status(404).json({ ok: false, error: 'Template session not found. Please re-upload.' });
@@ -385,9 +456,15 @@ router.post('/html-flow/create-project', (req, res) => {
       typeof rs.prompt === 'string'
     );
 
+    // Validate and normalise fullSlideGeneration
+    const fullSlideGen = Array.isArray(fullSlideGeneration) ? fullSlideGeneration : [];
+
     // Resolve conflicts
     const rawSelections         = Array.isArray(selections) ? selections : (session.selections ?? []);
-    const { resolved, removed } = resolveConflicts(rawSelections);
+    
+    // Auto-discover zones for slides marked with fullSlideGeneration
+    const selectionsWithAutoDiscovered = autoDiscoverZonesForFullSlide(session.trees ?? [], fullSlideGen, rawSelections);
+    const { resolved, removed } = resolveConflicts(selectionsWithAutoDiscovered);
 
     // Derive the zones array that all downstream consumers expect
     const zones = selectionsToZones(resolved, repeatableSlides);
@@ -402,19 +479,20 @@ router.post('/html-flow/create-project', (req, res) => {
     const name = projectName?.trim() || session.fileName?.replace(/\.html?$/, '') || 'html-project';
 
     const chain = {
-      id:              chainId,
-      flow:            'html',
-      projectName:     name,
-      templateFile:    session.fileName,
+      id:                  chainId,
+      flow:                'html',
+      projectName:         name,
+      templateFile:        session.fileName,
       templatePath,
-      slideCount:      session.slideCount,
-      createdAt:       new Date().toISOString(),
-      updatedAt:       new Date().toISOString(),
-      selections:      resolved,
+      slideCount:          session.slideCount,
+      createdAt:           new Date().toISOString(),
+      updatedAt:           new Date().toISOString(),
+      selections:          resolved,
       zones,
       repeatableSlides,
-      trees:           session.trees ?? [],
-      rounds:          [],
+      fullSlideGeneration: fullSlideGen,
+      trees:               session.trees ?? [],
+      rounds:              [],
     };
 
     fs.writeFileSync(path.join(chainDir, 'chain.json'), JSON.stringify(chain, null, 2), 'utf8');
