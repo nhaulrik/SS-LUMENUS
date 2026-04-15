@@ -46,41 +46,45 @@ export function selectionsToZones(selections, repeatableSlides = []) {
   const repBySlide = new Map()
   repeatableSlides.forEach(rs => repBySlide.set(rs.slideIndex, rs))
 
-  return selections.map((sel, idx) => {
-    const isBlock      = sel.zoneType === 'block'
-    const isRepeatable = repBySlide.has(sel.slideIndex)
+   return selections.map((sel, idx) => {
+     const isBlock      = sel.zoneType === 'block'
+     const isRepeatable = repBySlide.has(sel.slideIndex)
 
-    return {
-      // Discriminant
-      zoneType:     sel.zoneType,
+     return {
+       // Discriminant
+       zoneType:     sel.zoneType,
 
-      // Identity
-      key:          sel.key,
-      nodeId:       sel.nodeId,
-      slideIndex:   sel.slideIndex,
+       // Identity
+       key:          sel.key,
+       nodeId:       sel.nodeId,
+       slideIndex:   sel.slideIndex,
 
-      // Type metadata
-      type:         isBlock ? 'block' : (sel.type || 'text'),
-      hint:         sel.hint || '',
-      autoGenerate: isBlock ? true : (sel.autoGenerate !== false),
+       // Type metadata
+       type:         isBlock ? 'block' : (sel.type || 'text'),
+       hint:         sel.hint || '',
+       autoGenerate: isBlock ? true : (sel.autoGenerate !== false),
 
-      // Block-specific
-      prompt:       isBlock ? (sel.prompt || '') : undefined,
-      exampleHtml:  isBlock ? (sel.exampleHtml || undefined) : undefined,
+       // Block-specific
+       prompt:       isBlock ? (sel.prompt || '') : undefined,
+       exampleHtml:  isBlock ? (sel.exampleHtml || undefined) : undefined,
 
-      // Repeatable — derived from repeatableSlides argument
-      isRepeatable,
-      repeatableKey: null,
+       // Repeatable — derived from repeatableSlides argument
+       isRepeatable,
+       repeatableKey: null,
 
-      // Uniqueness — only meaningful for zones on repeatable slides
-      // defaults to true (unique per instance) when not explicitly set
-      unique: isRepeatable ? (sel.unique !== false) : undefined,
+       // Uniqueness — only meaningful for zones on repeatable slides
+       // defaults to true (unique per instance) when not explicitly set
+       unique: isRepeatable ? (sel.unique !== false) : undefined,
 
-      // Ordering
-      elementOrder: idx,
-      originalText: '',
-    }
-  })
+       // Ignored — zones marked as ignored are excluded from recipe generation
+       // and skipped during HTML patching
+       ignored: sel.ignored || false,
+
+       // Ordering
+       elementOrder: idx,
+       originalText: '',
+     }
+   })
 }
 
 /**

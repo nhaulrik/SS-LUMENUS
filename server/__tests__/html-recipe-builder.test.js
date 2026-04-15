@@ -166,6 +166,92 @@ describe('buildHtmlRecipe', () => {
     expect(recipe).toContain('blocks');
     expect(recipe).toContain('slides');
   });
+
+  it('should exclude ignored leaf zones from recipe', () => {
+    const zones = [
+      leaf('zone1', 'hint1'),
+      { ...leaf('zone2', 'hint2'), ignored: true },
+      leaf('zone3', 'hint3')
+    ];
+    const recipe = buildHtmlRecipe(zones);
+    expect(recipe).toContain('"zone1"');
+    expect(recipe).not.toContain('"zone2"');
+    expect(recipe).toContain('"zone3"');
+  });
+
+  it('should exclude ignored block zones from recipe', () => {
+    const zones = [
+      block('table1', 'fill it'),
+      { ...block('table2', 'fill it'), ignored: true },
+      block('table3', 'fill it')
+    ];
+    const recipe = buildHtmlRecipe(zones);
+    expect(recipe).toContain('"table1"');
+    expect(recipe).not.toContain('"table2"');
+    expect(recipe).toContain('"table3"');
+  });
+
+  it('should exclude ignored zones from contextual fields', () => {
+    const zones = [
+      leaf('desc', 'desc1', 1),
+      { ...leaf('desc', 'desc2', 2), ignored: true }
+    ];
+    const recipe = buildHtmlRecipe(zones);
+    // The non-ignored zone on slide 1 should appear, but not the ignored one on slide 2
+    expect(recipe).toContain('"slide_index": 1');
+    expect(recipe).not.toContain('"slide_index": 2');
+  });
+
+  it('should handle mixed ignored and non-ignored repeatable zones', () => {
+    const repSlides = [{ slideIndex: 2, key: 'item', prompt: 'one per item' }];
+    const zones = [
+      repLeaf('item_name', 'name', 2, true),
+      { ...repLeaf('item_desc', 'desc', 2, true), ignored: true }
+    ];
+    const recipe = buildHtmlRecipe(zones, '', repSlides);
+    expect(recipe).toContain('"item_name"');
+    expect(recipe).not.toContain('"item_desc"');
+  });
+
+  it('should treat child zones as ignored when parent is ignored', () => {
+    const zones = [
+      { ...block('parent_block', 'parent'), ignored: true, nodeId: 'div.parent' },
+      { ...leaf('child_leaf', 'child', 1, true), nodeId: 'div.parent>p.child' }
+    ];
+    const recipe = buildHtmlRecipe(zones);
+    // Both parent and child should be excluded from recipe
+    expect(recipe).not.toContain('"parent_block"');
+    expect(recipe).not.toContain('"child_leaf"');
+  });
+
+  it('should exclude deeply nested children of ignored parent', () => {
+    const zones = [
+      { ...block('root', 'root'), ignored: true, nodeId: 'div.root' },
+      { ...block('level1', 'level1', 1, true), nodeId: 'div.root>div.level1' },
+      { ...leaf('level2', 'level2', 1, true), nodeId: 'div.root>div.level1>p.level2' }
+    ];
+    const recipe = buildHtmlRecipe(zones);
+    // All should be excluded because root is ignored
+    expect(recipe).not.toContain('"root"');
+    expect(recipe).not.toContain('"level1"');
+    expect(recipe).not.toContain('"level2"');
+  });
+
+  it('should only exclude children of ignored parent, not siblings', () => {
+    const zones = [
+      { ...block('ignored_parent', 'ignored', true), ignored: true, nodeId: 'div.parent1' },
+      { ...leaf('child_of_ignored', 'child', 1, true), nodeId: 'div.parent1>p.child' },
+      { ...block('sibling_parent', 'sibling', true), ignored: false, nodeId: 'div.parent2' },
+      { ...leaf('child_of_sibling', 'sibling_child', 1, true), nodeId: 'div.parent2>p.child' }
+    ];
+    const recipe = buildHtmlRecipe(zones);
+    // Ignored parent and its child should be excluded
+    expect(recipe).not.toContain('"ignored_parent"');
+    expect(recipe).not.toContain('"child_of_ignored"');
+    // Sibling parent and its child should be included
+    expect(recipe).toContain('"sibling_parent"');
+    expect(recipe).toContain('"child_of_sibling"');
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

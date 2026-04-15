@@ -125,6 +125,26 @@ export function applyHtmlContent(templateHtml, data, zones, repeatableSlides = [
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
+/** Check if a zone is ignored directly or is a descendant of an ignored parent. */
+function isIgnoredOrDescendantOfIgnored(zone, allZones) {
+  if (zone.ignored) return true;
+  
+  // Check if any ancestor is ignored
+  let current = zone;
+  while (current.nodeId) {
+    // Find the parent by checking if another zone's nodeId is a prefix
+    const parent = allZones.find(z => 
+      current.nodeId !== z.nodeId && 
+      current.nodeId.startsWith(z.nodeId + '>')
+    );
+    if (!parent) break;
+    if (parent.ignored) return true;
+    current = parent;
+  }
+  
+  return false;
+}
+
 /**
  * Resolve a nodeId CSS-path fingerprint (e.g. "div.header>div.header-left[1]")
  * to the actual node-html-parser element within a parsed <section>.
@@ -174,7 +194,7 @@ function patchSection(section, zones, valueMap, inst, blocksData) {
     const key  = node.getAttribute('data-zone');
     if (!key) return;
     const zone = zones.find(z => z.key === key);
-    if (!zone || !zone.autoGenerate) return;
+    if (!zone || !zone.autoGenerate || isIgnoredOrDescendantOfIgnored(zone, zones)) return;
     const value = inst ? inst[key] : valueMap[key];
     if (value !== undefined && value !== null) node.set_content(String(value));
   });
@@ -185,7 +205,7 @@ function patchSection(section, zones, valueMap, inst, blocksData) {
     if (!labelFor) return;
     const labelKey = labelFor + '__label';
     const zone     = zones.find(z => z.key === labelKey);
-    if (!zone || !zone.autoGenerate) return;
+    if (!zone || !zone.autoGenerate || isIgnoredOrDescendantOfIgnored(zone, zones)) return;
     const value = inst ? inst[labelKey] : valueMap[labelKey];
     if (value !== undefined && value !== null) node.set_content(String(value));
   });
@@ -195,7 +215,7 @@ function patchSection(section, zones, valueMap, inst, blocksData) {
     const key  = node.getAttribute('data-block');
     if (!key) return;
     const zone = zones.find(z => z.key === key);
-    if (!zone || !zone.autoGenerate) return;
+    if (!zone || !zone.autoGenerate || isIgnoredOrDescendantOfIgnored(zone, zones)) return;
     let html;
     if (inst) {
       html = inst[key];
@@ -208,7 +228,7 @@ function patchSection(section, zones, valueMap, inst, blocksData) {
 
   // Block zones: nodeId path (user-assigned block zones with no data-block attr)
   zones.forEach(zone => {
-    if (zone.zoneType !== 'block' || !zone.autoGenerate || !zone.nodeId) return;
+    if (zone.zoneType !== 'block' || !zone.autoGenerate || isIgnoredOrDescendantOfIgnored(zone, zones) || !zone.nodeId) return;
     // Skip zones already handled via data-block above
     if (section.querySelector(`[data-block="${zone.key}"]`)) return;
 
@@ -228,7 +248,7 @@ function patchSection(section, zones, valueMap, inst, blocksData) {
 
 function stripDataAttrs(root) {
   const attrs = ['data-zone', 'data-block', 'data-prompt', 'data-hint',
-                 'data-auto', 'data-label-for', 'data-repeatable', 'data-type'];
+                 'data-auto', 'data-label-for', 'data-repeatable', 'data-type', 'data-ignore'];
   attrs.forEach(attr => {
     root.querySelectorAll(`[${attr}]`).forEach(node => node.removeAttribute(attr));
   });

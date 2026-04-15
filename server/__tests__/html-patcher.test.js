@@ -415,6 +415,136 @@ describe('applyHtmlContent — repeatable slides', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Ignored zones
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('applyHtmlContent — ignored zones', () => {
+  it('should skip patching ignored leaf zones', () => {
+    const html   = `<section><p data-zone="title">Original</p></section>`;
+    const data   = { static: { title: 'New Title' } };
+    const zones  = [{ ...leaf('title'), ignored: true }];
+    const result = applyHtmlContent(html, data, zones);
+    expect(result).toContain('Original');
+    expect(result).not.toContain('New Title');
+  });
+
+  it('should skip patching ignored block zones', () => {
+    const html   = `<div data-block="table">Original HTML</div>`;
+    const data   = { blocks: { table: { value: '<tr><td>New</td></tr>' } } };
+    const zones  = [{ ...block('table'), ignored: true }];
+    const result = applyHtmlContent(html, data, zones);
+    expect(result).toContain('Original HTML');
+    expect(result).not.toContain('<tr>');
+  });
+
+  it('should patch non-ignored zones normally', () => {
+    const html   = `<section><p data-zone="title">Original</p></section>`;
+    const data   = { static: { title: 'New Title' } };
+    const zones  = [{ ...leaf('title'), ignored: false }];
+    const result = applyHtmlContent(html, data, zones);
+    expect(result).toContain('New Title');
+    expect(result).not.toContain('Original');
+  });
+
+  it('should handle mixed ignored and non-ignored zones', () => {
+    const html = `<section>
+      <h1 data-zone="header">H</h1>
+      <p data-zone="body">B</p>
+    </section>`;
+    const data  = { static: { header: 'Title', body: 'Content' } };
+    const zones = [
+      { ...leaf('header'), ignored: false },
+      { ...leaf('body'), ignored: true }
+    ];
+    const result = applyHtmlContent(html, data, zones);
+    expect(result).toContain('Title');
+    expect(result).toContain('B'); // body should remain unchanged
+    expect(result).not.toContain('Content');
+  });
+
+  it('should strip data-ignore attribute from output', () => {
+    const html   = `<section><p data-zone="title" data-ignore="true">Content</p></section>`;
+    const data   = { static: { title: 'New' } };
+    const zones  = [leaf('title')];
+    const result = applyHtmlContent(html, data, zones);
+    expect(result).not.toContain('data-ignore');
+  });
+
+  it('should handle ignored zones in repeatable slides', () => {
+    const html = `
+      <section>
+        <p data-zone="item_name">Item</p>
+        <p data-zone="item_desc">Desc</p>
+      </section>
+      <section>
+        <p data-zone="outro">End</p>
+      </section>`;
+    const data = {
+      slides: {
+        item: {
+          instances: [
+            { item_name: 'Alpha', item_desc: 'Desc A' },
+            { item_name: 'Beta', item_desc: 'Desc B' }
+          ]
+        }
+      }
+    };
+    const repSlides = [{ slideIndex: 1, key: 'item', prompt: 'one per item' }];
+    const zones = [
+      { ...repLeaf('item_name', 1, true), ignored: false },
+      { ...repLeaf('item_desc', 1, true), ignored: true },
+      leaf('outro', 2, true)
+    ];
+    const result = applyHtmlContent(html, data, zones, repSlides);
+    // item_name should be patched, item_desc should remain unchanged
+    expect(result).toContain('Alpha');
+    expect(result).toContain('Beta');
+    expect(result).toContain('Desc'); // original descriptor text
+    expect(result).toContain('End');
+  });
+
+  it('should skip patching children of ignored parent zone', () => {
+    const html = `<section>
+      <div data-block="parent">
+        <p data-zone="child1">Child 1</p>
+        <p data-zone="child2">Child 2</p>
+      </div>
+    </section>`;
+    const data = {
+      blocks: { parent: { value: '<div><p>New Child 1</p><p>New Child 2</p></div>' } }
+    };
+    const zones = [
+      { ...block('parent'), ignored: true },
+      { ...leaf('child1'), ignored: false },
+      { ...leaf('child2'), ignored: false }
+    ];
+    const result = applyHtmlContent(html, data, zones);
+    // Parent is ignored, so children should not be patched
+    expect(result).toContain('Child 1');
+    expect(result).toContain('Child 2');
+    expect(result).not.toContain('New Child 1');
+  });
+
+  it('should treat child zones as ignored when parent is ignored', () => {
+    const html = `<section>
+      <div data-block="parent">
+        <p>Original content</p>
+      </div>
+    </section>`;
+    const data = {
+      blocks: { parent: { value: '<div><p>New content</p></div>' } }
+    };
+    const zones = [
+      { ...block('parent'), ignored: true }
+    ];
+    const result = applyHtmlContent(html, data, zones);
+    // Parent is ignored, so content should remain unchanged
+    expect(result).toContain('Original content');
+    expect(result).not.toContain('New content');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Attribute stripping
 // ─────────────────────────────────────────────────────────────────────────────
 

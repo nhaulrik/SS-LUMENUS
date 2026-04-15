@@ -260,6 +260,47 @@ describe('resolveConflicts', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// selectionsToZones — ignored field
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('selectionsToZones — ignored field', () => {
+  it('should preserve ignored=true from selection to zone', () => {
+    const sel   = { ...leafSel('p.x', 'x'), ignored: true };
+    const zones = selectionsToZones([sel]);
+    expect(zones[0].ignored).toBe(true);
+  });
+
+  it('should preserve ignored=false from selection to zone', () => {
+    const sel   = { ...leafSel('p.x', 'x'), ignored: false };
+    const zones = selectionsToZones([sel]);
+    expect(zones[0].ignored).toBe(false);
+  });
+
+  it('should default ignored to false when not provided', () => {
+    const zones = selectionsToZones([leafSel('p.x', 'x')]);
+    expect(zones[0].ignored).toBe(false);
+  });
+
+  it('should preserve ignored field for block zones', () => {
+    const sel   = { ...blockSel('div.t', 'table'), ignored: true };
+    const zones = selectionsToZones([sel]);
+    expect(zones[0].ignored).toBe(true);
+  });
+
+  it('should handle mixed ignored and non-ignored zones', () => {
+    const sels = [
+      { ...leafSel('p.a', 'a'), ignored: true },
+      { ...leafSel('p.b', 'b'), ignored: false },
+      { ...blockSel('div.t', 'tbl'), ignored: true }
+    ];
+    const zones = selectionsToZones(sels);
+    expect(zones[0].ignored).toBe(true);
+    expect(zones[1].ignored).toBe(false);
+    expect(zones[2].ignored).toBe(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // selectionsToZones — repeatableSlides integration
 // ─────────────────────────────────────────────────────────────────────────────
 

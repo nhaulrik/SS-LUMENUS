@@ -24,6 +24,26 @@
 
 const isGenerated = (z) => z.autoGenerate !== false;
 
+/** Check if a zone is ignored directly or is a descendant of an ignored parent. */
+function isIgnoredOrDescendantOfIgnored(zone, allZones) {
+  if (zone.ignored) return true;
+  
+  // Check if any ancestor is ignored
+  let current = zone;
+  while (current.nodeId) {
+    // Find the parent by checking if another zone's nodeId is a prefix
+    const parent = allZones.find(z => 
+      current.nodeId !== z.nodeId && 
+      current.nodeId.startsWith(z.nodeId + '>')
+    );
+    if (!parent) break;
+    if (parent.ignored) return true;
+    current = parent;
+  }
+  
+  return false;
+}
+
 /** Set of slideIndex values that are repeatable. */
 function repeatableSlideIndexSet(zones, repeatableSlides = []) {
   if (repeatableSlides.length > 0) {
@@ -83,17 +103,17 @@ export function buildHtmlRecipe(zones, globalPrompt = '', repeatableSlides = [])
 
   const globalSection = globalPrompt ? `GLOBAL GUIDANCE:\n${globalPrompt}\n\n` : '';
 
-  // Partition zones
+  // Partition zones (excluding ignored zones and descendants of ignored zones)
   const staticLeafZones = zones.filter(
-    z => !repSet.has(z.slideIndex) && z.zoneType !== 'block' && isGenerated(z) && !contextualKeys.has(z.key)
+    z => !repSet.has(z.slideIndex) && z.zoneType !== 'block' && isGenerated(z) && !contextualKeys.has(z.key) && !isIgnoredOrDescendantOfIgnored(z, zones)
   );
   const contextualZones = zones.filter(
-    z => !repSet.has(z.slideIndex) && z.zoneType !== 'block' && isGenerated(z) && contextualKeys.has(z.key)
+    z => !repSet.has(z.slideIndex) && z.zoneType !== 'block' && isGenerated(z) && contextualKeys.has(z.key) && !isIgnoredOrDescendantOfIgnored(z, zones)
   );
   const staticBlockZones = zones.filter(
-    z => !repSet.has(z.slideIndex) && z.zoneType === 'block' && isGenerated(z)
+    z => !repSet.has(z.slideIndex) && z.zoneType === 'block' && isGenerated(z) && !isIgnoredOrDescendantOfIgnored(z, zones)
   );
-  const repeatableZones = zones.filter(z => repSet.has(z.slideIndex) && isGenerated(z));
+  const repeatableZones = zones.filter(z => repSet.has(z.slideIndex) && isGenerated(z) && !isIgnoredOrDescendantOfIgnored(z, zones));
 
   // Deduplicate static leaf keys
   const seenStatic = new Set();

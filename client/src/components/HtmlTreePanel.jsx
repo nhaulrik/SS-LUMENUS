@@ -51,6 +51,16 @@ function isDescendant(nodeId, ancestorId) {
   return nodeId !== ancestorId && nodeId.startsWith(ancestorId + '>')
 }
 
+/** Check if any ancestor of this node is marked as ignored. */
+function isAncestorIgnored(nodeId, selections) {
+  for (const sel of selections) {
+    if (sel.ignored && isDescendant(nodeId, sel.nodeId)) {
+      return true
+    }
+  }
+  return false
+}
+
 // ── Slide control bar ─────────────────────────────────────────────────────────
 
 function SlideControlBar({ slideIndex, repeatableSlides, onRepeatableSlides, hasZones }) {
@@ -339,15 +349,36 @@ const TreeNode = memo(function TreeNode({
   highlightNodeId,
   onHighlight,
   conflictIds,
+  onSelections,
 }) {
   const sel         = selections.find(s => s.nodeId === node.id)
   const isSelected  = selectedIds.has(node.id)
   const isExpanded  = expandedIds.has(node.id)
   const isHighlight = highlightNodeId === node.id
   const isConflict  = conflictIds.has(node.id)
+  const isIgnored   = sel?.ignored || false
+  
+  // Check if this node or any ancestor is ignored
+  const isIgnoredOrInheritedIgnored = isIgnored || isAncestorIgnored(node.id, selections)
   const hasChildren = node.children?.length > 0
 
   const indent = depth * 16
+
+  const handleToggleIgnore = () => {
+    if (!sel) {
+      // Node is not assigned yet; create a minimal selection just to track ignored state
+      const newSel = {
+        nodeId: node.id,
+        slideIndex: selections.find(s => s.slideIndex)?.slideIndex || 1,
+        ignored: true,
+      }
+      onSelections([...selections, newSel])
+    } else {
+      // Node is already assigned; toggle its ignored state
+      const updated = { ...sel, ignored: !sel.ignored }
+      onSelections(selections.map(s => s.nodeId === node.id ? updated : s))
+    }
+  }
 
   return (
     <>
@@ -359,14 +390,27 @@ const TreeNode = memo(function TreeNode({
           node.interesting ? 'tree-node--interesting' : '',
           node.chrome      ? 'tree-node--chrome'      : '',
           isConflict       ? 'tree-node--conflict'    : '',
+          isIgnoredOrInheritedIgnored ? 'tree-node--ignored' : '',
           sel ? `tree-node--assigned tree-node--assigned-${sel.zoneType}` : '',
         ].filter(Boolean).join(' ')}
-        style={{ paddingLeft: 8 + indent + 'px' }}
+        style={{ paddingLeft: 32 + indent + 'px' }}
         onMouseEnter={() => onHighlight(node.id)}
         onMouseLeave={() => onHighlight(null)}
         data-node-id={node.id}
         data-testid={`tree-node-${node.id}`}
       >
+        {/* Ignore button — far left, always visible on all tree nodes */}
+        <button
+          className="tree-node-ignore-btn"
+          onClick={handleToggleIgnore}
+          aria-pressed={isIgnored}
+          aria-label={isIgnored ? 'Un-ignore zone' : 'Ignore zone'}
+          title={isIgnored ? 'Un-ignore zone' : 'Ignore zone'}
+          data-testid={`tree-ignore-btn-${node.id}`}
+        >
+          <span aria-hidden="true">{isIgnored ? '🚫' : '⊘'}</span>
+        </button>
+
         {/* Expand toggle */}
         <button
           className="tree-node-expand"
@@ -418,23 +462,24 @@ const TreeNode = memo(function TreeNode({
         </button>
       </div>
 
-      {/* Children */}
-      {hasChildren && isExpanded && node.children.map(child => (
-        <TreeNode
-          key={child.id}
-          node={child}
-          depth={depth + 1}
-          selections={selections}
-          selectedIds={selectedIds}
-          expandedIds={expandedIds}
-          onToggleExpand={onToggleExpand}
-          onToggleSelect={onToggleSelect}
-          onOpenAssign={onOpenAssign}
-          highlightNodeId={highlightNodeId}
-          onHighlight={onHighlight}
-          conflictIds={conflictIds}
-        />
-      ))}
+       {/* Children */}
+       {hasChildren && isExpanded && node.children.map(child => (
+         <TreeNode
+           key={child.id}
+           node={child}
+           depth={depth + 1}
+           selections={selections}
+           selectedIds={selectedIds}
+           expandedIds={expandedIds}
+           onToggleExpand={onToggleExpand}
+           onToggleSelect={onToggleSelect}
+           onOpenAssign={onOpenAssign}
+           highlightNodeId={highlightNodeId}
+           onHighlight={onHighlight}
+           conflictIds={conflictIds}
+           onSelections={onSelections}
+         />
+       ))}
     </>
   )
 }) // end memo(TreeNode)
@@ -691,22 +736,23 @@ export default function HtmlTreePanel({
         {currentTree.length === 0 ? (
           <p className="html-tree-empty">No elements found in this slide.</p>
         ) : (
-          currentTree.map(node => (
-            <TreeNode
-              key={node.id}
-              node={node}
-              depth={0}
-              selections={selections}
-              selectedIds={selectedIds}
-              expandedIds={expandedIds}
-              onToggleExpand={handleToggleExpand}
-              onToggleSelect={handleToggleSelect}
-              onOpenAssign={handleOpenAssign}
-              highlightNodeId={highlightNodeId}
-              onHighlight={onHighlight}
-              conflictIds={conflictIds}
-            />
-          ))
+           currentTree.map(node => (
+             <TreeNode
+               key={node.id}
+               node={node}
+               depth={0}
+               selections={selections}
+               selectedIds={selectedIds}
+               expandedIds={expandedIds}
+               onToggleExpand={handleToggleExpand}
+               onToggleSelect={handleToggleSelect}
+               onOpenAssign={handleOpenAssign}
+               highlightNodeId={highlightNodeId}
+               onHighlight={onHighlight}
+               conflictIds={conflictIds}
+               onSelections={onSelections}
+             />
+           ))
         )}
       </div>
 

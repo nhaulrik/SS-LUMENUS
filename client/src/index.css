@@ -1729,6 +1729,7 @@ select:focus-visible {
   align-items: center;
   gap: 6px;
   min-height: 26px;
+  padding-left: 32px;
   padding-right: 8px;
   cursor: default;
   transition: background var(--transition-fast);
@@ -1751,7 +1752,7 @@ select:focus-visible {
 }
 
 /* No guide line at depth 0 */
-.tree-node[style*="padding-left: 8px"]::before {
+.tree-node[style*="padding-left: 32px"]::before {
   display: none;
 }
 
@@ -1996,6 +1997,65 @@ select:focus-visible {
 
 .tree-conflict-warning li {
   margin-bottom: 2px;
+}
+
+/* ── Ignored state ────────────────────────────────────────────────────────── */
+
+.tree-node--ignored > .tree-node-label {
+  text-decoration: line-through;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+.tree-node--ignored .tree-zone-badge {
+  opacity: 0.6;
+}
+
+/* ── Ignore button ────────────────────────────────────────────────────────── */
+
+.tree-node-ignore-btn {
+  position: absolute;
+  left: 8px;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;  /* Hidden by default */
+  transition: opacity var(--transition-fast), background-color var(--transition-fast), color var(--transition-fast);
+  /* Minimum 44×44px touch target via padding compensation */
+  padding: 12px;
+  margin: -12px;
+}
+
+.tree-node:hover .tree-node-ignore-btn {
+  opacity: 1;
+}
+
+.tree-node-ignore-btn:hover {
+  background-color: var(--bg-tertiary);
+  border-color: var(--border-default);
+}
+
+.tree-node-ignore-btn:active {
+  background-color: var(--bg-secondary);
+}
+
+.tree-node-ignore-btn[aria-pressed="true"] {
+  color: var(--error);
+  border-color: rgba(232, 84, 74, 0.4);
+  opacity: 1;  /* Always visible when pressed/ignored */
+}
+
+.tree-node-ignore-btn[aria-pressed="true"]:hover {
+  background-color: rgba(232, 84, 74, 0.08);
+  border-color: rgba(232, 84, 74, 0.6);
 }
 
 /* ── Assignment panel ──────────────────────────────────────────────────────── */
