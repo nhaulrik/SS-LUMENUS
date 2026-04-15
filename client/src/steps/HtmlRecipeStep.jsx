@@ -114,16 +114,14 @@ export default function HtmlRecipeStep({
     setToast({ message: 'JSON copied!', type: 'success' })
   }, [jsonInput, setToast])
 
-  const displaySels    = selections.length ? selections : zones
-  const blockZoneCount = displaySels.filter(z => z.zoneType === 'block').length
-  const leafZoneCount  = displaySels.filter(z => z.zoneType !== 'block').length
-  const totalCount     = displaySels.length
+  const displaySels = selections.length ? selections : zones
+  const totalCount  = displaySels.length
 
   return (
     <div className="app">
       <AppHeader
         title={projectName}
-        subtitle={`${totalCount} zones · ${blockZoneCount > 0 ? `${blockZoneCount} block${blockZoneCount > 1 ? 's' : ''} · ` : ''}Generate content with AI`}
+        subtitle={`${totalCount} zone${totalCount > 1 ? 's' : ''} · Generate content with AI`}
         debugContext={debugContext}
       />
       <Breadcrumbs step={step} canNavigateTo={canNavigateTo} navigateTo={navigateTo} flow="html" />
@@ -167,13 +165,7 @@ export default function HtmlRecipeStep({
               </div>
             ) : (
               <div className="html-recipe-empty">
-                <p>Click "Generate recipe" to build the AI prompt from your {zones.length} zones.</p>
-                {blockZoneCount > 0 && (
-                  <p className="html-recipe-empty-note">
-                    {blockZoneCount} block zone{blockZoneCount > 1 ? 's' : ''} will generate full HTML sections.
-                    {leafZoneCount > 0 && ` ${leafZoneCount} leaf zone${leafZoneCount > 1 ? 's' : ''} will fill individual values.`}
-                  </p>
-                )}
+                <p>Click "Generate recipe" to build the AI prompt from your {zones.length} zone{zones.length > 1 ? 's' : ''}.</p>
               </div>
             )}
           </div>

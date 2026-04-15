@@ -385,7 +385,7 @@ router.post('/html-flow/create-project', (req, res) => {
       typeof rs.prompt === 'string'
     );
 
-    // Resolve conflicts: block zones supersede descendant leaf zones
+    // Resolve conflicts
     const rawSelections         = Array.isArray(selections) ? selections : (session.selections ?? []);
     const { resolved, removed } = resolveConflicts(rawSelections);
 

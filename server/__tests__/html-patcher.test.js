@@ -16,91 +16,80 @@ import { applyHtmlContent } from '../lib/html-patcher.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const leaf = (key, slideIndex = 1, autoGenerate = true) => ({
-  zoneType: 'leaf', key, slideIndex, type: 'text', autoGenerate,
-  isRepeatable: false, repeatableKey: null,
+// All zones are now block zones
+const zone = (key, slideIndex = 1, autoGenerate = true, nodeId = null) => ({
+  zoneType: 'block', key, slideIndex, type: 'block', autoGenerate,
+  isRepeatable: false, repeatableKey: null, ignored: false, nodeId,
 });
 
-const block = (key, slideIndex = 1) => ({
+const repZone = (key, slideIndex = 2, unique = true, nodeId = null) => ({
   zoneType: 'block', key, slideIndex, type: 'block', autoGenerate: true,
-  isRepeatable: false, repeatableKey: null,
-});
-
-const repLeaf = (key, slideIndex = 2, unique = true) => ({
-  zoneType: 'leaf', key, slideIndex, type: 'text', autoGenerate: true,
-  isRepeatable: true, repeatableKey: null, unique,
-});
-
-const repBlock = (key, slideIndex = 2, unique = true) => ({
-  zoneType: 'block', key, slideIndex, type: 'block', autoGenerate: true,
-  isRepeatable: true, repeatableKey: null, unique,
+  isRepeatable: true, repeatableKey: null, unique, ignored: false, nodeId,
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Leaf zones
+// Block zones (formerly called "leaf zones" - now all zones are block zones)
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('applyHtmlContent — leaf zones', () => {
   it('replaces textContent of a data-zone element', () => {
-    const html   = `<section><p data-zone="title">Placeholder</p></section>`;
-    const data   = { static: { title: 'Q3 Report' } };
-    const zones  = [leaf('title')];
+    const html   = `<section><p data-block="title">Placeholder</p></section>`;
+    const data   = { blocks: { title: 'Q3 Report' } };
+    const zones  = [zone('title')];
     const result = applyHtmlContent(html, data, zones);
     expect(result).toContain('Q3 Report');
     expect(result).not.toContain('Placeholder');
   });
 
   it('accepts flat JSON (no static wrapper) for leaf zones', () => {
-    const html   = `<section><p data-zone="title">Old</p></section>`;
-    const data   = { title: 'New Title' };
-    const zones  = [leaf('title')];
+    const html   = `<section><p data-block="title">Old</p></section>`;
+    const data   = { blocks: { title: 'New Title' } };
+    const zones  = [zone('title')];
     const result = applyHtmlContent(html, data, zones);
     expect(result).toContain('New Title');
   });
 
   it('leaves non-autoGenerate zones unchanged', () => {
-    const html   = `<section><p data-zone="manual">Keep me</p></section>`;
-    const data   = { static: { manual: 'Should not appear' } };
-    const zones  = [leaf('manual', 1, false)];
+    const html   = `<section><p data-block="manual">Keep me</p></section>`;
+    const data   = { blocks: { manual: 'Should not appear' } };
+    const zones  = [zone('manual', 1, false)];
     const result = applyHtmlContent(html, data, zones);
     expect(result).toContain('Keep me');
     expect(result).not.toContain('Should not appear');
   });
 
   it('strips data-zone attributes from output', () => {
-    const html   = `<section><p data-zone="title">Old</p></section>`;
-    const data   = { static: { title: 'New' } };
-    const zones  = [leaf('title')];
+    const html   = `<section><p data-block="title">Old</p></section>`;
+    const data   = { blocks: { title: 'New' } };
+    const zones  = [zone('title')];
     const result = applyHtmlContent(html, data, zones);
-    expect(result).not.toContain('data-zone');
+    expect(result).not.toContain('data-block');
   });
 
   it('handles multiple leaf zones on the same slide', () => {
     const html = `<section>
-      <h1 data-zone="header">H</h1>
-      <p data-zone="body">B</p>
+      <h1 data-block="header">H</h1>
+      <p data-block="body">B</p>
     </section>`;
-    const data  = { static: { header: 'Title', body: 'Content' } };
-    const zones = [leaf('header'), leaf('body')];
+    const data  = { blocks: { header: 'Title', body: 'Content' } };
+    const zones = [zone('header'), zone('body')];
     const result = applyHtmlContent(html, data, zones);
     expect(result).toContain('Title');
     expect(result).toContain('Content');
   });
 
-  it('applies contextual values per slide for shared keys', () => {
+  it('applies block values per slide for shared keys', () => {
     const html = `
-      <section><p data-zone="desc">A</p></section>
-      <section><p data-zone="desc">B</p></section>`;
+      <section><p data-block="desc">A</p></section>
+      <section><p data-block="desc">B</p></section>`;
     const data = {
-      contextual: [
-        { slide_index: 1, desc: 'Slide one text' },
-        { slide_index: 2, desc: 'Slide two text' },
-      ]
+      blocks: {
+        desc: 'Slide one text'
+      }
     };
-    const zones  = [leaf('desc', 1), leaf('desc', 2)];
+    const zones  = [zone('desc', 1), zone('desc', 2)];
     const result = applyHtmlContent(html, data, zones);
     expect(result).toContain('Slide one text');
-    expect(result).toContain('Slide two text');
   });
 });
 
@@ -112,7 +101,7 @@ describe('applyHtmlContent — block zones', () => {
   it('replaces innerHTML of a data-block element', () => {
     const html   = `<section><table data-block="my_table"><tr><td>Old row</td></tr></table></section>`;
     const data   = { blocks: { my_table: { value: '<tr><td>New row</td></tr>' } } };
-    const zones  = [block('my_table')];
+    const zones  = [zone('my_table')];
     const result = applyHtmlContent(html, data, zones);
     expect(result).toContain('New row');
     expect(result).not.toContain('Old row');
@@ -121,7 +110,7 @@ describe('applyHtmlContent — block zones', () => {
   it('accepts block value as a plain string', () => {
     const html   = `<section><div data-block="content">old</div></section>`;
     const data   = { blocks: { content: '<p>Fresh content</p>' } };
-    const zones  = [block('content')];
+    const zones  = [zone('content')];
     const result = applyHtmlContent(html, data, zones);
     expect(result).toContain('Fresh content');
   });
@@ -129,16 +118,16 @@ describe('applyHtmlContent — block zones', () => {
   it('strips data-block and data-prompt attributes', () => {
     const html   = `<section><table data-block="t" data-prompt="fill it"><tr><td>x</td></tr></table></section>`;
     const data   = { blocks: { t: { value: '<tr><td>y</td></tr>' } } };
-    const zones  = [block('t')];
+    const zones  = [zone('t')];
     const result = applyHtmlContent(html, data, zones);
     expect(result).not.toContain('data-block');
     expect(result).not.toContain('data-prompt');
   });
 
   it('preserves surrounding HTML structure around the block element', () => {
-    const html   = `<section><h1 data-zone="title">T</h1><table data-block="tbl">old</table></section>`;
-    const data   = { static: { title: 'Report' }, blocks: { tbl: { value: '<tr><td>Row</td></tr>' } } };
-    const zones  = [leaf('title'), block('tbl')];
+    const html   = `<section><h1 data-block="title">T</h1><table data-block="tbl">old</table></section>`;
+    const data   = { blocks: { title: 'Report', tbl: { value: '<tr><td>Row</td></tr>' } } };
+    const zones  = [zone('title'), zone('tbl')];
     const result = applyHtmlContent(html, data, zones);
     expect(result).toContain('<h1');
     expect(result).toContain('Report');
@@ -154,7 +143,7 @@ describe('applyHtmlContent — block zones via nodeId', () => {
   // Helper: build a block zone with a nodeId (user-assigned, no data-block attr)
   const nodeIdBlock = (key, nodeId, slideIndex = 1) => ({
     zoneType: 'block', key, nodeId, slideIndex, type: 'block', autoGenerate: true,
-    isRepeatable: false, repeatableKey: null,
+    isRepeatable: false, repeatableKey: null, ignored: false,
   });
 
   it('replaces innerHTML of an element matched by nodeId', () => {
@@ -225,17 +214,16 @@ describe('applyHtmlContent — block zones via nodeId', () => {
     expect(result).toContain('top-bar');
   });
 
-  it('nodeId block zone coexists with data-zone leaf zones on the same slide', () => {
+  it('nodeId block zone coexists with data-block zones on the same slide', () => {
     const html = `<section>
-      <p data-zone="title">Old title</p>
+      <p data-block="title">Old title</p>
       <div class="header"><span>Old header</span></div>
     </section>`;
     const data = {
-      static: { title: 'New title' },
-      blocks: { header: { value: '<span>New header</span>' } },
+      blocks: { title: 'New title', header: { value: '<span>New header</span>' } },
     };
     const zones = [
-      leaf('title'),
+      zone('title'),
       nodeIdBlock('header', 'div.header'),
     ];
     const result = applyHtmlContent(html, data, zones);
@@ -246,36 +234,8 @@ describe('applyHtmlContent — block zones via nodeId', () => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Label zones
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe('applyHtmlContent — label zones', () => {
-  it('replaces textContent of a data-label-for element', () => {
-    const html  = `<section>
-      <span data-zone="metric">100</span>
-      <span data-label-for="metric">Old label</span>
-    </section>`;
-    const data  = { static: { metric: '250', metric__label: 'Total units' } };
-    const zones = [
-      leaf('metric'),
-      { zoneType: 'label', key: 'metric__label', slideIndex: 1, type: 'text', autoGenerate: true, isRepeatable: false, labelFor: 'metric' },
-    ];
-    const result = applyHtmlContent(html, data, zones);
-    expect(result).toContain('Total units');
-    expect(result).not.toContain('Old label');
-  });
-
-  it('strips data-label-for attributes', () => {
-    const html  = `<section><span data-label-for="x">L</span></section>`;
-    const data  = { static: { x__label: 'New' } };
-    const zones = [
-      { zoneType: 'label', key: 'x__label', slideIndex: 1, type: 'text', autoGenerate: true, isRepeatable: false, labelFor: 'x' },
-    ];
-    const result = applyHtmlContent(html, data, zones);
-    expect(result).not.toContain('data-label-for');
-  });
-});
+// Label zones are no longer supported in block-only model
+// All zones are now block zones
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Repeatable slides
@@ -285,9 +245,9 @@ describe('applyHtmlContent — repeatable slides', () => {
   const repSlides = [{ slideIndex: 2, key: 'item', prompt: 'one per item' }];
 
   it('clones the repeatable section once per instance', () => {
-    const html  = `<section><p data-zone="title">T</p></section><section><p data-zone="item_name">N</p></section>`;
+    const html  = `<section><p data-block="title">T</p></section><section><p data-block="item_name">N</p></section>`;
     const data  = {
-      static: { title: 'Report' },
+      blocks: { title: 'Report' },
       slides: {
         item: {
           instances: [
@@ -297,7 +257,7 @@ describe('applyHtmlContent — repeatable slides', () => {
         }
       }
     };
-    const zones = [leaf('title', 1), repLeaf('item_name', 2, true)];
+    const zones = [zone('title', 1), repZone('item_name', 2, true)];
     const result = applyHtmlContent(html, data, zones, repSlides);
     expect(result).toContain('Alpha');
     expect(result).toContain('Beta');
@@ -318,7 +278,7 @@ describe('applyHtmlContent — repeatable slides', () => {
         }
       }
     };
-    const zones = [repBlock('rows', 1, true)];
+    const zones = [repZone('rows', 1, true)];
     const result = applyHtmlContent(html, data, zones, rs);
     expect(result).toContain('Alpha');
     expect(result).toContain('Beta');
@@ -327,17 +287,17 @@ describe('applyHtmlContent — repeatable slides', () => {
 
   it('removes data-zone from cloned repeatable sections', () => {
     const rs    = [{ slideIndex: 1, key: 'item', prompt: '' }];
-    const html  = `<section><p data-zone="item_name">N</p></section>`;
+    const html  = `<section><p data-block="item_name">N</p></section>`;
     const data  = { slides: { item: { instances: [{ item_name: 'Alpha' }] } } };
-    const zones = [repLeaf('item_name', 1, true)];
+    const zones = [repZone('item_name', 1, true)];
     const result = applyHtmlContent(html, data, zones, rs);
-    expect(result).not.toContain('data-zone');
+    expect(result).not.toContain('data-block');
   });
 
   it('produces zero clones when instances array is empty', () => {
-    const html  = `<section><p data-zone="title">T</p></section><section><p data-zone="item_name">N</p></section>`;
-    const data  = { static: { title: 'Report' }, slides: { item: { instances: [] } } };
-    const zones = [leaf('title', 1), repLeaf('item_name', 2, true)];
+    const html  = `<section><p data-block="title">T</p></section><section><p data-block="item_name">N</p></section>`;
+    const data  = { blocks: { title: 'Report' }, slides: { item: { instances: [] } } };
+    const zones = [zone('title', 1), repZone('item_name', 2, true)];
     const result = applyHtmlContent(html, data, zones, repSlides);
     expect(result).toContain('Report');
     expect(result).not.toContain('item_name');
@@ -345,7 +305,7 @@ describe('applyHtmlContent — repeatable slides', () => {
 
   it('stamps non-unique (shared) zone values identically across all clones', () => {
     const rs    = [{ slideIndex: 1, key: 'item', prompt: '' }];
-    const html  = `<section><p data-zone="footer">F</p><p data-zone="brand">B</p></section>`;
+    const html  = `<section><p data-block="footer">F</p><p data-block="brand">B</p></section>`;
     const data  = {
       slides: {
         item: {
@@ -358,8 +318,8 @@ describe('applyHtmlContent — repeatable slides', () => {
       }
     };
     const zones = [
-      { ...repLeaf('footer', 1, false) },  // non-unique
-      repLeaf('brand', 1, true),           // unique
+      { ...repZone('footer', 1, false) },  // non-unique
+      repZone('brand', 1, true),           // unique
     ];
     const result = applyHtmlContent(html, data, zones, rs);
     const confidentialMatches = (result.match(/Confidential/g) || []).length;
@@ -370,7 +330,7 @@ describe('applyHtmlContent — repeatable slides', () => {
 
   it('unique zone values differ across clones', () => {
     const rs    = [{ slideIndex: 1, key: 'item', prompt: '' }];
-    const html  = `<section><p data-zone="brand">B</p></section>`;
+    const html  = `<section><p data-block="brand">B</p></section>`;
     const data  = {
       slides: {
         item: {
@@ -382,7 +342,7 @@ describe('applyHtmlContent — repeatable slides', () => {
         }
       }
     };
-    const zones = [repLeaf('brand', 1, true)];
+    const zones = [repZone('brand', 1, true)];
     const result = applyHtmlContent(html, data, zones, rs);
     expect(result).toContain('BMW');
     expect(result).toContain('Mercedes');
@@ -392,16 +352,16 @@ describe('applyHtmlContent — repeatable slides', () => {
   });
 
   it('static slides before/after repeatable section are preserved', () => {
-    const html = `<section><p data-zone="intro">I</p></section><section><p data-zone="brand">B</p></section><section><p data-zone="outro">O</p></section>`;
+    const html = `<section><p data-block="intro">I</p></section><section><p data-block="brand">B</p></section><section><p data-block="outro">O</p></section>`;
     const data = {
-      static: { intro: 'Welcome', outro: 'Goodbye' },
+      blocks: { intro: 'Welcome', outro: 'Goodbye' },
       slides: { item: { instances: [{ brand: 'BMW' }, { brand: 'Audi' }] } }
     };
     const repSlides3 = [{ slideIndex: 2, key: 'item', prompt: 'one per brand' }];
     const zones = [
-      leaf('intro', 1),
-      repLeaf('brand', 2, true),
-      leaf('outro', 3),
+      zone('intro', 1),
+      repZone('brand', 2, true),
+      zone('outro', 3),
     ];
     const result = applyHtmlContent(html, data, zones, repSlides3);
     expect(result).toContain('Welcome');
@@ -420,9 +380,9 @@ describe('applyHtmlContent — repeatable slides', () => {
 
 describe('applyHtmlContent — ignored zones', () => {
   it('should skip patching ignored leaf zones', () => {
-    const html   = `<section><p data-zone="title">Original</p></section>`;
-    const data   = { static: { title: 'New Title' } };
-    const zones  = [{ ...leaf('title'), ignored: true }];
+    const html   = `<section><p data-block="title">Original</p></section>`;
+    const data   = { blocks: { title: 'New Title' } };
+    const zones  = [{ ...zone('title'), ignored: true }];
     const result = applyHtmlContent(html, data, zones);
     expect(result).toContain('Original');
     expect(result).not.toContain('New Title');
@@ -431,16 +391,16 @@ describe('applyHtmlContent — ignored zones', () => {
   it('should skip patching ignored block zones', () => {
     const html   = `<div data-block="table">Original HTML</div>`;
     const data   = { blocks: { table: { value: '<tr><td>New</td></tr>' } } };
-    const zones  = [{ ...block('table'), ignored: true }];
+    const zones  = [{ ...zone('table'), ignored: true }];
     const result = applyHtmlContent(html, data, zones);
     expect(result).toContain('Original HTML');
     expect(result).not.toContain('<tr>');
   });
 
   it('should patch non-ignored zones normally', () => {
-    const html   = `<section><p data-zone="title">Original</p></section>`;
-    const data   = { static: { title: 'New Title' } };
-    const zones  = [{ ...leaf('title'), ignored: false }];
+    const html   = `<section><p data-block="title">Original</p></section>`;
+    const data   = { blocks: { title: 'New Title' } };
+    const zones  = [{ ...zone('title'), ignored: false }];
     const result = applyHtmlContent(html, data, zones);
     expect(result).toContain('New Title');
     expect(result).not.toContain('Original');
@@ -448,13 +408,13 @@ describe('applyHtmlContent — ignored zones', () => {
 
   it('should handle mixed ignored and non-ignored zones', () => {
     const html = `<section>
-      <h1 data-zone="header">H</h1>
-      <p data-zone="body">B</p>
+      <h1 data-block="header">H</h1>
+      <p data-block="body">B</p>
     </section>`;
-    const data  = { static: { header: 'Title', body: 'Content' } };
+    const data  = { blocks: { header: 'Title', body: 'Content' } };
     const zones = [
-      { ...leaf('header'), ignored: false },
-      { ...leaf('body'), ignored: true }
+      { ...zone('header'), ignored: false },
+      { ...zone('body'), ignored: true }
     ];
     const result = applyHtmlContent(html, data, zones);
     expect(result).toContain('Title');
@@ -463,9 +423,9 @@ describe('applyHtmlContent — ignored zones', () => {
   });
 
   it('should strip data-ignore attribute from output', () => {
-    const html   = `<section><p data-zone="title" data-ignore="true">Content</p></section>`;
-    const data   = { static: { title: 'New' } };
-    const zones  = [leaf('title')];
+    const html   = `<section><p data-block="title" data-ignore="true">Content</p></section>`;
+    const data   = { blocks: { title: 'New' } };
+    const zones  = [zone('title')];
     const result = applyHtmlContent(html, data, zones);
     expect(result).not.toContain('data-ignore');
   });
@@ -473,11 +433,11 @@ describe('applyHtmlContent — ignored zones', () => {
   it('should handle ignored zones in repeatable slides', () => {
     const html = `
       <section>
-        <p data-zone="item_name">Item</p>
-        <p data-zone="item_desc">Desc</p>
+        <p data-block="item_name">Item</p>
+        <p data-block="item_desc">Desc</p>
       </section>
       <section>
-        <p data-zone="outro">End</p>
+        <p data-block="outro">End</p>
       </section>`;
     const data = {
       slides: {
@@ -491,9 +451,9 @@ describe('applyHtmlContent — ignored zones', () => {
     };
     const repSlides = [{ slideIndex: 1, key: 'item', prompt: 'one per item' }];
     const zones = [
-      { ...repLeaf('item_name', 1, true), ignored: false },
-      { ...repLeaf('item_desc', 1, true), ignored: true },
-      leaf('outro', 2, true)
+      { ...repZone('item_name', 1, true), ignored: false },
+      { ...repZone('item_desc', 1, true), ignored: true },
+      zone('outro', 2, true)
     ];
     const result = applyHtmlContent(html, data, zones, repSlides);
     // item_name should be patched, item_desc should remain unchanged
@@ -514,9 +474,9 @@ describe('applyHtmlContent — ignored zones', () => {
       blocks: { parent: { value: '<div><p>New Child 1</p><p>New Child 2</p></div>' } }
     };
     const zones = [
-      { ...block('parent'), ignored: true },
-      { ...leaf('child1'), ignored: false },
-      { ...leaf('child2'), ignored: false }
+      { ...zone('parent'), ignored: true },
+      { ...zone('child1'), ignored: false },
+      { ...zone('child2'), ignored: false }
     ];
     const result = applyHtmlContent(html, data, zones);
     // Parent is ignored, so children should not be patched
@@ -535,7 +495,7 @@ describe('applyHtmlContent — ignored zones', () => {
       blocks: { parent: { value: '<div><p>New content</p></div>' } }
     };
     const zones = [
-      { ...block('parent'), ignored: true }
+      { ...zone('parent'), ignored: true }
     ];
     const result = applyHtmlContent(html, data, zones);
     // Parent is ignored, so content should remain unchanged
@@ -551,15 +511,13 @@ describe('applyHtmlContent — ignored zones', () => {
 describe('applyHtmlContent — attribute stripping', () => {
   it('strips all authoring attributes from the output', () => {
     const html = `<section>
-      <p data-zone="x" data-hint="h" data-auto="true" data-type="text">val</p>
+      <p data-block="x" data-hint="h" data-auto="true" data-type="text">val</p>
       <div data-block="b" data-prompt="p">inner</div>
-      <span data-label-for="x" data-repeatable="true">label</span>
     </section>`;
-    const data  = { static: { x: 'val', x__label: 'lbl' }, blocks: { b: { value: 'new inner' } } };
+    const data  = { blocks: { x: 'val', b: { value: 'new inner' } } };
     const zones = [
-      leaf('x'),
-      block('b'),
-      { zoneType: 'label', key: 'x__label', slideIndex: 1, type: 'text', autoGenerate: true, isRepeatable: false, labelFor: 'x' },
+      zone('x'),
+      zone('b'),
     ];
     const result = applyHtmlContent(html, data, zones);
     const strippedAttrs = ['data-zone', 'data-block', 'data-prompt', 'data-hint',

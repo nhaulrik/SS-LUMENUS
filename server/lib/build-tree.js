@@ -140,13 +140,17 @@ function walkNode(node, parentId, depth, siblingMap, slideIndex, selections) {
 
   const zoneKey = existingBlock || existingZone
   if (zoneKey) {
+    // Fall back to element text content if no explicit prompt provided
+    const textContent = node.textContent?.trim() || ''
+    const prompt = existingPrompt || textContent
+    
     selections.push({
       nodeId:       id,
       slideIndex,
       zoneType:     'block',
       key:          zoneKey,
       hint:         existingHint || existingPrompt || `Generate content for ${tag}`,
-      prompt:       existingPrompt,
+      prompt:       prompt,
       autoGenerate: existingAuto === 'false' ? false : true,
       type:         'block',
       exampleHtml:  node.innerHTML?.trim() || undefined,

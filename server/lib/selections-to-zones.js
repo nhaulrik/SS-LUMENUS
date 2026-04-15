@@ -32,9 +32,9 @@
  *   - Each selection becomes one zone
  *   - elementOrder is the selection's position in the array (stable)
  *   - All zones have autoGenerate:true and type:'block'
- *   - isRepeatable is set to true for zones whose slideIndex matches a
- *     repeatableSlides entry; unique is propagated from the selection
- *     (default true) for repeatable zones, undefined for static zones
+  *   - isRepeatable is set to true for zones whose slideIndex matches a
+  *     repeatableSlides entry; unique is propagated from the selection
+  *     (default true) for repeatable zones, undefined for non-repeatable zones
  *
  * @param {Object[]} selections
  * @param {Object[]} repeatableSlides - [{ slideIndex, key, prompt }]

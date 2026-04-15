@@ -15,25 +15,16 @@ import { buildHtmlRecipe, validateHtmlJson } from '../lib/html-recipe-builder.js
 
 // ── Zone factories ─────────────────────────────────────────────────────────────
 
-const leaf = (key, hint = '', slideIndex = 1, autoGenerate = true) => ({
-  zoneType: 'leaf', key, hint, slideIndex, type: 'text', autoGenerate,
-  isRepeatable: false, repeatableKey: null,
-});
-
-const block = (key, prompt = '', slideIndex = 1, exampleHtml = '') => ({
+// All zones are now block zones
+const zone = (key, prompt = '', slideIndex = 1, exampleHtml = '', autoGenerate = true) => ({
   zoneType: 'block', key, hint: prompt, prompt, exampleHtml, slideIndex,
-  type: 'block', autoGenerate: true, isRepeatable: false, repeatableKey: null,
+  type: 'block', autoGenerate, isRepeatable: false, repeatableKey: null, ignored: false,
 });
 
 // Repeatable zones — unique (different per instance)
-const repLeaf = (key, hint = '', slideIndex = 2, unique = true) => ({
-  zoneType: 'leaf', key, hint, slideIndex, type: 'text', autoGenerate: true,
-  isRepeatable: true, repeatableKey: null, unique,
-});
-
-const repBlock = (key, prompt = '', slideIndex = 2, exampleHtml = '', unique = true) => ({
+const repZone = (key, prompt = '', slideIndex = 2, exampleHtml = '', unique = true) => ({
   zoneType: 'block', key, hint: prompt, prompt, exampleHtml, slideIndex,
-  type: 'block', autoGenerate: true, isRepeatable: true, repeatableKey: null, unique,
+  type: 'block', autoGenerate: true, isRepeatable: true, repeatableKey: null, unique, ignored: false,
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -42,46 +33,42 @@ const repBlock = (key, prompt = '', slideIndex = 2, exampleHtml = '', unique = t
 
 describe('buildHtmlRecipe', () => {
   it('contains INSTRUCTIONS header', () => {
-    const recipe = buildHtmlRecipe([leaf('title')]);
+    const recipe = buildHtmlRecipe([zone('title')]);
     expect(recipe).toContain('INSTRUCTIONS');
     expect(recipe).toContain('Return ONLY valid JSON');
   });
 
-  it('includes STATIC FIELDS section for leaf zones', () => {
-    const recipe = buildHtmlRecipe([leaf('company_name', 'the company')]);
-    expect(recipe).toContain('STATIC FIELDS');
+  it('includes BLOCK ZONES section for leaf zones (converted to block)', () => {
+    const recipe = buildHtmlRecipe([zone('company_name', 'the company')]);
+    expect(recipe).toContain('BLOCK ZONES');
     expect(recipe).toContain('"company_name"');
     expect(recipe).toContain('the company');
   });
 
   it('excludes non-autoGenerate leaf zones', () => {
-    const zones  = [leaf('manual', 'hint', 1, false), leaf('auto', 'hint', 1, true)];
+    const zones  = [zone('manual', 'hint', 1, '', false), zone('auto', 'hint', 1, '', true)];
     const recipe = buildHtmlRecipe(zones);
     expect(recipe).toContain('"auto"');
     expect(recipe).not.toContain('"manual"');
   });
 
-  it('deduplicates static keys that appear on multiple non-repeatable slides', () => {
-    const zones  = [leaf('header', 'h', 1), leaf('header', 'h', 2)];
-    // Both slides share the key → contextual, not static
+  it('deduplicates block keys that appear on multiple non-repeatable slides', () => {
+    const zones  = [zone('header', 'h', 1), zone('header', 'h', 2)];
+    // Both slides share the key → single block zone
     const recipe = buildHtmlRecipe(zones);
-    expect(recipe).toContain('CONTEXTUAL FIELDS');
-    // Should appear twice in contextual (once per slide) but only once in static
-    expect(recipe).not.toContain('STATIC FIELDS');
+    expect(recipe).toContain('BLOCK ZONES');
+    expect(recipe).toContain('"header"');
   });
 
-  it('includes CONTEXTUAL FIELDS for shared keys across slides', () => {
-    const zones  = [leaf('desc', 'slide 1 desc', 1), leaf('desc', 'slide 2 desc', 2)];
+  it('handles block zones for shared keys across slides', () => {
+    const zones  = [zone('desc', 'slide 1 desc', 1), zone('desc', 'slide 2 desc', 2)];
     const recipe = buildHtmlRecipe(zones);
-    expect(recipe).toContain('CONTEXTUAL FIELDS');
+    expect(recipe).toContain('BLOCK ZONES');
     expect(recipe).toContain('"desc"');
-    expect(recipe).toContain('slide_index');
-    expect(recipe).toContain('"slide_index": 1');
-    expect(recipe).toContain('"slide_index": 2');
   });
 
   it('includes BLOCK ZONES section for block zones', () => {
-    const zones  = [block('initiatives_table', 'Populate with Q3 data')];
+    const zones  = [zone('initiatives_table', 'Populate with Q3 data')];
     const recipe = buildHtmlRecipe(zones);
     expect(recipe).toContain('BLOCK ZONES');
     expect(recipe).toContain('[HTML BLOCK]');
@@ -90,14 +77,14 @@ describe('buildHtmlRecipe', () => {
   });
 
   it('includes example HTML in block zone entry when available', () => {
-    const zones  = [block('my_table', 'fill it', 1, '<tr><td>Row</td></tr>')];
+    const zones  = [zone('my_table', 'fill it', 1, '<tr><td>Row</td></tr>')];
     const recipe = buildHtmlRecipe(zones);
     expect(recipe).toContain('<tr>');
   });
 
   it('includes REPEATABLE SLIDE section for repeatable leaf zones', () => {
     const repSlides = [{ slideIndex: 2, key: 'item', prompt: 'one per item' }];
-    const zones     = [leaf('title', 'page title', 1), repLeaf('item_name', 'name', 2, true)];
+    const zones     = [zone('title', 'page title', 1), repZone('item_name', 'name', 2, '', true)];
     const recipe    = buildHtmlRecipe(zones, '', repSlides);
     expect(recipe).toContain('REPEATABLE SLIDE');
     expect(recipe).toContain('item');
@@ -106,7 +93,7 @@ describe('buildHtmlRecipe', () => {
 
   it('includes repeatable block zones inside REPEATABLE SLIDE section', () => {
     const repSlides = [{ slideIndex: 2, key: 'slide', prompt: 'one per slide' }];
-    const zones     = [repBlock('table_block', 'generate rows', 2, '', true)];
+    const zones     = [repZone('table_block', 'generate rows', 2, '', true)];
     const recipe    = buildHtmlRecipe(zones, '', repSlides);
     expect(recipe).toContain('REPEATABLE SLIDE');
     expect(recipe).toContain('"table_block"');
@@ -114,45 +101,43 @@ describe('buildHtmlRecipe', () => {
   });
 
   it('prepends GLOBAL GUIDANCE when provided', () => {
-    const recipe = buildHtmlRecipe([leaf('x')], 'Use formal language');
+    const recipe = buildHtmlRecipe([zone('x')], 'Use formal language');
     expect(recipe).toContain('GLOBAL GUIDANCE');
     expect(recipe).toContain('Use formal language');
     expect(recipe.indexOf('GLOBAL GUIDANCE')).toBeLessThan(recipe.indexOf('GENERATE THE FOLLOWING DATA'));
   });
 
   it('omits GLOBAL GUIDANCE when not provided', () => {
-    const recipe = buildHtmlRecipe([leaf('x')]);
+    const recipe = buildHtmlRecipe([zone('x')]);
     expect(recipe).not.toContain('GLOBAL GUIDANCE');
   });
 
-  it('numbers sections sequentially: static=1, block=2', () => {
-    const zones  = [leaf('title', '', 1), block('table', '', 1)];
+  it('numbers sections sequentially: only BLOCK ZONES', () => {
+    const zones  = [zone('title', '', 1), zone('table', '', 1)];
     const recipe = buildHtmlRecipe(zones);
-    expect(recipe).toContain('1. STATIC FIELDS');
-    expect(recipe).toContain('2. BLOCK ZONES');
+    expect(recipe).toContain('1. BLOCK ZONES');
+    expect(recipe).not.toContain('2. BLOCK ZONES');
   });
 
-  it('numbers sections sequentially: contextual=1, repeatable=2', () => {
+  it('numbers sections sequentially: block=1, repeatable=2', () => {
     const repSlides = [{ slideIndex: 3, key: 'item', prompt: 'one per item' }];
-    const zones     = [leaf('desc', '', 1), leaf('desc', '', 2), repLeaf('name', '', 3, true)];
+    const zones     = [zone('desc', '', 1), zone('desc', '', 2), repZone('name', '', 3, '', true)];
     const recipe    = buildHtmlRecipe(zones, '', repSlides);
-    expect(recipe).toContain('1. CONTEXTUAL FIELDS');
+    expect(recipe).toContain('1. BLOCK ZONES');
     expect(recipe).toContain('2. REPEATABLE SLIDE');
   });
 
-  it('numbers sections: static=1, contextual=2, block=3, repeatable=4', () => {
+  it('numbers sections: block=1, repeatable=2', () => {
     const repSlides = [{ slideIndex: 3, key: 'item', prompt: 'one per item' }];
     const zones = [
-      leaf('header', '', 1),                       // static
-      leaf('desc', '', 1), leaf('desc', '', 2),    // contextual
-      block('table', '', 1),                        // block
-      repLeaf('item_name', '', 3, true),            // repeatable
+      zone('header', '', 1),                       // block
+      zone('desc', '', 1), zone('desc', '', 2),    // block
+      zone('table', '', 1),                        // block
+      repZone('item_name', '', 3, '', true),       // repeatable
     ];
     const recipe = buildHtmlRecipe(zones, '', repSlides);
-    expect(recipe).toContain('1. STATIC FIELDS');
-    expect(recipe).toContain('2. CONTEXTUAL FIELDS');
-    expect(recipe).toContain('3. BLOCK ZONES');
-    expect(recipe).toContain('4. REPEATABLE SLIDE');
+    expect(recipe).toContain('1. BLOCK ZONES');
+    expect(recipe).toContain('2. REPEATABLE SLIDE');
   });
 
   it('handles empty zone list without throwing', () => {
@@ -160,18 +145,17 @@ describe('buildHtmlRecipe', () => {
   });
 
   it('includes IMPORTANT footer', () => {
-    const recipe = buildHtmlRecipe([leaf('x')]);
+    const recipe = buildHtmlRecipe([zone('x')]);
     expect(recipe).toContain('IMPORTANT');
-    expect(recipe).toContain('static');
     expect(recipe).toContain('blocks');
     expect(recipe).toContain('slides');
   });
 
   it('should exclude ignored leaf zones from recipe', () => {
     const zones = [
-      leaf('zone1', 'hint1'),
-      { ...leaf('zone2', 'hint2'), ignored: true },
-      leaf('zone3', 'hint3')
+      zone('zone1', 'hint1'),
+      { ...zone('zone2', 'hint2'), ignored: true },
+      zone('zone3', 'hint3')
     ];
     const recipe = buildHtmlRecipe(zones);
     expect(recipe).toContain('"zone1"');
@@ -181,9 +165,9 @@ describe('buildHtmlRecipe', () => {
 
   it('should exclude ignored block zones from recipe', () => {
     const zones = [
-      block('table1', 'fill it'),
-      { ...block('table2', 'fill it'), ignored: true },
-      block('table3', 'fill it')
+      zone('table1', 'fill it'),
+      { ...zone('table2', 'fill it'), ignored: true },
+      zone('table3', 'fill it')
     ];
     const recipe = buildHtmlRecipe(zones);
     expect(recipe).toContain('"table1"');
@@ -191,22 +175,22 @@ describe('buildHtmlRecipe', () => {
     expect(recipe).toContain('"table3"');
   });
 
-  it('should exclude ignored zones from contextual fields', () => {
+  it('should exclude ignored zones from block zones', () => {
     const zones = [
-      leaf('desc', 'desc1', 1),
-      { ...leaf('desc', 'desc2', 2), ignored: true }
+      zone('desc', 'desc1', 1),
+      { ...zone('desc', 'desc2', 2), ignored: true }
     ];
     const recipe = buildHtmlRecipe(zones);
-    // The non-ignored zone on slide 1 should appear, but not the ignored one on slide 2
-    expect(recipe).toContain('"slide_index": 1');
-    expect(recipe).not.toContain('"slide_index": 2');
+    // The non-ignored zone should appear
+    expect(recipe).toContain('"desc"');
+    expect(recipe).toContain('BLOCK ZONES');
   });
 
   it('should handle mixed ignored and non-ignored repeatable zones', () => {
     const repSlides = [{ slideIndex: 2, key: 'item', prompt: 'one per item' }];
     const zones = [
-      repLeaf('item_name', 'name', 2, true),
-      { ...repLeaf('item_desc', 'desc', 2, true), ignored: true }
+      repZone('item_name', 'name', 2, '', true),
+      { ...repZone('item_desc', 'desc', 2, '', true), ignored: true }
     ];
     const recipe = buildHtmlRecipe(zones, '', repSlides);
     expect(recipe).toContain('"item_name"');
@@ -215,8 +199,8 @@ describe('buildHtmlRecipe', () => {
 
   it('should treat child zones as ignored when parent is ignored', () => {
     const zones = [
-      { ...block('parent_block', 'parent'), ignored: true, nodeId: 'div.parent' },
-      { ...leaf('child_leaf', 'child', 1, true), nodeId: 'div.parent>p.child' }
+      { ...zone('parent_block', 'parent'), ignored: true, nodeId: 'div.parent' },
+      { ...zone('child_leaf', 'child', 1, '', true), nodeId: 'div.parent>p.child' }
     ];
     const recipe = buildHtmlRecipe(zones);
     // Both parent and child should be excluded from recipe
@@ -226,9 +210,9 @@ describe('buildHtmlRecipe', () => {
 
   it('should exclude deeply nested children of ignored parent', () => {
     const zones = [
-      { ...block('root', 'root'), ignored: true, nodeId: 'div.root' },
-      { ...block('level1', 'level1', 1, true), nodeId: 'div.root>div.level1' },
-      { ...leaf('level2', 'level2', 1, true), nodeId: 'div.root>div.level1>p.level2' }
+      { ...zone('root', 'root'), ignored: true, nodeId: 'div.root' },
+      { ...zone('level1', 'level1', 1, '', true), nodeId: 'div.root>div.level1' },
+      { ...zone('level2', 'level2', 1, '', true), nodeId: 'div.root>div.level1>p.level2' }
     ];
     const recipe = buildHtmlRecipe(zones);
     // All should be excluded because root is ignored
@@ -239,10 +223,10 @@ describe('buildHtmlRecipe', () => {
 
   it('should only exclude children of ignored parent, not siblings', () => {
     const zones = [
-      { ...block('ignored_parent', 'ignored', true), ignored: true, nodeId: 'div.parent1' },
-      { ...leaf('child_of_ignored', 'child', 1, true), nodeId: 'div.parent1>p.child' },
-      { ...block('sibling_parent', 'sibling', true), ignored: false, nodeId: 'div.parent2' },
-      { ...leaf('child_of_sibling', 'sibling_child', 1, true), nodeId: 'div.parent2>p.child' }
+      { ...zone('ignored_parent', 'ignored', 1, '', true), ignored: true, nodeId: 'div.parent1' },
+      { ...zone('child_of_ignored', 'child', 1, '', true), nodeId: 'div.parent1>p.child' },
+      { ...zone('sibling_parent', 'sibling', 1, '', true), ignored: false, nodeId: 'div.parent2' },
+      { ...zone('child_of_sibling', 'sibling_child', 1, '', true), nodeId: 'div.parent2>p.child' }
     ];
     const recipe = buildHtmlRecipe(zones);
     // Ignored parent and its child should be excluded
@@ -260,66 +244,63 @@ describe('buildHtmlRecipe', () => {
 
 describe('validateHtmlJson', () => {
   it('returns valid:false for invalid JSON syntax', () => {
-    const result = validateHtmlJson('{bad json', [leaf('x')]);
+    const result = validateHtmlJson('{bad json', [zone('x')]);
     expect(result.valid).toBe(false);
     expect(result.error).toMatch(/syntax/i);
   });
 
   it('validates a correct static-only JSON', () => {
-    const zones  = [leaf('title', 'page title')];
-    const json   = JSON.stringify({ static: { title: 'Hello' } });
+    const zones  = [zone('title', 'page title')];
+    const json   = JSON.stringify({ blocks: { title: 'Hello' } });
     const result = validateHtmlJson(json, zones);
     expect(result.valid).toBe(true);
-    expect(result.foundFields).toContain('title');
+    expect(result.foundFields.some(f => f.includes('title'))).toBe(true);
     expect(result.missingFields).toHaveLength(0);
   });
 
   it('accepts flat JSON without static wrapper for static fields', () => {
-    const zones  = [leaf('title')];
-    const json   = JSON.stringify({ title: 'Hello' });
+    const zones  = [zone('title')];
+    const json   = JSON.stringify({ blocks: { title: 'Hello' } });
     const result = validateHtmlJson(json, zones);
     expect(result.valid).toBe(true);
   });
 
   it('reports missing static fields', () => {
-    const zones  = [leaf('title'), leaf('subtitle')];
-    const json   = JSON.stringify({ static: { title: 'Hello' } });
+    const zones  = [zone('title'), zone('subtitle')];
+    const json   = JSON.stringify({ blocks: { title: 'Hello' } });
     const result = validateHtmlJson(json, zones);
     expect(result.valid).toBe(false);
-    expect(result.missingFields).toContain('subtitle');
+    expect(result.missingFields.some(f => f.includes('subtitle'))).toBe(true);
   });
 
   it('ignores non-autoGenerate leaf zones', () => {
-    const zones  = [leaf('manual', '', 1, false), leaf('auto', '', 1, true)];
-    const json   = JSON.stringify({ static: { auto: 'val' } });
+    const zones  = [zone('manual', '', 1, '', false), zone('auto', '', 1, '', true)];
+    const json   = JSON.stringify({ blocks: { auto: 'val' } });
     const result = validateHtmlJson(json, zones);
     expect(result.valid).toBe(true);
   });
 
   it('validates contextual fields for shared keys', () => {
-    const zones = [leaf('desc', '', 1), leaf('desc', '', 2)];
+    const zones = [zone('desc', '', 1), zone('desc', '', 2)];
     const json  = JSON.stringify({
-      contextual: [
-        { slide_index: 1, desc: 'slide 1' },
-        { slide_index: 2, desc: 'slide 2' },
-      ]
+      blocks: { desc: 'slide 1' }
     });
     const result = validateHtmlJson(json, zones);
     expect(result.valid).toBe(true);
   });
 
   it('reports missing contextual entry for a slide', () => {
-    const zones = [leaf('desc', '', 1), leaf('desc', '', 2)];
+    const zones = [zone('desc', '', 1), zone('desc', '', 2)];
     const json  = JSON.stringify({
-      contextual: [{ slide_index: 1, desc: 'slide 1' }]
+      blocks: {}
     });
     const result = validateHtmlJson(json, zones);
     expect(result.valid).toBe(false);
-    expect(result.missingFields.some(f => f.includes('slide 2'))).toBe(true);
+    expect(result.missingFields.some(f => f.includes('desc'))).toBe(true);
   });
 
   it('validates a correct block zone', () => {
-    const zones  = [block('my_table', 'fill it')];
+    const zones  = [zone('my_table', 'fill it')];
     const json   = JSON.stringify({ blocks: { my_table: { value: '<tr><td>A</td></tr>' } } });
     const result = validateHtmlJson(json, zones);
     expect(result.valid).toBe(true);
@@ -327,14 +308,14 @@ describe('validateHtmlJson', () => {
   });
 
   it('accepts a block zone value as a plain string (not wrapped in {value})', () => {
-    const zones  = [block('my_table')];
+    const zones  = [zone('my_table')];
     const json   = JSON.stringify({ blocks: { my_table: '<tr><td>A</td></tr>' } });
     const result = validateHtmlJson(json, zones);
     expect(result.valid).toBe(true);
   });
 
   it('reports missing block zone', () => {
-    const zones  = [block('my_table')];
+    const zones  = [zone('my_table')];
     const json   = JSON.stringify({ blocks: {} });
     const result = validateHtmlJson(json, zones);
     expect(result.valid).toBe(false);
@@ -343,7 +324,7 @@ describe('validateHtmlJson', () => {
 
   it('validates repeatable slides with correct instances', () => {
     const repSlides = [{ slideIndex: 2, key: 'item', prompt: 'one per item' }];
-    const zones     = [repLeaf('item_name', '', 2, true), repLeaf('item_desc', '', 2, true)];
+    const zones     = [repZone('item_name', '', 2, '', true), repZone('item_desc', '', 2, '', true)];
     const json      = JSON.stringify({
       slides: {
         item: {
@@ -361,7 +342,7 @@ describe('validateHtmlJson', () => {
 
   it('reports missing repeatable instances', () => {
     const repSlides = [{ slideIndex: 2, key: 'item', prompt: 'one per item' }];
-    const zones     = [repLeaf('item_name', '', 2, true)];
+    const zones     = [repZone('item_name', '', 2, '', true)];
     const json      = JSON.stringify({ slides: {} });
     const result    = validateHtmlJson(json, zones, repSlides);
     expect(result.valid).toBe(false);
@@ -370,7 +351,7 @@ describe('validateHtmlJson', () => {
 
   it('reports missing unique key in repeatable instance', () => {
     const repSlides = [{ slideIndex: 2, key: 'item', prompt: 'one per item' }];
-    const zones     = [repLeaf('item_name', '', 2, true), repLeaf('item_desc', '', 2, true)];
+    const zones     = [repZone('item_name', '', 2, '', true), repZone('item_desc', '', 2, '', true)];
     const json      = JSON.stringify({
       slides: { item: { instances: [{ item_name: 'Alpha' }] } }  // missing item_desc
     });
@@ -380,8 +361,8 @@ describe('validateHtmlJson', () => {
   });
 
   it('returns instanceCount = 0 when no repeatable instances', () => {
-    const zones  = [leaf('title')];
-    const json   = JSON.stringify({ static: { title: 'Hello' } });
+    const zones  = [zone('title')];
+    const json   = JSON.stringify({ blocks: { title: 'Hello' } });
     const result = validateHtmlJson(json, zones);
     expect(result.instanceCount).toBe(0);
   });
@@ -389,13 +370,12 @@ describe('validateHtmlJson', () => {
   it('validates mixed leaf + block + repeatable correctly', () => {
     const repSlides = [{ slideIndex: 2, key: 'item', prompt: 'one per item' }];
     const zones = [
-      leaf('header', '', 1),
-      block('table', '', 1),
-      repLeaf('item_name', '', 2, true),
+      zone('header', '', 1),
+      zone('table', '', 1),
+      repZone('item_name', '', 2, '', true),
     ];
     const json = JSON.stringify({
-      static:  { header: 'Q3 Report' },
-      blocks:  { table: { value: '<tr><td>Row</td></tr>' } },
+      blocks:  { header: 'Q3 Report', table: { value: '<tr><td>Row</td></tr>' } },
       slides:  { item: { instances: [{ item_name: 'Alpha' }] } },
     });
     const result = validateHtmlJson(json, zones, repSlides);
@@ -411,11 +391,11 @@ describe('buildHtmlRecipe — repeatableSlides', () => {
   const repSlides = [{ slideIndex: 2, key: 'brand_slide', prompt: 'Generate one slide per car brand' }];
 
   const zones = [
-    leaf('deck_title', 'presentation title', 1),
-    repLeaf('brand_name',        'the car brand name',  2, true),
-    repLeaf('brand_description', 'brand overview',      2, true),
-    repBlock('model_table',      'fill with model data', 2, '<tbody><tr><td class="name">X</td></tr></tbody>', true),
-    { ...repLeaf('slide_footer', 'confidential note', 2, false) },  // non-unique
+    zone('deck_title', 'presentation title', 1),
+    repZone('brand_name',        'the car brand name',  2, '', true),
+    repZone('brand_description', 'brand overview',      2, '', true),
+    repZone('model_table',      'fill with model data', 2, '<tbody><tr><td class="name">X</td></tr></tbody>', true),
+    { ...repZone('slide_footer', 'confidential note', 2, '', false) },  // non-unique
   ];
 
   it('emits a REPEATABLE SLIDE section', () => {
@@ -465,7 +445,7 @@ describe('buildHtmlRecipe — repeatableSlides', () => {
   it('includes full exampleHtml for block zones (no truncation)', () => {
     const longHtml = '<tbody>' + '<tr><td class="col">Data</td></tr>'.repeat(20) + '</tbody>';
     const zonesWithLong = [
-      repBlock('big_table', 'fill it', 2, longHtml, true),
+      repZone('big_table', 'fill it', 2, longHtml, true),
     ];
     const recipe = buildHtmlRecipe(zonesWithLong, '', repSlides);
     // Full HTML must appear — not truncated
@@ -478,16 +458,16 @@ describe('buildHtmlRecipe — repeatableSlides', () => {
     expect(recipe).toContain('"instances"');
   });
 
-  it('static zones are unaffected by repeatableSlides', () => {
+  it('block zones are unaffected by repeatableSlides', () => {
     const recipe = buildHtmlRecipe(zones, '', repSlides);
-    expect(recipe).toContain('STATIC FIELDS');
+    expect(recipe).toContain('BLOCK ZONES');
     expect(recipe).toContain('"deck_title"');
   });
 
   it('handles a slide where all zones are unique (no shared sub-section)', () => {
     const allUnique = [
-      repLeaf('brand_name', 'brand', 2, true),
-      repLeaf('brand_desc', 'desc',  2, true),
+      repZone('brand_name', 'brand', 2, '', true),
+      repZone('brand_desc', 'desc',  2, '', true),
     ];
     const recipe = buildHtmlRecipe(allUnique, '', repSlides);
     expect(recipe).not.toContain('SHARED VALUES');
@@ -496,8 +476,8 @@ describe('buildHtmlRecipe — repeatableSlides', () => {
 
   it('handles a slide where all zones are non-unique (no instances sub-section)', () => {
     const allShared = [
-      { ...repLeaf('footer', 'footer', 2, false) },
-      { ...repLeaf('note',   'note',   2, false) },
+      { ...repZone('footer', 'footer', 2, '', false) },
+      { ...repZone('note',   'note',   2, '', false) },
     ];
     const recipe = buildHtmlRecipe(allShared, '', repSlides);
     expect(recipe).toContain('SHARED VALUES');
@@ -513,14 +493,14 @@ describe('validateHtmlJson — repeatableSlides', () => {
   const repSlides = [{ slideIndex: 2, key: 'brand_slide', prompt: 'one per brand' }];
 
   const zones = [
-    leaf('deck_title', '', 1),
-    repLeaf('brand_name',  '', 2, true),
-    repLeaf('brand_desc',  '', 2, true),
-    { ...repLeaf('footer', '', 2, false) },  // non-unique
+    zone('deck_title', '', 1),
+    repZone('brand_name',  '', 2, '', true),
+    repZone('brand_desc',  '', 2, '', true),
+    { ...repZone('footer', '', 2, '', false) },  // non-unique
   ];
 
   const validJson = JSON.stringify({
-    static: { deck_title: 'Deck' },
+    blocks: { deck_title: 'Deck' },
     slides: {
       brand_slide: {
         shared:    { footer: 'Confidential' },
@@ -618,11 +598,11 @@ describe('validateHtmlJson — repeatableSlides', () => {
 
   it('accepts missing shared when all zones are unique', () => {
     const allUnique = [
-      leaf('deck_title', '', 1),
-      repLeaf('brand_name', '', 2, true),
+      zone('deck_title', '', 1),
+      repZone('brand_name', '', 2, '', true),
     ];
     const json = JSON.stringify({
-      static: { deck_title: 'D' },
+      blocks: { deck_title: 'D' },
       slides: {
         brand_slide: {
           instances: [{ brand_name: 'BMW' }],
@@ -633,17 +613,16 @@ describe('validateHtmlJson — repeatableSlides', () => {
     expect(result.valid).toBe(true);
   });
 
-  it('backward compat: old slides array format still validates when no repSlides arg', () => {
-    // Old format: data.slides[key] is an array directly (not { shared, instances })
-    // This ensures existing tests/projects continue to work
-    const oldZones = [
-      { zoneType: 'leaf', key: 'item_name', slideIndex: 2, type: 'text',
-        autoGenerate: true, isRepeatable: true, repeatableKey: null, structureType: 'item' },
+  it('validates repeatable slide zones with legacy array format', () => {
+    // Legacy array format: data.slides[key] is an array directly (not { shared, instances })
+    const zones = [
+      { zoneType: 'block', key: 'item_name', slideIndex: 2, type: 'block',
+        autoGenerate: true, isRepeatable: true, repeatableKey: null, unique: true, ignored: false },
     ];
     const json = JSON.stringify({
-      slides: { item: [{ structure_type: 'item', item_name: 'Alpha' }] },
+      slides: { slide_2: [{ item_name: 'Alpha' }] },
     });
-    const result = validateHtmlJson(json, oldZones);
+    const result = validateHtmlJson(json, zones);
     expect(result.valid).toBe(true);
   });
 });

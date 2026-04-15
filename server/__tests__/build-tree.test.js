@@ -171,12 +171,12 @@ describe('buildSectionTree — interesting heuristic', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('buildSectionTree — pre-existing selections', () => {
-  it('extracts a leaf selection from data-zone attribute', () => {
+  it('extracts a block selection from data-zone attribute', () => {
     const { selections } = buildSectionTree(
       section('<p data-zone="title" data-hint="Page title">Hello</p>'), 1
     );
     expect(selections).toHaveLength(1);
-    expect(selections[0].zoneType).toBe('leaf');
+    expect(selections[0].zoneType).toBe('block');
     expect(selections[0].key).toBe('title');
     expect(selections[0].hint).toBe('Page title');
   });
@@ -205,11 +205,11 @@ describe('buildSectionTree — pre-existing selections', () => {
     expect(selections[0].autoGenerate).toBe(true);
   });
 
-  it('infers type from data-type attribute', () => {
+  it('always sets type:block regardless of data-type attribute', () => {
     const { selections } = buildSectionTree(
       section('<span data-zone="count" data-type="number">42</span>'), 1
     );
-    expect(selections[0].type).toBe('number');
+    expect(selections[0].type).toBe('block');
   });
 
   it('assigns the correct slideIndex to selections', () => {
@@ -242,11 +242,11 @@ describe('buildSectionTree — pre-existing selections', () => {
     expect(selections.map(s => s.key)).toEqual(expect.arrayContaining(['title', 'body']));
   });
 
-  it('falls back to element text as hint when data-hint is absent', () => {
+  it('falls back to element text as prompt when data-prompt is absent', () => {
     const { selections } = buildSectionTree(
       section('<p data-zone="title">Fallback text</p>'), 1
     );
-    expect(selections[0].hint).toContain('Fallback text');
+    expect(selections[0].prompt).toContain('Fallback text');
   });
 });
 

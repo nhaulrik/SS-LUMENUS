@@ -29,20 +29,20 @@ let app;
 
 // ── Fixture HTML templates ────────────────────────────────────────────────────
 
-// Template with pre-existing data-zone attributes (backward compat)
+// Template with block zones (data-block)
 const LEAF_HTML = `<!DOCTYPE html>
 <html><head></head><body>
 <section>
-  <h1 data-zone="title" data-hint="Page title">Placeholder Title</h1>
-  <p  data-zone="body"  data-hint="Body text">Placeholder body text.</p>
+  <h1 data-block="title" data-hint="Page title">Placeholder Title</h1>
+  <p  data-block="body"  data-hint="Body text">Placeholder body text.</p>
 </section>
 </body></html>`;
 
-// Template with pre-existing data-block (backward compat)
+// Template with block zones
 const BLOCK_HTML = `<!DOCTYPE html>
 <html><head></head><body>
 <section>
-  <h1 data-zone="header">Header</h1>
+  <h1 data-block="header">Header</h1>
   <table data-block="initiatives_table" data-prompt="Populate with Q3 initiatives">
     <tr><th>Name</th><th>Owner</th></tr>
     <tr><td>Example</td><td>Team</td></tr>
@@ -50,7 +50,7 @@ const BLOCK_HTML = `<!DOCTYPE html>
 </section>
 </body></html>`;
 
-// Template with no data-zone/data-block — tree is returned but no pre-selections
+// Template with no data-block — tree is returned but no pre-selections
 const PLAIN_HTML = `<!DOCTYPE html>
 <html><head></head><body>
 <section>
@@ -145,7 +145,7 @@ describe('POST /api/html-flow/upload-template', () => {
     expect(node).toHaveProperty('depth');
   });
 
-  it('pre-populates selections from data-zone attributes (backward compat)', async () => {
+  it('pre-populates selections from data-block attributes', async () => {
     const res = await request(app)
       .post('/api/html-flow/upload-template')
       .send({ html: LEAF_HTML });
@@ -161,7 +161,7 @@ describe('POST /api/html-flow/upload-template', () => {
     expect(res.body.selections.some(s => s.zoneType === 'block' && s.key === 'initiatives_table')).toBe(true);
   });
 
-  it('returns empty selections for a plain template with no data-zone/data-block', async () => {
+  it('returns empty selections for a plain template with no data-block', async () => {
     const res = await request(app)
       .post('/api/html-flow/upload-template')
       .send({ html: PLAIN_HTML });
@@ -200,7 +200,7 @@ describe('POST /api/html-flow/upload-template', () => {
   });
 
   it('returns 400 for a file exceeding 5MB', async () => {
-    const largeHtml = `<section><p data-zone="x">${'A'.repeat(5 * 1024 * 1024 + 1)}</p></section>`;
+    const largeHtml = `<section><p data-block="x">${'A'.repeat(5 * 1024 * 1024 + 1)}</p></section>`;
     const res = await request(app)
       .post('/api/html-flow/upload-template')
       .send({ html: largeHtml });
@@ -218,8 +218,8 @@ describe('POST /api/html-flow/upload-template', () => {
   it('detects DUPLICATE_ZONE_KEY violation', async () => {
     const html = `<!DOCTYPE html><html><body>
       <section>
-        <p data-zone="title">First</p>
-        <p data-zone="title">Duplicate</p>
+        <p data-block="title">First</p>
+        <p data-block="title">Duplicate</p>
       </section>
     </body></html>`;
     const res = await request(app)
@@ -399,7 +399,7 @@ describe('POST /api/html-flow/create-project', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('POST /api/html-flow/generate-recipe', () => {
-  it('returns a recipe string for a leaf project', async () => {
+  it('returns a recipe string for a leaf project (now block zones)', async () => {
     const { chainId } = await createProject(LEAF_HTML);
     const res = await request(app)
       .post('/api/html-flow/generate-recipe')
@@ -407,7 +407,7 @@ describe('POST /api/html-flow/generate-recipe', () => {
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
     expect(typeof res.body.recipe).toBe('string');
-    expect(res.body.recipe).toContain('STATIC FIELDS');
+    expect(res.body.recipe).toContain('BLOCK ZONES');
   });
 
   it('includes BLOCK ZONES section for a project with block zones', async () => {
@@ -449,7 +449,7 @@ describe('POST /api/html-flow/generate-recipe', () => {
 describe('POST /api/html-flow/validate-json', () => {
   it('returns valid:true for correct leaf JSON', async () => {
     const { chainId } = await createProject(LEAF_HTML);
-    const json = JSON.stringify({ static: { title: 'Hello', body: 'World' } });
+    const json = JSON.stringify({ blocks: { title: 'Hello', body: 'World' } });
     const res  = await request(app)
       .post('/api/html-flow/validate-json')
       .send({ chainId, jsonString: json });
@@ -459,7 +459,7 @@ describe('POST /api/html-flow/validate-json', () => {
 
   it('returns valid:false for missing fields', async () => {
     const { chainId } = await createProject(LEAF_HTML);
-    const json = JSON.stringify({ static: { title: 'Hello' } }); // missing body
+    const json = JSON.stringify({ blocks: { title: 'Hello' } }); // missing body
     const res  = await request(app)
       .post('/api/html-flow/validate-json')
       .send({ chainId, jsonString: json });
@@ -490,7 +490,7 @@ describe('POST /api/html-flow/validate-json', () => {
 describe('POST /api/html-flow/apply-content', () => {
   it('applies leaf content and returns ok:true with outputFile', async () => {
     const { chainId } = await createProject(LEAF_HTML);
-    const json = JSON.stringify({ static: { title: 'Q3 Report', body: 'Great quarter.' } });
+    const json = JSON.stringify({ blocks: { title: 'Q3 Report', body: 'Great quarter.' } });
     const res  = await request(app)
       .post('/api/html-flow/apply-content')
       .send({ chainId, jsonString: json });
@@ -501,25 +501,25 @@ describe('POST /api/html-flow/apply-content', () => {
 
   it('patched output contains AI values', async () => {
     const { chainId } = await createProject(LEAF_HTML);
-    const json = JSON.stringify({ static: { title: 'Q3 Report', body: 'Great quarter.' } });
+    const json = JSON.stringify({ blocks: { title: 'Q3 Report', body: 'Great quarter.' } });
     const res  = await request(app)
       .post('/api/html-flow/apply-content')
       .send({ chainId, jsonString: json });
     expect(res.body.previewHtml).toContain('Q3 Report');
   });
 
-  it('patched output strips data-zone attributes', async () => {
+  it('patched output strips data-block attributes', async () => {
     const { chainId } = await createProject(LEAF_HTML);
-    const json = JSON.stringify({ static: { title: 'T', body: 'B' } });
+    const json = JSON.stringify({ blocks: { title: 'T', body: 'B' } });
     const res  = await request(app)
       .post('/api/html-flow/apply-content')
       .send({ chainId, jsonString: json });
-    expect(res.body.previewHtml).not.toContain('data-zone');
+    expect(res.body.previewHtml).not.toContain('data-block');
   });
 
   it('writes output file to disk', async () => {
     const { chainId } = await createProject(LEAF_HTML);
-    const json = JSON.stringify({ static: { title: 'T', body: 'B' } });
+    const json = JSON.stringify({ blocks: { title: 'T', body: 'B' } });
     const res  = await request(app)
       .post('/api/html-flow/apply-content')
       .send({ chainId, jsonString: json });
@@ -529,7 +529,7 @@ describe('POST /api/html-flow/apply-content', () => {
 
   it('records the round in chain.json', async () => {
     const { chainId } = await createProject(LEAF_HTML);
-    const json = JSON.stringify({ static: { title: 'T', body: 'B' } });
+    const json = JSON.stringify({ blocks: { title: 'T', body: 'B' } });
     await request(app)
       .post('/api/html-flow/apply-content')
       .send({ chainId, jsonString: json });
@@ -541,7 +541,7 @@ describe('POST /api/html-flow/apply-content', () => {
 
   it('returns 422 for invalid JSON', async () => {
     const { chainId } = await createProject(LEAF_HTML);
-    const json = JSON.stringify({ static: { title: 'T' } }); // missing body
+    const json = JSON.stringify({ blocks: { title: 'T' } }); // missing body
     const res  = await request(app)
       .post('/api/html-flow/apply-content')
       .send({ chainId, jsonString: json });
@@ -563,7 +563,7 @@ describe('POST /api/html-flow/apply-content', () => {
 describe('GET /api/html-flow/download/:chainId/:file', () => {
   it('serves the output file as a download', async () => {
     const { chainId } = await createProject(LEAF_HTML);
-    const json = JSON.stringify({ static: { title: 'T', body: 'B' } });
+    const json = JSON.stringify({ blocks: { title: 'T', body: 'B' } });
     const applyRes = await request(app)
       .post('/api/html-flow/apply-content')
       .send({ chainId, jsonString: json });
@@ -648,7 +648,7 @@ describe('Security — chainId path traversal', () => {
 
   it('apply-content does not leak outputPath in response', async () => {
     const { chainId } = await createProject(LEAF_HTML);
-    const json = JSON.stringify({ static: { title: 'T', body: 'B' } });
+    const json = JSON.stringify({ blocks: { title: 'T', body: 'B' } });
     const res = await request(app)
       .post('/api/html-flow/apply-content')
       .send({ chainId, jsonString: json });

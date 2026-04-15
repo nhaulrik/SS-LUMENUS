@@ -145,12 +145,12 @@ function SlideControlBar({ slideIndex, repeatableSlides, onRepeatableSlides, has
 
 function SelectionBadge({ sel }) {
   const isShared = sel.unique === false
-  return (
-    <span className={`tree-zone-badge tree-zone-badge--${sel.zoneType}${isShared ? ' tree-zone-badge--shared' : ''}`}>
-      {isShared ? 'shared' : sel.zoneType === 'block' ? 'block' : sel.type || 'leaf'}
-      <span className="tree-zone-badge-key">{sel.key}</span>
-    </span>
-  )
+   return (
+     <span className={`tree-zone-badge tree-zone-badge--${sel.zoneType}${isShared ? ' tree-zone-badge--shared' : ''}`}>
+       {isShared ? 'shared' : 'block'}
+       <span className="tree-zone-badge-key">{sel.key}</span>
+     </span>
+   )
 }
 
 // ── Assignment panel ──────────────────────────────────────────────────────────
@@ -159,7 +159,7 @@ function AssignmentPanel({ nodes, existingSel, isRepeatableSlide, onAssign, onCl
   const isGroup  = nodes.length > 1
   const firstNode = nodes[0]
 
-  const [zoneType, setZoneType]   = useState(existingSel?.zoneType ?? (isGroup ? 'block' : 'leaf'))
+  const [zoneType, setZoneType]   = useState('block')
   const [key,      setKey]        = useState(existingSel?.key ?? suggestKey(firstNode))
   const [hint,     setHint]       = useState(existingSel?.hint ?? '')
   const [prompt,   setPrompt]     = useState(existingSel?.prompt ?? '')
@@ -202,23 +202,11 @@ function AssignmentPanel({ nodes, existingSel, isRepeatableSlide, onAssign, onCl
         </p>
       )}
 
-      {/* Zone type selector */}
-      <div className="tree-assign-options">
-        <label className={`tree-assign-option${zoneType === 'leaf' ? ' tree-assign-option--active' : ''}`}>
-          <input type="radio" name="zoneType" value="leaf" checked={zoneType === 'leaf'} onChange={() => setZoneType('leaf')} />
-          <div>
-            <strong>Content zone</strong>
-            <span>AI fills this element's text value</span>
-          </div>
-        </label>
-        <label className={`tree-assign-option${zoneType === 'block' ? ' tree-assign-option--active' : ''}`}>
-          <input type="radio" name="zoneType" value="block" checked={zoneType === 'block'} onChange={() => setZoneType('block')} />
-          <div>
-            <strong>Block zone</strong>
-            <span>AI generates the entire inner HTML</span>
-          </div>
-        </label>
-      </div>
+      {/* All zones are block zones */}
+       <div className="tree-assign-info">
+         <strong>Block zone</strong>
+         <span>AI generates the entire inner HTML</span>
+       </div>
 
       {/* Zone key */}
       <div className="tree-assign-field">
@@ -234,50 +222,18 @@ function AssignmentPanel({ nodes, existingSel, isRepeatableSlide, onAssign, onCl
         />
       </div>
 
-      {/* Leaf: hint + type */}
-      {zoneType === 'leaf' && (
-        <>
-          <div className="tree-assign-field">
-            <label>Hint <span className="tree-assign-optional">(guidance for the AI)</span></label>
-            <input
-              className="tree-assign-input"
-              value={hint}
-              onChange={e => setHint(e.target.value)}
-              placeholder="Describe what content goes here…"
-              data-testid="tree-assign-hint"
-            />
-          </div>
-          <div className="tree-assign-field tree-assign-field--row">
-            <div>
-              <label>Type</label>
-              <select className="tree-assign-input" value={type} onChange={e => setType(e.target.value)} data-testid="tree-assign-type">
-                <option value="text">Text</option>
-                <option value="number">Number</option>
-                <option value="image">Image</option>
-              </select>
-            </div>
-            <label className="tree-assign-toggle">
-              <input type="checkbox" checked={autoGen} onChange={e => setAutoGen(e.target.checked)} data-testid="tree-assign-ai" />
-              <span>AI generates</span>
-            </label>
-          </div>
-        </>
-      )}
-
-      {/* Block: prompt */}
-      {zoneType === 'block' && (
-        <div className="tree-assign-field">
-          <label>Prompt <span className="tree-assign-optional">(optional)</span></label>
-          <textarea
-            className="tree-assign-input tree-assign-textarea"
-            rows={3}
-            value={prompt}
-            onChange={e => setPrompt(e.target.value)}
-            placeholder='e.g. "Populate with Q3 initiatives for the EMEA region"'
-            data-testid="tree-assign-prompt"
-          />
-        </div>
-      )}
+      {/* Block zone: prompt */}
+       <div className="tree-assign-field">
+         <label>Prompt <span className="tree-assign-optional">(optional)</span></label>
+         <textarea
+           className="tree-assign-input tree-assign-textarea"
+           rows={3}
+           value={prompt}
+           onChange={e => setPrompt(e.target.value)}
+           placeholder='e.g. "Populate with Q3 initiatives for the EMEA region"'
+           data-testid="tree-assign-prompt"
+         />
+       </div>
 
       {/* Uniqueness toggle — only shown for zones on repeatable slides */}
       {isRepeatableSlide && (
@@ -348,14 +304,12 @@ const TreeNode = memo(function TreeNode({
   onOpenAssign,
   highlightNodeId,
   onHighlight,
-  conflictIds,
   onSelections,
 }) {
   const sel         = selections.find(s => s.nodeId === node.id)
   const isSelected  = selectedIds.has(node.id)
   const isExpanded  = expandedIds.has(node.id)
   const isHighlight = highlightNodeId === node.id
-  const isConflict  = conflictIds.has(node.id)
   const isIgnored   = sel?.ignored || false
   
   // Check if this node or any ancestor is ignored
@@ -389,7 +343,6 @@ const TreeNode = memo(function TreeNode({
           isHighlight ? 'tree-node--highlight' : '',
           node.interesting ? 'tree-node--interesting' : '',
           node.chrome      ? 'tree-node--chrome'      : '',
-          isConflict       ? 'tree-node--conflict'    : '',
           isIgnoredOrInheritedIgnored ? 'tree-node--ignored' : '',
           sel ? `tree-node--assigned tree-node--assigned-${sel.zoneType}` : '',
         ].filter(Boolean).join(' ')}
@@ -476,7 +429,6 @@ const TreeNode = memo(function TreeNode({
            onOpenAssign={onOpenAssign}
            highlightNodeId={highlightNodeId}
            onHighlight={onHighlight}
-           conflictIds={conflictIds}
            onSelections={onSelections}
          />
        ))}
@@ -486,20 +438,7 @@ const TreeNode = memo(function TreeNode({
 
 // ── Conflict warning ──────────────────────────────────────────────────────────
 
-function ConflictWarning({ conflicts, onDismiss }) {
-  if (!conflicts.length) return null
-  return (
-    <div className="tree-conflict-warning" data-testid="tree-conflict-warning">
-      <strong>Block zone takes precedence.</strong> The following zones will be removed:
-      <ul>
-        {conflicts.map(s => <li key={s.nodeId}><code>{s.key}</code></li>)}
-      </ul>
-      <button className="btn btn-secondary" onClick={onDismiss}>OK</button>
-    </div>
-  )
-}
-
-// ── Main component ────────────────────────────────────────────────────────────
+// ── Main component ────────────────────────────────────────────────────────
 
 export default function HtmlTreePanel({
   trees,
@@ -516,7 +455,6 @@ export default function HtmlTreePanel({
   const [expandedIds,   setExpandedIds]   = useState(() => new Set())
   const [selectedIds,   setSelectedIds]   = useState(() => new Set())
   const [assignTarget,  setAssignTarget]  = useState(null) // [node, ...]
-  const [conflicts,     setConflicts]     = useState([])
   const [clearArmed,    setClearArmed]    = useState(false)
 
   const currentTree = useMemo(() => trees?.[slideIdx] ?? [], [trees, slideIdx])
@@ -524,16 +462,6 @@ export default function HtmlTreePanel({
 
   // Is the current slide marked repeatable?
   const isCurrentSlideRepeatable = repeatableSlides.some(rs => rs.slideIndex === slideIndex)
-
-  // Nodes that are descendants of a block zone (will be superseded)
-  const conflictIds = useMemo(() => {
-    const blockNodeIds = selections.filter(s => s.zoneType === 'block').map(s => s.nodeId)
-    const ids = new Set()
-    for (const flat of flatten(currentTree)) {
-      if (blockNodeIds.some(bid => isDescendant(flat.id, bid))) ids.add(flat.id)
-    }
-    return ids
-  }, [selections, currentTree])
 
   // ── Expand / collapse ────────────────────────────────────────────────────────
 
@@ -573,21 +501,7 @@ export default function HtmlTreePanel({
   const handleAssign = useCallback(({ zoneType, key, hint, prompt, type, autoGenerate, unique }) => {
     if (!assignTarget) return
 
-    const newSelections = [...selections]
-
-    // Detect conflicts: leaf zones that are descendants of the new block zone
-    const removedByConflict = []
-    if (zoneType === 'block') {
-      for (const node of assignTarget) {
-        const existing = newSelections.filter(
-          s => s.zoneType === 'leaf' && isDescendant(s.nodeId, node.id)
-        )
-        removedByConflict.push(...existing)
-      }
-    }
-
-    // Remove conflicted selections
-    const filtered = newSelections.filter(s => !removedByConflict.includes(s))
+    const filtered = [...selections]
 
     // Add / replace selections for each target node
     for (const node of assignTarget) {
@@ -595,15 +509,14 @@ export default function HtmlTreePanel({
       const sel = {
         nodeId:       node.id,
         slideIndex,
-        zoneType,
+        zoneType:     'block',
         key,
-        hint:         zoneType === 'block' ? (prompt || hint) : hint,
-        prompt:       zoneType === 'block' ? prompt : '',
-        autoGenerate: zoneType === 'block' ? true : autoGenerate,
-        type:         zoneType === 'block' ? 'block' : type,
-        // Capture the node's current innerHTML as exampleHtml for block zones
+        prompt,
+        autoGenerate: true,
+        type:         'block',
+        // Capture the node's current innerHTML as exampleHtml
         // so the recipe builder can show the AI the exact HTML structure to fill
-        ...(zoneType === 'block' && node.innerHTML ? { exampleHtml: node.innerHTML } : {}),
+        ...(node.innerHTML ? { exampleHtml: node.innerHTML } : {}),
         // unique is only set for zones on repeatable slides
         ...(isCurrentSlideRepeatable ? { unique: unique !== false } : {}),
       }
@@ -612,8 +525,6 @@ export default function HtmlTreePanel({
     }
 
     onSelections(filtered)
-
-    if (removedByConflict.length > 0) setConflicts(removedByConflict)
     setAssignTarget(null)
     setSelectedIds(new Set())
   }, [assignTarget, selections, onSelections, slideIndex, isCurrentSlideRepeatable])
@@ -728,9 +639,6 @@ export default function HtmlTreePanel({
         />
       )}
 
-      {/* ── Conflict warning ─────────────────────────────────────────────── */}
-      <ConflictWarning conflicts={conflicts} onDismiss={() => setConflicts([])} />
-
       {/* ── Tree ─────────────────────────────────────────────────────────── */}
       <div className="html-tree-scroll">
         {currentTree.length === 0 ? (
@@ -749,7 +657,6 @@ export default function HtmlTreePanel({
                onOpenAssign={handleOpenAssign}
                highlightNodeId={highlightNodeId}
                onHighlight={onHighlight}
-               conflictIds={conflictIds}
                onSelections={onSelections}
              />
            ))

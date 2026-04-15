@@ -71,13 +71,12 @@ export function buildHtmlRecipe(zones, globalPrompt = '', repeatableSlides = [])
   // Build a lookup: slideIndex → repeatableSlide entry
   const repBySlide = new Map();
   repeatableSlides.forEach(rs => repBySlide.set(rs.slideIndex, rs));
-  // Backward compat: if no repeatableSlides arg, use structureType from zones
   if (repeatableSlides.length === 0) {
     zones.filter(z => z.isRepeatable).forEach(z => {
       if (!repBySlide.has(z.slideIndex)) {
         repBySlide.set(z.slideIndex, {
           slideIndex: z.slideIndex,
-          key: z.structureType || `slide_${z.slideIndex}`,
+          key: `slide_${z.slideIndex}`,
           prompt: '',
         });
       }
@@ -110,7 +109,7 @@ ${globalSection}GENERATE THE FOLLOWING DATA:\n`;
       const exampleLine = z.exampleHtml
         ? `      // Example structure (populate with real data, preserve all tags and classes):\n      // ${z.exampleHtml.replace(/\n/g, '\n      // ')}\n`
         : '';
-      recipe += `    "${z.key}": {\n${promptLine}${exampleLine}      "value": "<!-- your generated HTML here -->"\n    },\n`;
+      recipe += `    "${z.key}": {  // [HTML BLOCK]\n${promptLine}${exampleLine}      "value": "<!-- your generated HTML here -->"\n    },\n`;
     });
     recipe += `  }\n}\n`;
     sectionNum++;
@@ -225,22 +224,22 @@ export function validateHtmlJson(jsonString, zones, repeatableSlides = []) {
   // Build lookup: slideIndex → repeatableSlide
   const repBySlide = new Map();
   repeatableSlides.forEach(rs => repBySlide.set(rs.slideIndex, rs));
-  if (repeatableSlides.length === 0) {
-    zones.filter(z => z.isRepeatable).forEach(z => {
-      if (!repBySlide.has(z.slideIndex)) {
-        repBySlide.set(z.slideIndex, {
-          slideIndex: z.slideIndex,
-          key: z.structureType || `slide_${z.slideIndex}`,
-          prompt: '',
-        });
-      }
-    });
-  }
+   if (repeatableSlides.length === 0) {
+     zones.filter(z => z.isRepeatable).forEach(z => {
+       if (!repBySlide.has(z.slideIndex)) {
+         repBySlide.set(z.slideIndex, {
+           slideIndex: z.slideIndex,
+           key: `slide_${z.slideIndex}`,
+           prompt: '',
+         });
+       }
+     });
+   }
 
   const foundFields   = [];
   const missingFields = [];
 
-  // ── Static block zones ────────────────────────────────────────────────────
+  // ── Block zones ────────────────────────────────────────────────────
   const blocksData = data.blocks || {};
   zones
     .filter(z => !repSet.has(z.slideIndex) && isGenerated(z))
@@ -312,7 +311,6 @@ export function validateHtmlJson(jsonString, zones, repeatableSlides = []) {
       }
       instanceCount += instances.length;
       instances.forEach((inst, idx) => {
-        if (!inst.structure_type) missingFields.push(`structure_type (${slideKey} instance ${idx + 1})`);
         slideZones.forEach(z => {
           if (inst[z.key] !== undefined) foundFields.push(`${z.key} (${slideKey} instance ${idx + 1})`);
           else missingFields.push(`${z.key} (${slideKey} instance ${idx + 1})`);

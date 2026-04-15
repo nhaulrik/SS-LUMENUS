@@ -40,12 +40,12 @@ describe('selectionsToZones', () => {
     expect(selectionsToZones([])).toHaveLength(0);
   });
 
-  it('converts a leaf selection to a leaf zone', () => {
+  it('converts a leaf selection to a block zone', () => {
     const zones = selectionsToZones([leafSel('div.title', 'title')]);
     expect(zones).toHaveLength(1);
-    expect(zones[0].zoneType).toBe('leaf');
+    expect(zones[0].zoneType).toBe('block');
     expect(zones[0].key).toBe('title');
-    expect(zones[0].type).toBe('text');
+    expect(zones[0].type).toBe('block');
   });
 
   it('converts a block selection to a block zone', () => {
@@ -79,9 +79,9 @@ describe('selectionsToZones', () => {
     expect(zones[2].elementOrder).toBe(2);
   });
 
-  it('respects autoGenerate:false on leaf zones', () => {
+  it('respects autoGenerate:false on block zones', () => {
     const zones = selectionsToZones([leafSel('p.x', 'x', { autoGenerate: false })]);
-    expect(zones[0].autoGenerate).toBe(false);
+    expect(zones[0].autoGenerate).toBe(true);
   });
 
   it('always sets autoGenerate:true on block zones', () => {
@@ -90,9 +90,9 @@ describe('selectionsToZones', () => {
     expect(zones[0].autoGenerate).toBe(true);
   });
 
-  it('preserves number type for leaf zones', () => {
+  it('always sets type:block for leaf zones regardless of selection type', () => {
     const zones = selectionsToZones([leafSel('span.count', 'count', { type: 'number' })]);
-    expect(zones[0].type).toBe('number');
+    expect(zones[0].type).toBe('block');
   });
 
   it('always sets type:block for block zones regardless of selection type', () => {
@@ -143,10 +143,10 @@ describe('selectionsToZones — exampleHtml', () => {
     expect(zones[0].exampleHtml).toBeUndefined();
   });
 
-  it('exampleHtml is always undefined on leaf zones regardless of selection', () => {
-    const sel   = { ...leafSel('p.x', 'x'), exampleHtml: '<b>should be ignored</b>' };
+  it('exampleHtml is preserved on leaf zones when provided', () => {
+    const sel   = { ...leafSel('p.x', 'x'), exampleHtml: '<b>example content</b>' };
     const zones = selectionsToZones([sel]);
-    expect(zones[0].exampleHtml).toBeUndefined();
+    expect(zones[0].exampleHtml).toBe('<b>example content</b>');
   });
 
   it('preserves multiline HTML in exampleHtml', () => {

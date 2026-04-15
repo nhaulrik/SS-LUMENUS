@@ -40,8 +40,6 @@ export function applyHtmlContent(templateHtml, data, zones, repeatableSlides = [
     zones.forEach(z => { if (z.isRepeatable) repSlideIndices.add(z.slideIndex); });
   }
 
-  const staticData     = data.static || data;
-  const contextualData = data.contextual || [];
   const blocksData     = data.blocks    || {};
   const slidesData     = data.slides    || {};
 
@@ -54,7 +52,7 @@ export function applyHtmlContent(templateHtml, data, zones, repeatableSlides = [
       // ── Repeatable slide ───────────────────────────────────────────────────
       const slideZones = zones.filter(z => z.slideIndex === slideIndex);
       const repSlide   = repBySlide.get(slideIndex);
-      const slideKey   = repSlide?.key || slideZones.find(z => z.structureType)?.structureType || `slide_${slideIndex}`;
+      const slideKey   = repSlide?.key || `slide_${slideIndex}`;
       const slideData  = slidesData[slideKey];
 
       // Detect format
@@ -178,7 +176,7 @@ function findElementByNodeId(section, nodeId) {
 }
 
 function patchSection(section, zones, valueMap, inst, blocksData) {
-  // Block zones: data-block (backward compat — pre-existing data-block attributes)
+  // Block zones: data-block
   section.querySelectorAll('[data-block]').forEach(node => {
     const key  = node.getAttribute('data-block');
     if (!key) return;
