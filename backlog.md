@@ -1,8 +1,31 @@
 # Development Backlog — SOLON Slide Studio
 
 **Last Updated**: 2026-04-15  
-**Current Status**: HTML Visual Flow — Stage 1 Complete (227 unit, 142 E2E tests passing)  
+**Current Status**: HTML Visual Flow — Block-Only Zones Refactor Complete (245 unit, 93 E2E tests passing)  
 **Active Branch**: `html-flow`
+
+---
+
+## Current Sprint Status
+
+### ✅ Completed (2026-04-15)
+- **Block-Only Zones Refactor**: All zones unified under block-only model
+  - Removed leaf zones, content zones, static zones
+  - Removed zone type selector, conflict detection
+  - All zones now use `data-block` attributes and `type: 'block'`
+  - Simplified JSON format: `{ blocks: {...} }` instead of legacy `static` format
+  - Explicit ignored zones preservation in recipe ("ZONES TO PRESERVE" section)
+  
+- **Test Suite**: 100% passing
+  - 245 unit tests ✅
+  - 93 E2E tests ✅ (html-flow, html-preview-step, html-ignore-zones, html-repeatable, html-breadcrumbs, html-clear-all, html-editor)
+  - All test fixtures updated to new recipe format
+
+### 🎯 Next Steps
+1. **Merge to main**: PR review and merge of html-flow branch
+2. **Phase 2**: Advanced Zone Management (bulk operations, templates, conditional zones)
+3. **Phase 3**: Recipe Intelligence (AI suggestions, LLM integration)
+4. **Phase 4**: Output & Export (PDF, PPTX)
 
 ---
 
@@ -35,7 +58,30 @@
 - [x] Accessibility audit (WCAG AA)
 - [x] Focus trapping for modals
 
-**Metrics**: 227 unit tests, 142 E2E tests (100% passing)
+**Metrics**: 245 unit tests, 93 E2E tests (100% passing)
+
+#### Phase 1.1: Block-Only Zones Refactor ✅ COMPLETE
+**Status**: Shipped (2026-04-15)  
+**Scope**: Simplify zone model by removing leaf zones, focusing on block-only zones
+
+- [x] Remove all leaf zone UI components and state management
+- [x] Remove zone type selector modal
+- [x] Remove conflict detection system
+- [x] Update data model: all zones now have `type: 'block'` and use `data-block` attributes
+- [x] Update recipe builder to exclude ignored zones with explicit preservation instructions
+- [x] Remove backward compatibility code
+- [x] Update all 245 unit tests
+- [x] Fix all 93 E2E tests (html-flow, html-preview-step, html-ignore-zones, html-repeatable, etc.)
+- [x] Implement ignored zones preservation in recipe (explicit "ZONES TO PRESERVE" section)
+- [x] Update test fixtures to use new recipe format (blocks instead of static)
+
+**Key Changes**:
+- JSON format simplified: `{ blocks: {...} }` for non-repeatable zones
+- Ignored zones explicitly listed in recipe to prevent AI from modifying them
+- Removed ~400 lines of backward compatibility code
+- All zone types unified under block-only model
+
+**Metrics**: 245 unit tests ✅, 93 E2E tests ✅ (100% passing)
 
 ---
 
