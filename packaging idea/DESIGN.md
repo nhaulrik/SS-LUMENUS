@@ -166,7 +166,71 @@ The output `index.html` contains three embedded sections:
 
 ---
 
-## 9. Use Cases
+## 9. Integration with SOLON Slide Studio
+
+### Application Context
+
+SOLON Slide Studio is the host application. It is a 4-step linear wizard that takes a user from uploading an HTML slide template through AI-assisted content generation to a final preview and download screen.
+
+| Step | Key | Description |
+|------|-----|-------------|
+| 0 | `flow-select`  | Landing — choose workflow |
+| 1 | `html-upload`  | Upload HTML template, assign content zones |
+| 2 | `html-recipe`  | Generate AI prompt, paste AI JSON, validate and apply |
+| 3 | `html-preview` | **Final step** — live iframe preview, slide navigation, download |
+
+### Placement: Final Step (`html-preview`)
+
+The packager action lives exclusively in **Step 3 (`HtmlPreviewStep`)** as a natural extension of the existing download action. The user has already reviewed the generated slides in the preview; packaging is the last thing they do before sharing or presenting.
+
+**Proposed UI addition to `HtmlPreviewStep`:**
+
+```
++-----------------------------------------------------------+
+|  Slide 3 of 8   [< Prev]  [Next >]                        |  <- existing slide nav
++-----------------------------------------------------------+
+|                                                           |
+|              iframe slide preview                         |
+|                                                           |
++-----------------------------------------------------------+
+|  [Download HTML]   [Package as Presentation]              |  <- action bar
++-----------------------------------------------------------+
+```
+
+The **"Package as Presentation"** button triggers the packager pipeline against the full set of generated slide files for the current session and downloads the resulting `index.html` as a single file.
+
+### User Flow
+
+1. User completes Step 2 (content applied) and arrives at Step 3.
+2. They preview individual slides using the existing slide navigator.
+3. They click **"Package as Presentation"**.
+4. The app calls a new backend endpoint that runs the packager over all slides in the current chain, inlines assets, and streams back the bundled `index.html`.
+5. The browser downloads `presentation.html` (or a user-specified name).
+6. The user opens the file in any browser and presents — no further tools needed.
+
+### Re-Packaging (Patch Workflow)
+
+If the user edits slide content (e.g. goes back to Step 2, adjusts content, and re-applies), they return to Step 3 and click **"Package as Presentation"** again. The packager runs a full rebuild — no manual cleanup required. The new download simply replaces the previous file.
+
+This means the packaging step is **always current**: it reflects whatever state the slides are in at the moment the button is clicked.
+
+### New Backend Endpoint
+
+```
+POST /api/html-flow/package/:chainId
+
+Response: streams index.html as application/octet-stream
+          Content-Disposition: attachment; filename="presentation.html"
+```
+
+The endpoint:
+1. Resolves all slide HTML files for the given `chainId`.
+2. Runs the packager pipeline (scan → parse → build tree → inline assets → emit).
+3. Streams the resulting `index.html` back to the client for download.
+
+---
+
+## 10. Use Cases (Extended)
 
 ### UC-1: Standard Presentation
 A user generates 20 slides across 4 top-level sections. They run the packager, open `index.html`, and present using the primary deck to move between sections and the sub-deck to navigate within each section.
@@ -194,7 +258,9 @@ Key properties of this workflow:
 
 ---
 
-## 10. CLI Interface (Proposed)
+## 11. CLI Interface (Proposed — Standalone Usage)
+
+The packager can also be used as a standalone CLI tool outside of SOLON, for users who manage slide files independently.
 
 ```
 packager --input ./slides --output ./dist/index.html [options]
@@ -210,7 +276,7 @@ Options:
   --watch            Watch the input folder and rebuild automatically on any file change
 ```
 
-### Recommended Patch Workflow
+### Recommended Patch Workflow (CLI)
 
 ```
 # Initial build
@@ -227,7 +293,7 @@ The `--watch` mode monitors the input folder for file additions, modifications, 
 
 ---
 
-## 11. Output File Constraints
+## 12. Output File Constraints (Packaged `index.html`)
 
 - **Single file**: one `index.html`, no companion files.
 - **No external runtime**: no React, Vue, or framework CDN links. Vanilla JS only.
@@ -237,7 +303,7 @@ The `--watch` mode monitors the input folder for file additions, modifications, 
 
 ---
 
-## 12. Open Questions / Future Considerations
+## 13. Open Questions / Future Considerations
 
 - **Slide templates**: should the packager support injecting a shared header/footer into each slide iframe?
 - **Presenter mode**: a secondary window showing speaker notes (requires a `<meta name="slide-notes">` convention).

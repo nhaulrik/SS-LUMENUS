@@ -170,16 +170,17 @@ export async function doHtmlApplyContent(page, projectName = 'test-project') {
   await doHtmlCreateProject(page, projectName);
 
   // Paste minimal valid JSON into the recipe textarea and click Apply
+  // Using new blocks format (not legacy static format)
   const minimalJson = JSON.stringify({
-    static: {
-      initiative_group_title:    'Test Initiative',
-      initiative_group_subtitle: 'Test Subtitle',
-      total_hours:               '1,000',
-      initiative_count:          '3',
-      feature_count:             '10',
-      completion_pct:            '50%',
-      business_value:            'Test value',
-      market_relevance:          'Test relevance',
+    blocks: {
+      initiative_group_title:    { value: 'Test Initiative' },
+      initiative_group_subtitle: { value: 'Test Subtitle' },
+      total_hours:               { value: '1,000' },
+      initiative_count:          { value: '3' },
+      feature_count:             { value: '10' },
+      completion_pct:            { value: '50%' },
+      business_value:            { value: 'Test value' },
+      market_relevance:          { value: 'Test relevance' },
     }
   });
   await page.locator(SEL.htmlJsonInput).fill(minimalJson);

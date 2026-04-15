@@ -156,10 +156,10 @@ test.describe('UC-PS-11 — API returns slideCount in apply-content response', (
   test('single-slide apply returns slideCount of 1', async ({ page }) => {
     await doHtmlCreateProject(page);
     const minJson = JSON.stringify({
-      static: {
-        initiative_group_title: 'T', initiative_group_subtitle: 'S',
-        total_hours: '1', initiative_count: '1', feature_count: '1',
-        completion_pct: '0%', business_value: 'B', market_relevance: 'M',
+      blocks: {
+        initiative_group_title: { value: 'T' }, initiative_group_subtitle: { value: 'S' },
+        total_hours: { value: '1' }, initiative_count: { value: '1' }, feature_count: { value: '1' },
+        completion_pct: { value: '0%' }, business_value: { value: 'B' }, market_relevance: { value: 'M' },
       }
     });
     let applyBody = null;

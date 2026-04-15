@@ -83,37 +83,50 @@ export function buildHtmlRecipe(zones, globalPrompt = '', repeatableSlides = [])
     });
   }
 
-  const globalSection = globalPrompt ? `GLOBAL GUIDANCE:\n${globalPrompt}\n\n` : '';
+   const globalSection = globalPrompt ? `GLOBAL GUIDANCE:\n${globalPrompt}\n\n` : '';
 
-  // Partition zones (all are block zones now, excluding ignored zones and descendants of ignored zones)
-  const staticBlockZones = zones.filter(
-    z => !repSet.has(z.slideIndex) && isGenerated(z) && !isIgnoredOrDescendantOfIgnored(z, zones)
-  );
-  const repeatableZones = zones.filter(z => repSet.has(z.slideIndex) && isGenerated(z) && !isIgnoredOrDescendantOfIgnored(z, zones));
+   // Partition zones (all are block zones now, excluding ignored zones and descendants of ignored zones)
+   const staticBlockZones = zones.filter(
+     z => !repSet.has(z.slideIndex) && isGenerated(z) && !isIgnoredOrDescendantOfIgnored(z, zones)
+   );
+   const repeatableZones = zones.filter(z => repSet.has(z.slideIndex) && isGenerated(z) && !isIgnoredOrDescendantOfIgnored(z, zones));
+   
+   // Collect ignored zones (for explicit preservation instructions)
+   const ignoredZones = zones.filter(z => isIgnoredOrDescendantOfIgnored(z, zones));
 
-  let recipe = `INSTRUCTIONS:
+   let recipe = `INSTRUCTIONS:
 - Return ONLY valid JSON, no explanations or markdown
 - Use EXACT key names as provided - do NOT abbreviate or modify key names
 - Return the full innerHTML string for each zone
 - For repeatable slides, return both a "shared" object and an "instances" array
+- PRESERVE CONTENT: Do NOT modify or regenerate the content of ignored zones listed below
 
 ${globalSection}GENERATE THE FOLLOWING DATA:\n`;
 
-  let sectionNum = 1;
+   let sectionNum = 1;
 
-  // ── Static block zones ────────────────────────────────────────────────────
-  if (staticBlockZones.length > 0) {
-    recipe += `\n${sectionNum}. BLOCK ZONES (generate full innerHTML for each container):\n{\n  "blocks": {\n`;
-    staticBlockZones.forEach(z => {
-      const promptLine  = z.prompt    ? `      // Prompt: ${z.prompt}\n` : '';
-      const exampleLine = z.exampleHtml
-        ? `      // Example structure (populate with real data, preserve all tags and classes):\n      // ${z.exampleHtml.replace(/\n/g, '\n      // ')}\n`
-        : '';
-      recipe += `    "${z.key}": {  // [HTML BLOCK]\n${promptLine}${exampleLine}      "value": "<!-- your generated HTML here -->"\n    },\n`;
-    });
-    recipe += `  }\n}\n`;
-    sectionNum++;
-  }
+   // ── Ignored zones (preservation instructions) ──────────────────────────────
+   if (ignoredZones.length > 0) {
+     recipe += `\nZONES TO PRESERVE (do NOT regenerate these):\n`;
+     ignoredZones.forEach(z => {
+       recipe += `- ${z.key} (preserve as-is)\n`;
+     });
+     recipe += `\n`;
+   }
+
+   // ── Static block zones ────────────────────────────────────────────────────
+   if (staticBlockZones.length > 0) {
+     recipe += `\n${sectionNum}. BLOCK ZONES (generate full innerHTML for each container):\n{\n  "blocks": {\n`;
+     staticBlockZones.forEach(z => {
+       const promptLine  = z.prompt    ? `      // Prompt: ${z.prompt}\n` : '';
+       const exampleLine = z.exampleHtml
+         ? `      // Example structure (populate with real data, preserve all tags and classes):\n      // ${z.exampleHtml.replace(/\n/g, '\n      // ')}\n`
+         : '';
+       recipe += `    "${z.key}": {  // [HTML BLOCK]\n${promptLine}${exampleLine}      "value": "<!-- your generated HTML here -->"\n    },\n`;
+     });
+     recipe += `  }\n}\n`;
+     sectionNum++;
+   }
 
   // ── Repeatable slides ─────────────────────────────────────────────────────
   if (repeatableZones.length > 0) {

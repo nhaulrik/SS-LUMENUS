@@ -166,13 +166,13 @@ test.describe('UC-HF-05 — User can assign a zone via the tree', () => {
 // ── UC-HF-06: Block zone assignment ──────────────────────────────────────────
 
 test.describe('UC-HF-06 — User can assign a block zone', () => {
-  test('selecting Block zone mode shows prompt field', async ({ page }) => {
+  test('assigning a zone shows prompt field', async ({ page }) => {
     await doHtmlUpload(page);
     await page.locator(SEL.treeExpandAll).click();
     const firstNode = page.locator(SEL.treeNodes).first();
     await firstNode.hover();
     await firstNode.locator('.tree-node-assign-btn').click();
-    await page.locator(SEL.assignPanel).locator('input[value="block"]').check();
+    // All zones are now block zones by default, so prompt field should be visible
     await expect(page.locator(SEL.assignPromptInput)).toBeVisible();
   });
 });
@@ -417,7 +417,7 @@ test.describe('UC-HF-23 — upload-template API returns correct structure', () =
     }
   });
 
-  test('API returns correct type inference for number zones in selections', async ({ page }) => {
+  test('API returns correct type for zones in selections', async ({ page }) => {
     const html = fs.readFileSync(FIXTURE_HTML, 'utf8');
     const res  = await page.request.post('http://localhost:3001/api/html-flow/upload-template', {
       data: { html, fileName: 'test_slide.html' }
@@ -425,7 +425,8 @@ test.describe('UC-HF-23 — upload-template API returns correct structure', () =
     const body = await res.json();
     const totalHours = body.selections.find(s => s.key === 'total_hours');
     expect(totalHours).toBeTruthy();
-    expect(totalHours.type).toBe('number');
+    // All zones are now block zones
+    expect(totalHours.type).toBe('block');
   });
 
   test('API returns previewHtml containing the slide structure', async ({ page }) => {
