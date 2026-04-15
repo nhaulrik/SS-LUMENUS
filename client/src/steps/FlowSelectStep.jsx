@@ -44,7 +44,7 @@ export default function FlowSelectStep({ onSelectFlow, debugContext }) {
               </div>
             </div>
             <div className="flow-card-cta">
-              Select <span className="flow-card-arrow">→</span>
+              Select <span className="flow-card-arrow" aria-hidden="true">→</span>
             </div>
           </button>
 

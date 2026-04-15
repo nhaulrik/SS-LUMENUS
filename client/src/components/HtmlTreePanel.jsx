@@ -16,7 +16,7 @@
  *   onHighlight        — (nodeId | null) => void — called on tree row hover
  */
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, memo } from 'react'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -169,10 +169,13 @@ function AssignmentPanel({ nodes, existingSel, isRepeatableSlide, onAssign, onCl
     <div
       className="tree-assign-panel"
       data-testid="tree-assign-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="assign-panel-title"
       onKeyDown={e => e.key === 'Escape' && onClose()}
     >
       <div className="tree-assign-header">
-        <span className="tree-assign-title">
+        <span className="tree-assign-title" id="assign-panel-title">
           {isGroup ? `Assign ${nodes.length} elements` : `Assign: ${firstNode.label}`}
         </span>
         <button className="tree-assign-close" onClick={onClose} aria-label="Close">✕</button>
@@ -319,7 +322,7 @@ function AssignmentPanel({ nodes, existingSel, isRepeatableSlide, onAssign, onCl
 
 // ── Tree node row ─────────────────────────────────────────────────────────────
 
-function TreeNode({
+const TreeNode = memo(function TreeNode({
   node,
   depth,
   selections,
@@ -364,10 +367,11 @@ function TreeNode({
           className="tree-node-expand"
           onClick={() => hasChildren && onToggleExpand(node.id)}
           aria-label={isExpanded ? 'Collapse' : 'Expand'}
+          aria-expanded={hasChildren ? isExpanded : undefined}
           tabIndex={hasChildren ? 0 : -1}
           style={{ visibility: hasChildren ? 'visible' : 'hidden' }}
         >
-          {isExpanded ? '▾' : '▸'}
+          <span aria-hidden="true">{isExpanded ? '▾' : '▸'}</span>
         </button>
 
         {/* Checkbox for multi-select */}
@@ -380,8 +384,12 @@ function TreeNode({
           data-testid={`tree-check-${node.id}`}
         />
 
-        {/* Node label */}
-        <span className="tree-node-label" onClick={() => onOpenAssign([node])}>
+        {/* Node label — button for keyboard accessibility */}
+        <button
+          className="tree-node-label"
+          onClick={() => onOpenAssign([node])}
+          aria-label={`Assign zone to ${node.tag}${node.classes.length > 0 ? '.' + node.classes.join('.') : ''}`}
+        >
           <span className="tree-node-tag">{node.tag}</span>
           {node.classes.length > 0 && (
             <span className="tree-node-classes">.{node.classes.join('.')}</span>
@@ -389,7 +397,7 @@ function TreeNode({
           {node.textPreview && (
             <span className="tree-node-preview">{node.textPreview}</span>
           )}
-        </span>
+        </button>
 
         {/* Zone badge */}
         {sel && <SelectionBadge sel={sel} />}
@@ -398,10 +406,10 @@ function TreeNode({
         <button
           className="tree-node-assign-btn"
           onClick={() => onOpenAssign([node])}
-          title={sel ? 'Edit zone' : 'Assign zone'}
+          aria-label={sel ? 'Edit zone' : 'Assign zone'}
           data-testid={`tree-assign-btn-${node.id}`}
         >
-          {sel ? '✎' : '+'}
+          <span aria-hidden="true">{sel ? '✎' : '+'}</span>
         </button>
       </div>
 
@@ -424,7 +432,7 @@ function TreeNode({
       ))}
     </>
   )
-}
+}) // end memo(TreeNode)
 
 // ── Conflict warning ──────────────────────────────────────────────────────────
 
@@ -454,13 +462,14 @@ export default function HtmlTreePanel({
   highlightNodeId,
   onHighlight,
 }) {
-  const [slideIdx,     setSlideIdx]     = useState(0)   // 0-based
-  const [expandedIds,  setExpandedIds]  = useState(() => new Set())
-  const [selectedIds,  setSelectedIds]  = useState(() => new Set())
-  const [assignTarget, setAssignTarget] = useState(null) // [node, ...]
-  const [conflicts,    setConflicts]    = useState([])
+  const [slideIdx,      setSlideIdx]      = useState(0)   // 0-based
+  const [expandedIds,   setExpandedIds]   = useState(() => new Set())
+  const [selectedIds,   setSelectedIds]   = useState(() => new Set())
+  const [assignTarget,  setAssignTarget]  = useState(null) // [node, ...]
+  const [conflicts,     setConflicts]     = useState([])
+  const [clearArmed,    setClearArmed]    = useState(false)
 
-  const currentTree = trees?.[slideIdx] ?? []
+  const currentTree = useMemo(() => trees?.[slideIdx] ?? [], [trees, slideIdx])
   const slideIndex  = slideIdx + 1
 
   // Is the current slide marked repeatable?
@@ -603,21 +612,21 @@ export default function HtmlTreePanel({
               onClick={handleOpenGroupAssign}
               data-testid="tree-group-assign-btn"
             >
-              Assign {selectedIds.size} selected →
+              Assign {selectedIds.size} selected <span aria-hidden="true">→</span>
             </button>
           )}
           {onClearAll && (selections.length > 0 || repeatableSlides.length > 0) && (
             <button
-              className="btn btn-link html-tree-clear-btn"
+              className={`btn btn-link html-tree-clear-btn${clearArmed ? ' html-tree-clear-btn--armed' : ''}`}
               onClick={() => {
-                if (window.confirm('Clear all zone assignments and repeatable slide settings?')) {
-                  onClearAll()
-                }
+                if (clearArmed) { onClearAll(); setClearArmed(false) }
+                else { setClearArmed(true); setTimeout(() => setClearArmed(false), 3000) }
               }}
-              title="Remove all zone assignments and repeatable slide settings"
+              onBlur={() => setClearArmed(false)}
+              aria-label={clearArmed ? 'Click again to confirm clearing all zones' : 'Clear all zone assignments'}
               data-testid="tree-clear-all-btn"
             >
-              Clear all
+              {clearArmed ? 'Confirm clear' : 'Clear all'}
             </button>
           )}
           <button
@@ -641,16 +650,18 @@ export default function HtmlTreePanel({
 
       {/* ── Slide tabs (multi-slide templates) ──────────────────────────── */}
       {slideCount > 1 && (
-        <div className="html-tree-slide-tabs">
+        <div className="html-tree-slide-tabs" role="tablist" aria-label="Slides">
           {Array.from({ length: slideCount }, (_, i) => {
             const isRep = repeatableSlides.some(rs => rs.slideIndex === i + 1)
             return (
               <button
                 key={i}
+                role="tab"
+                aria-selected={slideIdx === i}
                 className={`html-tree-slide-tab${slideIdx === i ? ' html-tree-slide-tab--active' : ''}${isRep ? ' html-tree-slide-tab--repeatable' : ''}`}
                 onClick={() => { setSlideIdx(i); setExpandedIds(new Set()); setSelectedIds(new Set()) }}
               >
-                Slide {i + 1}{isRep ? ' ↻' : ''}
+                Slide {i + 1}{isRep ? <span aria-hidden="true"> ↻</span> : ''}
               </button>
             )
           })}

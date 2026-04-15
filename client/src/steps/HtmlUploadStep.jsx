@@ -62,8 +62,9 @@ export default function HtmlUploadStep({
   const [promptCopied,     setPromptCopied]      = useState(false)
 
   // ── Stage C: create project ───────────────────────────────────────────────
-  const [creating,     setCreating]     = useState(false)
-  const [projectName,  setProjectName]  = useState(initialSession?.projectName ?? '')
+  const [creating,      setCreating]      = useState(false)
+  const [projectName,   setProjectName]   = useState(initialSession?.projectName ?? '')
+  const [replaceArmed,  setReplaceArmed]  = useState(false)
 
   // ── Editor (opt-in) ───────────────────────────────────────────────────────
   const [rawHtml,    setRawHtml]    = useState(initialSession?.rawHtml ?? '')
@@ -267,7 +268,7 @@ ${highlightCss}
       <AppHeader title="Solon Slide Studio" subtitle="Visual Flow — Upload HTML Template" debugContext={debugContext} />
 
       <div className="html-upload-back">
-        <button className="btn btn-link" onClick={onBack}>← Change flow</button>
+        <button className="btn btn-link" onClick={onBack}><span aria-hidden="true">←</span> Change flow</button>
         <Breadcrumbs step={step} canNavigateTo={canNavigateTo} navigateTo={navigateTo} flow="html" />
       </div>
 
@@ -328,13 +329,23 @@ ${highlightCss}
                     >
                       ✎ Edit HTML
                     </button>
-                    <button className="btn btn-link" onClick={() => {
-                      if (selections.length > 0 && !window.confirm('Replace file? Your current zone assignments will be lost.')) return
-                      setTemplateId(null); setTrees([]); setSelections([]); setRepeatableSlides([])
-                      setPreviewHtml(''); setRawHtml(''); setFileName(''); setViolations([])
-                      syncSession({ templateId: null, trees: [], selections: [], repeatableSlides: [], previewHtml: '', rawHtml: '', fileName: '' })
-                    }}>
-                      Replace file
+                    <button
+                      className="btn btn-link"
+                      aria-label={replaceArmed ? 'Click again to confirm replacing the file' : 'Replace file'}
+                      onClick={() => {
+                        if (selections.length === 0 || replaceArmed) {
+                          setTemplateId(null); setTrees([]); setSelections([]); setRepeatableSlides([])
+                          setPreviewHtml(''); setRawHtml(''); setFileName(''); setViolations([])
+                          syncSession({ templateId: null, trees: [], selections: [], repeatableSlides: [], previewHtml: '', rawHtml: '', fileName: '' })
+                          setReplaceArmed(false)
+                        } else {
+                          setReplaceArmed(true)
+                          setTimeout(() => setReplaceArmed(false), 3000)
+                        }
+                      }}
+                      onBlur={() => setReplaceArmed(false)}
+                    >
+                      {replaceArmed ? 'Confirm replace' : 'Replace file'}
                     </button>
                   </div>
                 </div>
@@ -396,7 +407,7 @@ ${highlightCss}
                     onClick={handleCreateProject}
                     data-testid="create-project-btn"
                   >
-                    {creating ? 'Creating…' : 'Create Project →'}
+                    {creating ? 'Creating…' : <><span aria-hidden="true">→</span> Create Project</>}
                   </button>
                 </div>
               </>

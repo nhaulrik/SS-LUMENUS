@@ -281,7 +281,7 @@ export default function HtmlEditorPanel({
 
     const injection = `<style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { width: 100%; height: 100%; overflow: hidden; background: #000; display: block; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: oklch(8% 0.015 160); display: block; }
 #solon-slide-shell {
   position: absolute; top: 0; left: 0;
   width: 1280px; height: 720px;

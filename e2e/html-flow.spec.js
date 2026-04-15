@@ -378,9 +378,10 @@ test.describe('UC-HF-22 — User can replace the uploaded file', () => {
 
   test('clicking "Replace file" returns to the upload zone', async ({ page }) => {
     await doHtmlUpload(page);
-    // Auto-accept the confirmation dialog (selections.length > 0 triggers it)
-    page.on('dialog', dialog => dialog.accept());
+    // First click arms the button (two-click confirmation pattern replaces window.confirm)
     await page.locator('button:has-text("Replace file")').click();
+    // Second click (now labelled "Confirm replace") executes the action
+    await page.locator('button:has-text("Confirm replace")').click();
     await expect(page.locator(SEL.htmlUploadZone)).toBeVisible();
     await expect(page.locator(SEL.htmlTreePanel)).not.toBeVisible();
   });

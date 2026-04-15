@@ -28,7 +28,8 @@ export default function HtmlPreviewStep({
   // The wrapper uses padding-bottom:56.25% (aspect-ratio trick) so its height
   // is always derived from its width — stable across srcDoc changes, which
   // means the ResizeObserver never sees 0-height flicker during iframe reload.
-  const [previewScale, setPreviewScale] = useState(1)
+  const [previewScale,  setPreviewScale]  = useState(1)
+  const [startNewArmed, setStartNewArmed] = useState(false)
   const roRef = useRef(null)
   const wrapperCallbackRef = useCallback((el) => {
     if (roRef.current) { roRef.current.disconnect(); roRef.current = null }
@@ -102,7 +103,7 @@ export default function HtmlPreviewStep({
               aria-label="Previous slide"
               data-testid="preview-nav-prev"
             >
-              ←
+              <span aria-hidden="true">←</span>
             </button>
             <span className="html-preview-step-nav-counter" data-testid="preview-nav-counter">
               {currentSlide} / {slideCount}
@@ -114,7 +115,7 @@ export default function HtmlPreviewStep({
               aria-label="Next slide"
               data-testid="preview-nav-next"
             >
-              →
+              <span aria-hidden="true">→</span>
             </button>
           </div>
         )}
@@ -122,16 +123,22 @@ export default function HtmlPreviewStep({
         {/* ── Actions ─────────────────────────────────────────────── */}
         <div className="html-preview-step-actions">
           <button className="btn btn-link" onClick={onBack}>
-            ← Back to recipe
+            <span aria-hidden="true">←</span> Back to recipe
           </button>
           <div className="html-preview-step-right-actions">
             <button className="btn btn-secondary" onClick={handleDownload}>
               Download HTML
             </button>
-            <button className="btn btn-primary" onClick={() => {
-              if (window.confirm('Start a new project? This will clear the current session.')) onStartNew()
-            }}>
-              Start new project
+            <button
+              className={`btn ${startNewArmed ? 'btn-danger' : 'btn-primary'}`}
+              aria-label={startNewArmed ? 'Click again to confirm starting a new project' : 'Start new project'}
+              onClick={() => {
+                if (startNewArmed) { onStartNew() }
+                else { setStartNewArmed(true); setTimeout(() => setStartNewArmed(false), 3000) }
+              }}
+              onBlur={() => setStartNewArmed(false)}
+            >
+              {startNewArmed ? 'Confirm — clear session' : 'Start new project'}
             </button>
           </div>
         </div>

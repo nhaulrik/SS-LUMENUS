@@ -26,11 +26,14 @@ async function countBadges(page) {
  * @param {boolean} confirm — true to accept, false to dismiss
  */
 async function clickClearAll(page, confirm = true) {
-  page.once('dialog', dialog => {
-    if (confirm) dialog.accept();
-    else dialog.dismiss();
-  });
-  await page.locator(SEL.treeClearAllBtn).click();
+  // Two-click armed confirmation pattern (replaces window.confirm)
+  await page.locator(SEL.treeClearAllBtn).click(); // arm
+  if (confirm) {
+    await page.locator('button:has-text("Confirm clear")').click(); // confirm
+  } else {
+    // Click elsewhere to disarm without confirming
+    await page.locator('body').click({ position: { x: 10, y: 10 } });
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -72,18 +75,12 @@ test.describe('UC-CA-02 — Clear all button visible when zones exist', () => {
 // UC-CA-03: Clicking shows a confirmation dialog
 // ─────────────────────────────────────────────────────────────────────────────
 
-test.describe('UC-CA-03 — Confirmation dialog is shown', () => {
-  test('a confirm dialog appears when clear all is clicked', async ({ page }) => {
+test.describe('UC-CA-03 — Confirmation step is shown', () => {
+  test('clicking clear all arms the button showing a confirm label', async ({ page }) => {
     await doHtmlUpload(page);
-
-    let dialogSeen = false;
-    page.once('dialog', dialog => {
-      dialogSeen = true;
-      dialog.dismiss();
-    });
-
+    // First click arms — no dialog, but button text changes to "Confirm clear"
     await page.locator(SEL.treeClearAllBtn).click();
-    expect(dialogSeen).toBe(true);
+    await expect(page.locator('button:has-text("Confirm clear")')).toBeVisible();
   });
 });
 

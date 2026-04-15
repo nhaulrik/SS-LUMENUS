@@ -157,12 +157,12 @@ export default function HtmlRecipeStep({
               onClick={handleGenerateRecipe}
               disabled={loadingRecipe}
             >
-              {loadingRecipe ? 'Generating…' : recipe ? '↻ Regenerate recipe' : 'Generate recipe'}
+              {loadingRecipe ? 'Generating…' : recipe ? <><span aria-hidden="true">↻</span> Regenerate recipe</> : 'Generate recipe'}
             </button>
 
             {recipe ? (
               <div className="html-recipe-area-wrapper">
-                <button className="copy-btn" onClick={handleCopyRecipe} title="Copy to clipboard">⧉</button>
+                <button className="copy-btn" onClick={handleCopyRecipe} aria-label="Copy recipe to clipboard"><span aria-hidden="true">⧉</span></button>
                 <div className="html-recipe-area">{recipe}</div>
               </div>
             ) : (
@@ -187,7 +187,7 @@ export default function HtmlRecipeStep({
             </div>
 
             <div className="html-recipe-json-wrapper">
-              <button className="copy-btn" onClick={handleCopyJson} title="Copy to clipboard">⧉</button>
+              <button className="copy-btn" onClick={handleCopyJson} aria-label="Copy JSON to clipboard"><span aria-hidden="true">⧉</span></button>
               <textarea
                 className={`json-input${validation?.valid === false ? ' has-error' : ''}`}
                 value={jsonInput}
@@ -222,14 +222,14 @@ export default function HtmlRecipeStep({
 
             <div className="html-recipe-actions">
               <button className="btn btn-link" onClick={onBack}>
-                ← Back to template
+                <span aria-hidden="true">←</span> Back to template
               </button>
               <button
                 className="btn btn-primary"
                 onClick={handleApply}
                 disabled={!validation?.valid || applying}
               >
-                {applying ? 'Applying…' : 'Apply content →'}
+                {applying ? 'Applying…' : <><span aria-hidden="true">→</span> Apply content</>}
               </button>
             </div>
           </div>

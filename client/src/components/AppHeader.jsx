@@ -15,14 +15,14 @@ export default function AppHeader({ title, subtitle, debugContext }) {
           {debugContext && (
             <button
               className="debug-link"
-              title="Copy debug context"
+              aria-label="Open debug context"
               onClick={() => setShowDebug(true)}
             >
-              ? Debug
+              Debug
             </button>
           )}
-          <a href="/docs.html" target="_blank" className="docs-link" title="Open Documentation">
-            ? Docs
+          <a href="/docs.html" target="_blank" className="docs-link" aria-label="Open documentation">
+            Docs
           </a>
         </div>
       </div>

@@ -44,6 +44,7 @@
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
   --shadow-glow: 0 0 24px rgba(76, 175, 128, 0.2);
+  /* Glow is suppressed for users who prefer reduced motion */
   
   /* Transitions */
   --transition-fast: 150ms ease;
@@ -53,11 +54,17 @@
   /* Typography */
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
 
-  /* Semantic color tokens */
-  --accent-block:  var(--accent-block);  /* block zone accent (orange) */
-  --accent-visual: var(--accent-visual);  /* visual / syntax accent (blue) */
-  --syntax-tag:    var(--syntax-tag);  /* HTML tag names in tree */
-  --syntax-attr:   var(--syntax-attr);  /* HTML class names in tree */
+  /* Semantic color tokens — real values, not self-references */
+  --accent-block:  oklch(72% 0.14 55);   /* amber — block zone accent */
+  --accent-visual: oklch(65% 0.13 250);  /* slate-blue — visual flow accent */
+  --syntax-tag:    oklch(68% 0.12 160);  /* teal-green — HTML tag names in tree */
+  --syntax-attr:   oklch(72% 0.10 200);  /* cyan-teal — HTML class names in tree */
+
+  /* Danger / destructive */
+  --danger: oklch(58% 0.18 25);          /* red — destructive actions */
+
+  /* Tinted near-black for iframe/preview backgrounds (replaces pure #000) */
+  --bg-canvas: oklch(8% 0.015 160);
 
   /* Border aliases */
   --border-medium: var(--border-default);
@@ -69,7 +76,7 @@
 
 body {
   margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
   min-height: 100vh;
@@ -206,6 +213,11 @@ header p {
 
 .step-content-enter-left {
   animation-name: slideInLeft;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --shadow-glow: none; }
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 
 @keyframes slideInRight {
@@ -423,6 +435,51 @@ header p {
 
 .btn-danger:hover {
   background: rgba(232, 84, 74, 0.1);
+}
+
+/* ── btn-link (text-only action button) ─────────────────────────────────────── */
+.btn-link {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: var(--space-xs) var(--space-sm);
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.btn-link:hover {
+  color: var(--text-secondary);
+}
+
+/* ── Global focus rings — non-negotiable for keyboard users ──────────────────── */
+/* Applied via :focus-visible so mouse clicks don't show the ring */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible,
+.btn:focus-visible,
+.btn-link:focus-visible,
+.breadcrumb-item:focus-visible,
+.upload-zone:focus-visible,
+.flow-card:focus-visible,
+.tree-node-expand:focus-visible,
+.tree-node-assign-btn:focus-visible,
+.tree-assign-close:focus-visible,
+.copy-btn:focus-visible,
+.debug-link:focus-visible,
+.docs-link:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Inputs already have custom focus via box-shadow — keep them consistent */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 0;
 }
 
 .actions {
@@ -687,7 +744,7 @@ header p {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   padding: var(--space-md);
-  font-family: 'Menlo', 'Consolas', 'Monaco', monospace;
+  font-family: var(--font-mono);
   font-size: 0.72rem;
   line-height: 1.55;
   color: var(--text-secondary);
@@ -745,8 +802,8 @@ header p {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.toast--success { background: var(--success);  color: #fff; }
-.toast--error   { background: var(--error);    color: #fff; }
+.toast--success { background: var(--success);  color: var(--bg-primary); }
+.toast--error   { background: var(--error);    color: oklch(97% 0.01 25); }
 .toast--info    { background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-default); }
 
 .toast__close {
@@ -1076,7 +1133,7 @@ header p {
   border-radius: var(--radius-md);
   overflow: hidden;
   border: 1px solid var(--border-subtle);
-  background: #000;
+  background: var(--bg-canvas);
 }
 
 .html-preview-frame {
@@ -1342,7 +1399,7 @@ header p {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   overflow: hidden;
-  background: #000;
+  background: var(--bg-canvas);
 }
 
 .html-preview-step-frame {
@@ -1364,8 +1421,8 @@ header p {
 }
 
 .html-preview-step-nav-btn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   font-size: 1rem;
   display: flex;
@@ -1473,7 +1530,7 @@ header p {
 
 .html-tree-slide-tab--active {
   background: var(--accent-primary);
-  color: #fff;
+  color: var(--bg-primary);
   border-color: var(--accent-primary);
 }
 
@@ -1488,8 +1545,13 @@ header p {
 }
 
 .html-tree-clear-btn:hover {
-  color: var(--danger, #e05c5c);
+  color: var(--danger);
   background: transparent;
+}
+
+.html-tree-clear-btn--armed {
+  color: var(--danger);
+  font-weight: 500;
 }
 
 /* ── Slide control bar (repeatable toggle) ──────────────────────────────────── */
@@ -1713,7 +1775,9 @@ header p {
   color: var(--text-muted);
   cursor: pointer;
   font-size: 10px;
-  padding: 0;
+  /* Minimum 44×44px touch target via padding compensation */
+  padding: 14px;
+  margin: -14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1783,6 +1847,9 @@ header p {
   justify-content: center;
   opacity: 0;
   transition: opacity 0.1s;
+  /* Minimum 44×44px touch target via padding compensation */
+  padding: 12px;
+  margin: -12px;
 }
 
 .tree-node:hover .tree-node-assign-btn {
@@ -2169,7 +2236,7 @@ header p {
   border-radius: var(--radius-md);
   overflow: hidden;
   border: 1px solid var(--border-subtle);
-  background: #000;
+  background: var(--bg-canvas);
 }
 
 /* ── Resizable divider ───────────────────────────────────────────────────────── */

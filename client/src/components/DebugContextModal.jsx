@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 
 /**
  * Debug context modal — shows a JSON snapshot of the current app state
@@ -13,6 +13,15 @@ export default function DebugContextModal({ context, onClose }) {
   const [includeHtml,    setIncludeHtml]    = useState(false)
   const [includeRecipe,  setIncludeRecipe]  = useState(true)
   const [includeOutput,  setIncludeOutput]  = useState(false)
+  const firstFocusRef = useRef(null)
+
+  // Focus first interactive element on mount; close on Escape
+  useEffect(() => {
+    firstFocusRef.current?.focus()
+    const handleKey = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [onClose])
 
   const hasHtml    = !!(context?.uploadSession?.rawHtml)
   const hasRecipe  = !!(context?.recipe)
@@ -61,20 +70,29 @@ export default function DebugContextModal({ context, onClose }) {
   const charCount = json.length
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content debug-modal" onClick={e => e.stopPropagation()}>
+    <div className="modal-overlay" onClick={onClose} aria-hidden="true">
+      <div
+        className="modal-content debug-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="debug-modal-title"
+        onClick={e => e.stopPropagation()}
+      >
 
         <div className="debug-modal-header">
           <div>
-            <h3 className="debug-modal-title">Debug Context</h3>
+            <h3 className="debug-modal-title" id="debug-modal-title">Debug Context</h3>
             <p className="debug-modal-subtitle">
               Copy and paste into chat to share your current state for debugging.
               {' '}<span style={{ opacity: 0.6 }}>({charCount.toLocaleString()} chars)</span>
             </p>
           </div>
           <button
+            ref={firstFocusRef}
             className={"btn btn-sm " + (copied ? 'btn-primary' : 'btn-secondary') + " debug-copy-btn"}
             onClick={handleCopy}
+            aria-live="polite"
+            aria-label={copied ? 'Copied to clipboard' : 'Copy to clipboard'}
           >
             {copied ? 'Copied!' : 'Copy'}
           </button>
