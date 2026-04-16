@@ -21,6 +21,7 @@ export default function HtmlRecipeStep({
   onApplied,        // ({ outputFile, previewHtml, roundId, slideCount }) => void — advance to preview
   onRecipeChange,   // (recipeString) => void — lifts recipe to App for debug context
   onRecipeStateChange, // (updates) => void — updates preserved recipe state in App
+  onAiResponseChange, // (aiResponse) => void — lifts AI response to App for debug context
   recipeState = { recipe: '', globalPrompt: '', jsonInput: '' }, // preserved state from App
   setToast,
   debugContext,
@@ -64,7 +65,11 @@ export default function HtmlRecipeStep({
 
   // ── Validate JSON (debounced) ─────────────────────────────────────────────
   const validateJson = useCallback(async (value) => {
-    if (!value.trim()) { setValidation(null); return }
+    if (!value.trim()) { 
+      setValidation(null)
+      onAiResponseChange?.(null)
+      return 
+    }
     try {
       const res = await fetch('/api/html-flow/validate-json', {
         method:  'POST',
@@ -74,10 +79,25 @@ export default function HtmlRecipeStep({
       if (!res.ok) throw new Error(`Server error ${res.status}`)
       const data = await res.json()
       setValidation(data)
+      
+      // Update AI response in debug context
+      onAiResponseChange?.({
+        raw: value,
+        validated: true,
+        validationResult: data
+      })
     } catch (err) {
-      setValidation({ valid: false, error: 'Validation failed: ' + err.message })
+      const errorData = { valid: false, error: 'Validation failed: ' + err.message }
+      setValidation(errorData)
+      
+      // Update AI response with error
+      onAiResponseChange?.({
+        raw: value,
+        validated: true,
+        validationResult: errorData
+      })
     }
-  }, [chainId])
+  }, [chainId, onAiResponseChange])
 
    const handleJsonChange = useCallback((value) => {
      setJsonInput(value)

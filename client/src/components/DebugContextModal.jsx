@@ -14,6 +14,7 @@ export default function DebugContextModal({ context, onClose }) {
   const [includeHtml,    setIncludeHtml]    = useState(false)
   const [includeRecipe,  setIncludeRecipe]  = useState(true)
   const [includeOutput,  setIncludeOutput]  = useState(false)
+  const [includeAiResponse, setIncludeAiResponse] = useState(false)
   
   // Focus trapping: constrains Tab/Shift+Tab within modal, restores focus on close
   const modalRef = useFocusTrap()
@@ -25,9 +26,10 @@ export default function DebugContextModal({ context, onClose }) {
     return () => document.removeEventListener('keydown', handleKey)
   }, [onClose])
 
-  const hasHtml    = !!(context?.uploadSession?.rawHtml)
-  const hasRecipe  = !!(context?.recipe)
-  const hasOutput  = !!(context?.applied?.outputHtml)
+  const hasHtml       = !!(context?.uploadSession?.rawHtml)
+  const hasRecipe     = !!(context?.recipe)
+  const hasOutput     = !!(context?.applied?.outputHtml)
+  const hasAiResponse = !!(context?.aiResponse)
 
   const filtered = useMemo(() => {
     if (!context) return context
@@ -50,8 +52,13 @@ export default function DebugContextModal({ context, onClose }) {
       out.applied = includeOutput && hasOutput ? { ...rest, outputHtml } : rest
     }
 
+    // Strip or keep AI response
+    if (!includeAiResponse || !hasAiResponse) {
+      out.aiResponse = null
+    }
+
     return out
-  }, [context, includeHtml, includeRecipe, includeOutput, hasHtml, hasRecipe, hasOutput])
+  }, [context, includeHtml, includeRecipe, includeOutput, includeAiResponse, hasHtml, hasRecipe, hasOutput, hasAiResponse])
 
   const json = useMemo(() => {
     try {
@@ -133,6 +140,17 @@ export default function DebugContextModal({ context, onClose }) {
             />
             <span>Output HTML</span>
             {!hasOutput && <span className="debug-include-na">— not available</span>}
+          </label>
+
+          <label className={`debug-include-option${!hasAiResponse ? ' debug-include-option--disabled' : ''}`}>
+            <input
+              type="checkbox"
+              checked={includeAiResponse && hasAiResponse}
+              disabled={!hasAiResponse}
+              onChange={e => setIncludeAiResponse(e.target.checked)}
+            />
+            <span>AI Response</span>
+            {!hasAiResponse && <span className="debug-include-na">— not available</span>}
           </label>
         </div>
 

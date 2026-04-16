@@ -61,6 +61,10 @@ export default function App() {
     jsonInput: '',        // user's JSON response input
   })
 
+  // ── AI response tracking (for debug context) ────────────────────
+  const [htmlAiResponse, setHtmlAiResponse] = useState(null)
+  // { raw, validated, validationResult }
+
   const handleHtmlProjectCreated = useCallback((project) => {
     setHtmlProject(project)
     navigateTo('html-recipe')
@@ -78,6 +82,10 @@ export default function App() {
 
   const handleHtmlRecipeStateChange = useCallback((updates) => {
     setHtmlRecipeState(prev => ({ ...prev, ...updates }))
+  }, [])
+
+  const handleHtmlAiResponseChange = useCallback((aiResponse) => {
+    setHtmlAiResponse(aiResponse)
   }, [])
 
   // ── Global toast ───────────────────────────────────────────────
@@ -136,6 +144,9 @@ export default function App() {
           outputHtml: htmlApplied.previewHtml ?? '',
         }
       : null,
+
+    // AI response — JSON pasted by user and its validation result
+    aiResponse: htmlAiResponse,
   }
 
   const sharedProps = { step, canNavigateTo, navigateTo, stepAnimClass, debugContext }
@@ -183,6 +194,7 @@ export default function App() {
           onApplied={handleHtmlApplied}
           onRecipeChange={setHtmlRecipe}
           onRecipeStateChange={handleHtmlRecipeStateChange}
+          onAiResponseChange={handleHtmlAiResponseChange}
           recipeState={htmlRecipeState}
           setToast={setToast}
           debugContext={debugContext}
