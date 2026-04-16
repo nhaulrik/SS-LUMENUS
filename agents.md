@@ -34,6 +34,6 @@ You MUST follow these rules on EVERY task, every time. They override any default
 - At the end of a session, remind me to export the session if I want traceability (`/export`).
 - At the end of a task, update the approapiate MD with your progress.
 - Run e2e tests for the relevant spec. Not all of them at once.
-
+- Be token efficient at all times
 
 Follow these rules religiously. If you ever feel like breaking one, ask me first.

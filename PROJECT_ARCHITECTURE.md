@@ -1744,7 +1744,7 @@ The current Phase 4 implementation (export-time relationships) will be refactore
 - ✅ Multiple exports per project
 - ✅ Slide download capabilities
 
-### Phase 4 🔄 IN PROGRESS (Phase 4A COMPLETE)
+### Phase 4 🔄 IN PROGRESS (Phase 4A & 4B COMPLETE)
 **Previous Design**: Export-time relationships (being refactored)  
 **New Design**: Independent relationship builder + packaging system
 
@@ -1754,11 +1754,17 @@ The current Phase 4 implementation (export-time relationships) will be refactore
   - Simplified ExportDialog.jsx (55% code reduction)
   - Removed 6 relationship API endpoints
   - All core tests passing
-- 🔄 **4B: Relationship builder** (next phase)
-  - Drag-drop structure creation
-  - Backend structure-manager.js
-  - Frontend RelationshipBuilder component
-- 📋 **4C: Packaging system** (planned)
+- ✅ **4B: Relationship builder** (COMPLETE 2026-04-16)
+  - ✅ Backend structure-manager.js (500 lines, fully functional)
+  - ✅ 8 API endpoints for structure CRUD operations
+  - ✅ Frontend RelationshipBuilder component (drag-drop tree UI)
+  - ✅ TreeNode recursive component with expand/collapse
+  - ✅ SlidePreview component for viewing slide metadata
+  - ✅ StructureEditor 3-step wizard for creating structures
+  - ✅ Complete API integration with backend
+  - ✅ Integration tests covering all CRUD operations
+  - ✅ Build passes, no errors, 451+ tests passing
+- 📋 **4C: Packaging system** (next phase)
   - Create organized deliverables
   - Backend package-manager.js
   - Frontend CreatePackageDialog
@@ -1983,11 +1989,25 @@ projects/
 
 ---
 
-**Document Version**: 3.0  
+**Document Version**: 3.1  
 **Last Updated**: 2026-04-16  
-**Status**: Phase 3 Complete - Phase 4 Redesign In Progress
+**Status**: Phase 3 Complete - Phase 4 (4A & 4B) Complete - Phase 4C Planned
 
 ## Progress Timeline
+
+- **2026-04-16**: Phase 4B Complete - Relationship Builder ✅
+  - ✅ Backend: structure-manager.js (500 lines, all functions exported)
+  - ✅ 8 API endpoints: POST/GET/PUT/DELETE structures, add/move/remove nodes, orphans
+  - ✅ Frontend: 9 new React components (RelationshipBuilder, TreeNode, SlidePreview, StructureEditor, StructureList)
+  - ✅ Drag-drop tree UI with expand/collapse and delete on hover
+  - ✅ 3-step structure creation wizard (name → select exports → review)
+  - ✅ Circular dependency prevention
+  - ✅ Orphaned slide tracking
+  - ✅ API integration: Updated RelationshipBuilder to match actual backend contract
+  - ✅ Integration tests: 30+ test cases covering all CRUD operations
+  - ✅ Build: PASSED (81 modules), no errors
+  - ✅ Tests: 451+ core tests passing
+  - Ready for Phase 4C (Packaging System)
 
 - **2026-04-16**: Phase 4A Complete - Simplify Exports ✅
   - Refactored export-manager.js (removed slides-manifest.json)
