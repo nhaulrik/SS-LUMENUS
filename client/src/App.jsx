@@ -1,16 +1,26 @@
 import { useState, useCallback } from 'react'
 import Toast           from './components/Toast.jsx'
+import ProjectLandingStep from './steps/ProjectLandingStep.jsx'
+import ProjectDashboardStep from './steps/ProjectDashboardStep.jsx'
 import FlowSelectStep  from './steps/FlowSelectStep.jsx'
 import HtmlUploadStep  from './steps/HtmlUploadStep.jsx'
 import HtmlRecipeStep  from './steps/HtmlRecipeStep.jsx'
 import HtmlPreviewStep from './steps/HtmlPreviewStep.jsx'
 import MetadataAssignmentStep from './steps/MetadataAssignmentStep.jsx'
 
-const ALL_STEPS = ['flow-select', 'html-upload', 'html-recipe', 'html-preview', 'html-metadata']
+const ALL_STEPS = [
+  'project-landing',
+  'project-dashboard',
+  'flow-select',
+  'html-upload',
+  'html-recipe',
+  'html-preview',
+  'html-metadata'
+]
 
 export default function App() {
   // ── Step navigation ────────────────────────────────────────────
-  const [step,    setStep]    = useState('flow-select')
+  const [step,    setStep]    = useState('project-landing')
   const [animDir, setAnimDir] = useState('forward')
 
   const navigateTo = useCallback((newStep) => {
@@ -21,6 +31,34 @@ export default function App() {
   }, [step])
 
   const stepAnimClass = `step-content step-content-enter-${animDir === 'forward' ? 'right' : 'left'}`
+
+  // ── Project Management (Phase 1) ────────────────────────────────
+  const [currentProjectName, setCurrentProjectName] = useState(null)
+  const [currentFlowId, setCurrentFlowId] = useState(null)
+
+  const handleProjectSelected = useCallback((projectName) => {
+    setCurrentProjectName(projectName)
+    navigateTo('project-dashboard')
+  }, [navigateTo])
+
+  const handleCreateProject = useCallback((projectData) => {
+    setCurrentProjectName(projectData.projectName)
+    setCurrentFlowId(projectData.flowId)
+    navigateTo('project-dashboard')
+  }, [navigateTo])
+
+  const handleFlowSelected = useCallback((flowId) => {
+    setCurrentFlowId(flowId)
+    // Navigate to html-upload with the selected flow
+    // This will load the flow's template and zones
+    navigateTo('html-upload')
+  }, [navigateTo])
+
+  const handleBackToProjects = useCallback(() => {
+    setCurrentProjectName(null)
+    setCurrentFlowId(null)
+    navigateTo('project-landing')
+  }, [navigateTo])
 
   // ── Flow selection ─────────────────────────────────────────────
   const [activeFlow, setActiveFlow] = useState(null)
@@ -135,13 +173,15 @@ export default function App() {
 
   // ── canNavigateTo guard ────────────────────────────────────────
   const canNavigateTo = useCallback((s) => {
+    if (s === 'project-landing') return true
+    if (s === 'project-dashboard') return !!currentProjectName
     if (s === 'flow-select')  return true
-    if (s === 'html-upload')  return activeFlow === 'html' || step === 'html-recipe' || step === 'html-metadata'
+    if (s === 'html-upload')  return activeFlow === 'html' || step === 'html-recipe' || step === 'html-metadata' || !!currentFlowId
     if (s === 'html-recipe')  return !!(htmlProject)
     if (s === 'html-preview') return !!(htmlProject && htmlApplied)
     if (s === 'html-metadata') return !!(htmlProject && htmlApplied)
     return false
-  }, [activeFlow, htmlProject, htmlApplied, step])
+  }, [activeFlow, htmlProject, htmlApplied, step, currentProjectName, currentFlowId])
 
   // ── Debug context ──────────────────────────────────────────────
   const debugContext = {
@@ -195,6 +235,31 @@ export default function App() {
   const sharedProps = { step, canNavigateTo, navigateTo, stepAnimClass, debugContext }
 
   // ── Step routing ───────────────────────────────────────────────
+
+  if (step === 'project-landing') {
+    return (
+      <>
+        <Toast toast={toast} onDismiss={() => setToast(null)} />
+        <ProjectLandingStep
+          onProjectSelected={handleProjectSelected}
+          onCreateProject={handleCreateProject}
+        />
+      </>
+    )
+  }
+
+  if (step === 'project-dashboard' && currentProjectName) {
+    return (
+      <>
+        <Toast toast={toast} onDismiss={() => setToast(null)} />
+        <ProjectDashboardStep
+          projectName={currentProjectName}
+          onFlowSelected={handleFlowSelected}
+          onBackToProjects={handleBackToProjects}
+        />
+      </>
+    )
+  }
 
   if (step === 'flow-select') {
     return (

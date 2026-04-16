@@ -1,0 +1,444 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+  color: #e4e4e7;
+  overflow-y: auto;
+}
+
+.header {
+  padding: 40px;
+  border-bottom: 1px solid rgba(228, 228, 231, 0.1);
+  background: linear-gradient(135deg, rgba(10, 14, 39, 0.8), rgba(26, 31, 58, 0.8));
+}
+
+.headerTop {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.backButton {
+  background: none;
+  border: none;
+  color: #60a5fa;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  font-weight: 600;
+}
+
+.backButton:hover {
+  background-color: rgba(96, 165, 250, 0.1);
+}
+
+.projectTitle {
+  font-size: 36px;
+  font-weight: 700;
+  margin: 0;
+  background: linear-gradient(135deg, #60a5fa, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.projectStatus {
+  margin: 0;
+  font-size: 14px;
+  color: #a1a1aa;
+}
+
+.statusBadge {
+  display: inline-block;
+  padding: 4px 12px;
+  background-color: rgba(34, 197, 94, 0.1);
+  color: #86efac;
+  border-radius: 20px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.content {
+  flex: 1;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+/* Sections */
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sectionTitle {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+  color: #f1f5f9;
+}
+
+.primaryButton {
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.primaryButton:hover {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
+}
+
+/* Empty State */
+.emptyState {
+  padding: 40px;
+  text-align: center;
+  background-color: rgba(96, 165, 250, 0.05);
+  border: 1px dashed rgba(96, 165, 250, 0.2);
+  border-radius: 8px;
+}
+
+.emptyState p {
+  margin: 0;
+  color: #a1a1aa;
+}
+
+/* Templates List */
+.templatesList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.templateCard {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.5));
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 12px;
+  padding: 24px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.templateCard:hover {
+  border-color: rgba(96, 165, 250, 0.3);
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.8));
+}
+
+.templateHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.templateName {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  color: #f1f5f9;
+  flex: 1;
+  word-break: break-word;
+}
+
+.templateSize {
+  font-size: 12px;
+  color: #71717a;
+  white-space: nowrap;
+  margin-left: 12px;
+}
+
+.templateDescription {
+  margin: 8px 0;
+  font-size: 14px;
+  color: #a1a1aa;
+}
+
+.templateMeta {
+  display: flex;
+  gap: 16px;
+  margin: 12px 0;
+  font-size: 12px;
+  color: #71717a;
+}
+
+.metaItem {
+  display: block;
+}
+
+.metaLabel {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #52525b;
+  margin-bottom: 2px;
+}
+
+.metaValue {
+  display: block;
+  font-size: 14px;
+  color: #60a5fa;
+  font-weight: 500;
+}
+
+.templateActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.actionButton {
+  background-color: rgba(96, 165, 250, 0.1);
+  color: #60a5fa;
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.actionButton:hover {
+  background-color: rgba(96, 165, 250, 0.2);
+  border-color: rgba(96, 165, 250, 0.4);
+}
+
+/* Flows List */
+.flowsList {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.flowsListHeader {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #71717a;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.flowLink {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 8px 12px;
+  margin: 4px 0;
+  background-color: rgba(96, 165, 250, 0.05);
+  border: 1px solid rgba(96, 165, 250, 0.1);
+  border-radius: 6px;
+  color: #60a5fa;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+}
+
+.flowLink:hover {
+  background-color: rgba(96, 165, 250, 0.15);
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+.flowName {
+  font-weight: 500;
+}
+
+.flowArrow {
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.flowLink:hover .flowArrow {
+  opacity: 1;
+}
+
+/* Flows Grid */
+.flowsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.flowCard {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.5));
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.flowCard:hover {
+  border-color: rgba(96, 165, 250, 0.3);
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.8));
+  transform: translateY(-4px);
+}
+
+.flowCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 12px;
+}
+
+.flowName {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  color: #f1f5f9;
+  flex: 1;
+}
+
+.flowStatus {
+  display: inline-block;
+  padding: 4px 12px;
+  background-color: rgba(34, 197, 94, 0.1);
+  color: #86efac;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: capitalize;
+  white-space: nowrap;
+  margin-left: 8px;
+}
+
+.flowMeta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.flowOpenButton {
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  align-self: flex-start;
+}
+
+.flowOpenButton:hover {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  transform: translateY(-1px);
+}
+
+/* Loading State */
+.loadingSpinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 400px;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(96, 165, 250, 0.2);
+  border-top-color: #60a5fa;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loadingSpinner p {
+  color: #a1a1aa;
+  font-size: 16px;
+}
+
+/* Error State */
+.errorContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  min-height: 400px;
+  padding: 40px;
+  text-align: center;
+}
+
+.errorContainer h2 {
+  font-size: 24px;
+  color: #f1f5f9;
+  margin: 0;
+}
+
+.errorContainer p {
+  font-size: 16px;
+  color: #a1a1aa;
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header {
+    padding: 24px;
+  }
+
+  .projectTitle {
+    font-size: 28px;
+  }
+
+  .content {
+    padding: 24px;
+    gap: 24px;
+  }
+
+  .sectionHeader {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .primaryButton {
+    width: 100%;
+    text-align: center;
+  }
+
+  .templateHeader {
+    flex-direction: column;
+  }
+
+  .templateSize {
+    margin-left: 0;
+    margin-top: 4px;
+  }
+
+  .flowsGrid {
+    grid-template-columns: 1fr;
+  }
+}
