@@ -8,7 +8,7 @@
 import { useCallback, useRef, useState, useMemo } from 'react'
 import AppHeader   from '../components/AppHeader.jsx'
 import Breadcrumbs from '../components/Breadcrumbs.jsx'
-import SaveProjectDialog from '../components/SaveProjectDialog.jsx'
+import { generateScaledPreviewHtml } from '../utils/slidePreview.js'
 
 export default function HtmlPreviewStep({
   project,      // { chainId, projectName, zones }
@@ -18,6 +18,7 @@ export default function HtmlPreviewStep({
   navigateTo,
   onBack,       // () => void — back to recipe step
   onStartNew,   // () => void — back to flow selector
+  onAssignMetadata, // () => void — navigate to metadata assignment step
   setToast,
   debugContext,
 }) {
@@ -46,60 +47,21 @@ export default function HtmlPreviewStep({
 
   // ── Slide navigation (multi-slide only) ──────────────────────────────────
   const [currentSlide, setCurrentSlide] = useState(1)
-  const [showSaveDialog, setShowSaveDialog] = useState(false)
 
   const goToSlide = useCallback((index) => {
     setCurrentSlide(Math.max(1, Math.min(index, slideCount)))
   }, [slideCount])
 
   const scaledPreviewHtml = useMemo(() => {
-    if (!previewHtml) return ''
+    // Use shared utility to generate scaled preview HTML.
     // CSS transforms are applied right-to-left: scale runs first, then translateY.
     // So translateY operates in post-scale (screen) space.
     // To shift slide N to the top of the viewport we need to move up by
     // (slideIndex - 1) * 720 * previewScale screen pixels.
-    const offsetY   = (currentSlide - 1) * 720 * previewScale
-    const injection = `<style>
-#solon-slide-shell { transform: translateY(-${offsetY}px) scale(${previewScale}); overflow: hidden; }
-</style>`
-    return previewHtml.includes('</head>')
-      ? previewHtml.replace('</head>', injection + '</head>')
-      : injection + previewHtml
+    return generateScaledPreviewHtml(previewHtml, currentSlide - 1, previewScale)
   }, [previewHtml, previewScale, currentSlide])
 
-  const handleSaveProject = useCallback(() => {
-    setShowSaveDialog(true)
-  }, [])
 
-  const handleConfirmSave = useCallback(async (projectName) => {
-    try {
-      const response = await fetch('/api/html-flow/save-project', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chainId,
-          projectName,
-          slideCount,
-        }),
-      })
-
-      const result = await response.json()
-      
-      if (!result.ok) {
-        setToast({ type: 'error', message: result.error })
-        return
-      }
-
-      setToast({ 
-        type: 'success', 
-        message: `Project "${projectName}" saved successfully!` 
-      })
-      
-      setShowSaveDialog(false)
-    } catch (err) {
-      setToast({ type: 'error', message: err.message })
-    }
-  }, [chainId, slideCount, setToast])
 
   return (
     <div className="app">
@@ -153,35 +115,27 @@ export default function HtmlPreviewStep({
            <button className="btn btn-link" onClick={onBack}>
              <span aria-hidden="true">←</span> Back to recipe
            </button>
-           <div className="html-preview-step-right-actions">
-             <button 
-               className="btn btn-secondary" 
-               onClick={handleSaveProject}
-               data-testid="btn-save-project"
-             >
-               Save Project
-             </button>
-             <button
-               className={`btn ${startNewArmed ? 'btn-danger' : 'btn-primary'}`}
-               aria-label={startNewArmed ? 'Click again to confirm starting a new project' : 'Start new project'}
-               onClick={() => {
-                 if (startNewArmed) { onStartNew() }
-                 else { setStartNewArmed(true); setTimeout(() => setStartNewArmed(false), 3000) }
-               }}
-               onBlur={() => setStartNewArmed(false)}
-             >
-               {startNewArmed ? 'Confirm — clear session' : 'Start new project'}
-             </button>
-           </div>
-         </div>
-
-         {showSaveDialog && (
-           <SaveProjectDialog
-             defaultName={projectName}
-             onConfirm={handleConfirmSave}
-             onCancel={() => setShowSaveDialog(false)}
-           />
-         )}
+            <div className="html-preview-step-right-actions">
+              <button 
+                className="btn btn-primary" 
+                onClick={onAssignMetadata}
+                data-testid="btn-assign-metadata"
+              >
+                Assign Metadata
+              </button>
+              <button
+                className={`btn ${startNewArmed ? 'btn-danger' : 'btn-secondary'}`}
+                aria-label={startNewArmed ? 'Click again to confirm starting a new project' : 'Start new project'}
+                onClick={() => {
+                  if (startNewArmed) { onStartNew() }
+                  else { setStartNewArmed(true); setTimeout(() => setStartNewArmed(false), 3000) }
+                }}
+                onBlur={() => setStartNewArmed(false)}
+              >
+                {startNewArmed ? 'Confirm — clear session' : 'Start new project'}
+              </button>
+            </div>
+          </div>
        </div>
      </div>
    )
