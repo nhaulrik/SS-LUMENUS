@@ -8,6 +8,7 @@
 import { useCallback, useRef, useState, useMemo } from 'react'
 import AppHeader   from '../components/AppHeader.jsx'
 import Breadcrumbs from '../components/Breadcrumbs.jsx'
+import SaveProjectDialog from '../components/SaveProjectDialog.jsx'
 
 export default function HtmlPreviewStep({
   project,      // { chainId, projectName, zones }
@@ -45,6 +46,7 @@ export default function HtmlPreviewStep({
 
   // ── Slide navigation (multi-slide only) ──────────────────────────────────
   const [currentSlide, setCurrentSlide] = useState(1)
+  const [showSaveDialog, setShowSaveDialog] = useState(false)
 
   const goToSlide = useCallback((index) => {
     setCurrentSlide(Math.max(1, Math.min(index, slideCount)))
@@ -65,13 +67,39 @@ export default function HtmlPreviewStep({
       : injection + previewHtml
   }, [previewHtml, previewScale, currentSlide])
 
-  const handleDownload = useCallback(() => {
-    const url = `/api/html-flow/download/${chainId}/${outputFile}`
-    const a   = document.createElement('a')
-    a.href     = url
-    a.download = outputFile
-    a.click()
-  }, [chainId, outputFile])
+  const handleSaveProject = useCallback(() => {
+    setShowSaveDialog(true)
+  }, [])
+
+  const handleConfirmSave = useCallback(async (projectName) => {
+    try {
+      const response = await fetch('/api/html-flow/save-project', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chainId,
+          projectName,
+          slideCount,
+        }),
+      })
+
+      const result = await response.json()
+      
+      if (!result.ok) {
+        setToast({ type: 'error', message: result.error })
+        return
+      }
+
+      setToast({ 
+        type: 'success', 
+        message: `Project "${projectName}" saved successfully!` 
+      })
+      
+      setShowSaveDialog(false)
+    } catch (err) {
+      setToast({ type: 'error', message: err.message })
+    }
+  }, [chainId, slideCount, setToast])
 
   return (
     <div className="app">
@@ -121,28 +149,40 @@ export default function HtmlPreviewStep({
         )}
 
         {/* ── Actions ─────────────────────────────────────────────── */}
-        <div className="html-preview-step-actions">
-          <button className="btn btn-link" onClick={onBack}>
-            <span aria-hidden="true">←</span> Back to recipe
-          </button>
-          <div className="html-preview-step-right-actions">
-            <button className="btn btn-secondary" onClick={handleDownload}>
-              Download HTML
-            </button>
-            <button
-              className={`btn ${startNewArmed ? 'btn-danger' : 'btn-primary'}`}
-              aria-label={startNewArmed ? 'Click again to confirm starting a new project' : 'Start new project'}
-              onClick={() => {
-                if (startNewArmed) { onStartNew() }
-                else { setStartNewArmed(true); setTimeout(() => setStartNewArmed(false), 3000) }
-              }}
-              onBlur={() => setStartNewArmed(false)}
-            >
-              {startNewArmed ? 'Confirm — clear session' : 'Start new project'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+         <div className="html-preview-step-actions">
+           <button className="btn btn-link" onClick={onBack}>
+             <span aria-hidden="true">←</span> Back to recipe
+           </button>
+           <div className="html-preview-step-right-actions">
+             <button 
+               className="btn btn-secondary" 
+               onClick={handleSaveProject}
+               data-testid="btn-save-project"
+             >
+               Save Project
+             </button>
+             <button
+               className={`btn ${startNewArmed ? 'btn-danger' : 'btn-primary'}`}
+               aria-label={startNewArmed ? 'Click again to confirm starting a new project' : 'Start new project'}
+               onClick={() => {
+                 if (startNewArmed) { onStartNew() }
+                 else { setStartNewArmed(true); setTimeout(() => setStartNewArmed(false), 3000) }
+               }}
+               onBlur={() => setStartNewArmed(false)}
+             >
+               {startNewArmed ? 'Confirm — clear session' : 'Start new project'}
+             </button>
+           </div>
+         </div>
+
+         {showSaveDialog && (
+           <SaveProjectDialog
+             defaultName={projectName}
+             onConfirm={handleConfirmSave}
+             onCancel={() => setShowSaveDialog(false)}
+           />
+         )}
+       </div>
+     </div>
+   )
 }

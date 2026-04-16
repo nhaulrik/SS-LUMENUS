@@ -35,7 +35,7 @@ const pendingTemplates = new Map();
 function resolveChainDir(chainId) {
   if (!chainId || typeof chainId !== 'string') return null;
   // Only allow safe characters — UUIDs and our chain- prefix
-  if (!/^[\w\-]{1,100}$/.test(chainId)) return null;
+  if (!/^[\w-]{1,100}$/.test(chainId)) return null;
   const chainDir = path.join(CHAINS_DIR, chainId);
   if (!isInsideDir(chainDir, RESOLVED_CHAINS_DIR)) return null;
   return chainDir;
@@ -697,7 +697,7 @@ router.get('/html-flow/download/:chainId/:file', (req, res) => {
   try {
     const { chainId, file } = req.params;
 
-    if (!/^[\w\-]+\.html$/.test(file)) {
+    if (!/^[\w-]+\.html$/.test(file)) {
       return res.status(400).json({ ok: false, error: 'Invalid filename.' });
     }
 
@@ -717,6 +717,120 @@ router.get('/html-flow/download/:chainId/:file', (req, res) => {
     return res.sendFile(path.resolve(filePath));
   } catch (err) {
     console.error('[html-flow] download error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ── POST /api/html-flow/save-project ──────────────────────────────────
+
+router.post('/html-flow/save-project', (req, res) => {
+  try {
+    const { chainId, projectName } = req.body;
+
+    // Validation
+    if (!chainId || !projectName) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: 'chainId and projectName are required.' 
+      });
+    }
+
+    if (typeof projectName !== 'string' || projectName.trim().length === 0) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: 'Project name must be a non-empty string.' 
+      });
+    }
+
+    if (projectName.length > 100) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: 'Project name must be 100 characters or less.' 
+      });
+    }
+
+    // Sanitize project name (remove special chars, allow spaces/hyphens)
+    const sanitizedName = projectName
+      .trim()
+      .replace(/[<>:"/\\|?*]/g, '')
+      .substring(0, 100);
+
+    const chainDir = resolveChainDir(chainId);
+    if (!chainDir) return res.status(400).json({ ok: false, error: 'Invalid chainId.' });
+
+    const chainPath = path.join(chainDir, 'chain.json');
+    if (!fs.existsSync(chainPath)) {
+      return res.status(404).json({ ok: false, error: 'Project not found.' });
+    }
+
+    const chain = JSON.parse(fs.readFileSync(chainPath, 'utf8'));
+    const outputFile = chain.rounds[chain.rounds.length - 1]?.outputFile;
+    if (!outputFile) {
+      return res.status(400).json({ ok: false, error: 'No output found.' });
+    }
+
+    const outputPath = path.join(chainDir, outputFile);
+    if (!fs.existsSync(outputPath)) {
+      return res.status(404).json({ ok: false, error: 'Output file not found.' });
+    }
+
+    // Read the patched HTML
+    const patchedHtml = fs.readFileSync(outputPath, 'utf8');
+
+    // Create project folder
+    const projectFolder = path.join(chainDir, sanitizedName);
+    fs.mkdirSync(projectFolder, { recursive: true });
+
+    // Extract head content (styles, fonts, etc.) from the patched HTML
+    const headMatch = patchedHtml.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
+    const headContent = headMatch ? headMatch[1] : '';
+
+    // Extract sections (slides) from HTML
+    const sections = patchedHtml.match(/<section[^>]*>[\s\S]*?<\/section>/g) || [];
+    
+    if (sections.length === 0) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: 'No slides found in output.' 
+      });
+    }
+
+    // Write individual slide files
+    const slideFiles = [];
+    for (let i = 0; i < sections.length; i++) {
+      const section = sections[i];
+      const slideNumber = i + 1;
+      const fileName = `slide-${slideNumber}.html`;
+      
+      // Create complete HTML document for each slide
+      // Include the head content from the original HTML (styles, fonts, etc.)
+      const slideHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Slide ${slideNumber}</title>
+${headContent}
+</head>
+<body>
+${section}
+</body>
+</html>`;
+
+      const slidePath = path.join(projectFolder, fileName);
+      fs.writeFileSync(slidePath, slideHtml, 'utf8');
+      slideFiles.push(fileName);
+    }
+
+    // Project folder with individual slide files is now saved
+    return res.json({
+      ok: true,
+      projectName: sanitizedName,
+      slideCount: sections.length,
+      projectPath: projectFolder,
+    });
+  } catch (err) {
+    console.error('[html-flow] save-project error:', err);
     return res.status(500).json({ ok: false, error: err.message });
   }
 });

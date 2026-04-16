@@ -94,7 +94,14 @@ export const SEL = {
   htmlPreviewStepFrameWrap: '.html-preview-step-frame-wrap',
   htmlPreviewStepFrame:     '.html-preview-step-frame',
   htmlDownloadBtn:          'button:has-text("Download HTML")',
+  htmlSaveProjectBtn:       '[data-testid="btn-save-project"]',
   htmlStartNewBtn:          'button:has-text("Start new project")',
+  
+  // Save project dialog
+  dialogOverlay:            '.dialog-overlay',
+  dialog:                   '.dialog',
+  dialogInput:              '#projectName',
+  dialogError:              '.dialog-error',
 
   // Navigation
   changeFlowBtn: 'button:has-text("Change flow")',
