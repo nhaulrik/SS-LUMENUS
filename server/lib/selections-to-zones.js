@@ -103,9 +103,17 @@ export function resolveConflicts(selections) {
   const removed  = []
   const resolved = selections.filter(sel => {
     // Remove zones whose nodeId is a descendant of any parent zone
-    const superseded = parentIds.some(
-      parentId => sel.nodeId !== parentId && sel.nodeId.startsWith(parentId + '>')
-    )
+    // BUT: preserve ignored child zones even if parent is non-ignored
+    // (ignored zones should be kept as-is in the recipe)
+    const superseded = parentIds.some(parentId => {
+      if (sel.nodeId === parentId) return false
+      if (!sel.nodeId.startsWith(parentId + '>')) return false
+      
+      // If this child is ignored, don't supersede it
+      if (sel.ignored) return false
+      
+      return true
+    })
     if (superseded) removed.push(sel)
     return !superseded
   })

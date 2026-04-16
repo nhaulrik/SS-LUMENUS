@@ -647,9 +647,9 @@ router.post('/html-flow/apply-content', (req, res) => {
       return res.status(404).json({ ok: false, error: 'Project not found.' });
     }
 
-    const chain          = JSON.parse(fs.readFileSync(chainPath, 'utf8'));
-    const zones          = chain.zones || [];
-    const repeatableSlides = chain.repeatableSlides || [];
+     const chain          = JSON.parse(fs.readFileSync(chainPath, 'utf8'));
+     const zones          = (chain.zones || []).filter(z => z.key);
+     const repeatableSlides = chain.repeatableSlides || [];
 
     const validation = validateHtmlJson(jsonString, zones, repeatableSlides);
     if (!validation.valid) {

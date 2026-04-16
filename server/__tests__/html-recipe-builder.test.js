@@ -12,6 +12,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { buildHtmlRecipe, generateFullSlideRecipe, validateHtmlJson } from '../lib/html-recipe-builder.js';
+import { resolveConflicts } from '../lib/selections-to-zones.js';
 
 // ── Zone factories ─────────────────────────────────────────────────────────────
 
@@ -480,9 +481,9 @@ describe('buildHtmlRecipe — repeatableSlides', () => {
 
   it('non-unique zones do NOT appear in the instance structure definition', () => {
     const recipe = buildHtmlRecipe(zones, '', repSlides);
-    // The instance structure block ("Each instance must follow this structure:")
+    // The instance structure block ("Template for each instance:")
     // should list only unique keys. Find that block specifically.
-    const instanceIdx  = recipe.indexOf('Each instance must follow this structure exactly:');
+    const instanceIdx  = recipe.indexOf('Template for each instance:');
     const returnIdx    = recipe.indexOf('Return the full structure as:');
     expect(instanceIdx).toBeGreaterThan(-1);
     const instanceStructure = recipe.slice(instanceIdx, returnIdx);
@@ -749,6 +750,79 @@ describe('generateFullSlideRecipe', () => {
     const recipe = generateFullSlideRecipe(zones, 1);
     expect(recipe).toContain('Main heading');
     expect(recipe).toContain('<h1>Example Title</h1>');
+  });
+
+  it('includes ignored zones in ZONES_TO_PRESERVE section with original HTML', () => {
+    const zones = [
+      zone('title', 'title', 1),
+      { ...zone('left_panel', 'left panel', 1), ignored: true, exampleHtml: '<div class="left-panel">Original content</div>' },
+      zone('body', 'body', 1),
+    ];
+    const recipe = generateFullSlideRecipe(zones, 1);
+    expect(recipe).toContain('ZONES_TO_PRESERVE');
+    expect(recipe).toContain('left_panel');
+    expect(recipe).toContain('do NOT regenerate');
+    expect(recipe).toContain('<div class="left-panel">Original content</div>');
+    expect(recipe).toContain('"title"');
+    expect(recipe).toContain('"body"');
+    expect(recipe).not.toContain('"left_panel"'); // Should not be in generation zones
+  });
+
+  it('does not include ZONES_TO_PRESERVE section when no zones are ignored', () => {
+    const zones = [
+      zone('title', 'title', 1),
+      zone('body', 'body', 1),
+    ];
+    const recipe = generateFullSlideRecipe(zones, 1);
+    expect(recipe).not.toContain('ZONES_TO_PRESERVE');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// resolveConflicts with ignored zones
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('resolveConflicts with ignored zones', () => {
+  it('should preserve ignored child zones even if parent is non-ignored', () => {
+    const selections = [
+      { nodeId: 'div.body', slideIndex: 1, ignored: false, key: 'body' },
+      { nodeId: 'div.body>div.left-panel', slideIndex: 1, ignored: true, key: 'left_panel' },
+    ];
+    
+    const { resolved, removed } = resolveConflicts(selections);
+    
+    // The ignored child should NOT be removed
+    expect(resolved.length).toBe(2);
+    expect(removed.length).toBe(0);
+    expect(resolved.find(s => s.nodeId === 'div.body>div.left-panel')).toBeDefined();
+  });
+
+  it('should remove non-ignored child zones when parent is non-ignored', () => {
+    const selections = [
+      { nodeId: 'div.body', slideIndex: 1, ignored: false, key: 'body' },
+      { nodeId: 'div.body>div.left-panel', slideIndex: 1, ignored: false, key: 'left_panel' },
+    ];
+    
+    const { resolved, removed } = resolveConflicts(selections);
+    
+    // The non-ignored child should be removed
+    expect(resolved.length).toBe(1);
+    expect(removed.length).toBe(1);
+    expect(removed[0].nodeId).toBe('div.body>div.left-panel');
+  });
+
+  it('should remove child zones when parent is ignored', () => {
+    const selections = [
+      { nodeId: 'div.body', slideIndex: 1, ignored: true, key: 'body' },
+      { nodeId: 'div.body>div.left-panel', slideIndex: 1, ignored: false, key: 'left_panel' },
+    ];
+    
+    const { resolved, removed } = resolveConflicts(selections);
+    
+    // The child should be removed because parent is ignored (and thus supersedes)
+    expect(resolved.length).toBe(1);
+    expect(removed.length).toBe(1);
+    expect(removed[0].nodeId).toBe('div.body>div.left-panel');
   });
 });
 
