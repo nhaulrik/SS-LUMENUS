@@ -24,7 +24,7 @@ export default function HtmlUploadStep({
   stepAnimClass, debugContext,
   initialSession, onSessionChange,
   onProjectCreated, onBack, setToast,
-  currentProjectName, currentFlowId,
+  currentProjectName, currentFlowId, pendingFlowName,
 }) {
   const fileInputRef  = useRef(null)
 
@@ -280,6 +280,7 @@ export default function HtmlUploadStep({
              repeatableSlides,
              fullSlideGeneration,
              existingProjectName: currentProjectName,
+             flowName: pendingFlowName || undefined,
            })
          })
          const data = await res.json()
@@ -298,7 +299,7 @@ export default function HtmlUploadStep({
      } finally {
        setCreating(false)
      }
-   }, [isExistingFlow, currentProjectName, currentFlowId, templateId, selections, repeatableSlides, fullSlideGeneration, onProjectCreated, setToast])
+   }, [isExistingFlow, currentProjectName, currentFlowId, templateId, selections, repeatableSlides, fullSlideGeneration, pendingFlowName, onProjectCreated, setToast])
 
   // ── Copy AI fix prompt ────────────────────────────────────────────────────
   const handleCopyPrompt = useCallback(() => {

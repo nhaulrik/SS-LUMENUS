@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import styles from './ProjectDashboardStep.module.css'
 
 /**
@@ -15,9 +15,11 @@ export default function ProjectDashboardStep({
   onBackToProjects,
   setToast,
 }) {
-  const [project, setProject] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error,   setError]   = useState(null)
+  const [project,       setProject]       = useState(null)
+  const [loading,       setLoading]       = useState(true)
+  const [error,         setError]         = useState(null)
+  const [newFlowName,   setNewFlowName]   = useState('')
+  const flowNameInputRef = useRef(null)
 
   useEffect(() => {
     const load = async () => {
@@ -35,8 +37,8 @@ export default function ProjectDashboardStep({
     load()
   }, [projectName])
 
-  const handleDeleteFlow = async (flowId) => {
-    if (!confirm(`Delete flow "${flowId}"? This cannot be undone.`)) return
+  const handleDeleteFlow = async (flowId, flowDisplayName) => {
+    if (!confirm(`Delete flow "${flowDisplayName}"? This cannot be undone.`)) return
     try {
       const res = await fetch(`/api/projects/${projectName}/flows/${flowId}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Failed to delete flow')
@@ -91,9 +93,27 @@ export default function ProjectDashboardStep({
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>Flows</h2>
-            <button className={styles.primaryButton} onClick={onNewFlow}>
-              + New Flow
-            </button>
+            <form
+              className={styles.newFlowForm}
+              onSubmit={e => {
+                e.preventDefault()
+                onNewFlow(newFlowName.trim() || undefined)
+                setNewFlowName('')
+              }}
+            >
+              <input
+                ref={flowNameInputRef}
+                className={styles.newFlowInput}
+                type="text"
+                value={newFlowName}
+                onChange={e => setNewFlowName(e.target.value)}
+                placeholder="Flow name…"
+                maxLength={80}
+              />
+              <button className={styles.primaryButton} type="submit" disabled={!newFlowName.trim()}>
+                + New Flow
+              </button>
+            </form>
           </div>
 
           {flows.length === 0 ? (
@@ -105,7 +125,7 @@ export default function ProjectDashboardStep({
               {flows.map((flow) => (
                 <div key={flow.flowId} className={styles.flowCard}>
                   <div className={styles.flowCardHeader}>
-                    <h3 className={styles.flowName}>{flow.flowId}</h3>
+                    <h3 className={styles.flowName}>{flow.name || flow.flowId}</h3>
                     <span className={styles.flowStatus}>{flow.status}</span>
                   </div>
 
@@ -141,7 +161,7 @@ export default function ProjectDashboardStep({
                     </button>
                     <button
                       className={styles.actionButton}
-                      onClick={() => handleDeleteFlow(flow.flowId)}
+                      onClick={() => handleDeleteFlow(flow.flowId, flow.name || flow.flowId)}
                       style={{ color: 'var(--color-danger, #e53e3e)' }}
                     >
                       Delete

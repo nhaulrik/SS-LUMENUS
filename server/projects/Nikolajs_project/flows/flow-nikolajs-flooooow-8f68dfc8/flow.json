@@ -1,35 +1,18 @@
 {
-  "flowId": "flow-nikolajs-project-c8a850c4",
-  "projectId": "64e5f01c-25a9-4678-bbe2-28733b9b2118",
-  "templateId": "2eee4a45-e622-473e-8a03-7b857164c288",
+  "flowId": "flow-nikolajs-flooooow-8f68dfc8",
+  "name": "Nikolajs_flooooow",
+  "projectId": "1c03a801-e144-402f-a20e-4e84f31e537f",
+  "templateId": "44906c3e-636c-4860-8ffe-9993b4cfae3f",
   "templateFilename": "initiative_template_v4.html",
-  "createdAt": "2026-04-16T21:46:40.837Z",
-  "updatedAt": "2026-04-16T21:59:40.222Z",
+  "createdAt": "2026-04-16T22:22:44.826Z",
+  "updatedAt": "2026-04-16T22:23:05.443Z",
   "status": "active",
   "globalPrompt": "",
   "generations": [
     {
-      "id": "daacca6f-8402-4faa-9de5-0cdad3f2f2e3",
-      "appliedAt": "2026-04-16T21:49:08.571Z",
-      "outputFile": "output-daacca6f-8402-4faa-9de5-0cdad3f2f2e3.html",
-      "jsonInput": "{\n  \"slides\": {\n    \"slide_1\": {\n      \"shared\": {\n        \"auto_div_slide_footer\": \"<span class=\\\"footer-text\\\">Solon Tax Product Roadmap 2026 · Confidential</span>\\n    <span class=\\\"footer-text\\\">Executive Steering Committee · 29 April 2026</span>\"\n      },\n      \"instances\": [\n        {\n          \"auto_div_slide_header\": \"<div class=\\\"header-top\\\">\\n      <span class=\\\"header-eyebrow\\\">Feature Catalog · Roadmap Initiative</span>\\n      <span class=\\\"nc-logo\\\">Netcompany</span>\\n    </div>\\n\\n    <div class=\\\"header-main\\\" style=\\\"padding-bottom:0; margin-top:8px;\\\">\\n      <div class=\\\"header-coral-bar\\\"></div>\\n      <div class=\\\"header-title-block\\\">\\n        <div class=\\\"header-title\\\">Taxpayer Accounting</div>\\n        <div class=\\\"header-group-tag\\\">Core Revenue Management Capabilities</div>\\n      </div>\\n    </div>\\n\\n    <div class=\\\"header-stats\\\">\\n      <div class=\\\"header-stat\\\">\\n        <span class=\\\"header-stat-value\\\">—</span>\\n        <span class=\\\"header-stat-label\\\">Total Hours</span>\\n      </div>\\n      <div class=\\\"header-stat\\\">\\n        <span class=\\\"header-stat-value\\\">TBD</span>\\n        <span class=\\\"header-stat-label\\\">Features in Scope</span>\\n      </div>\\n      <div class=\\\"header-stat\\\">\\n        <span class=\\\"header-stat-value\\\">PI 27 · PI 28</span>\\n        <span class=\\\"header-stat-label\\\">Primary Window</span>\\n      </div>\\n      <div class=\\\"header-stat\\\">\\n        <span class=\\\"header-stat-value\\\">TBD</span>\\n        <span class=\\\"header-stat-label\\\">P1 Features</span>\\n      </div>\\n      <div class=\\\"header-stat\\\">\\n        <span class=\\\"header-stat-value\\\">TBD</span>\\n        <span class=\\\"header-stat-label\\\">Unestimated</span>\\n      </div>\\n      <div class=\\\"stat-spacer\\\"></div>\\n      <div class=\\\"header-subtitle-block\\\">\\n        <span class=\\\"header-subtitle\\\">Solon Tax Product Roadmap 2026 · Executive Steering Committee</span>\\n      </div>\\n    </div>\",\n          \"auto_div_slide_body\": \"<div class=\\\"panel-main\\\">"
-    },
-    {
-      "id": "d4932a11-eb39-4623-bcd8-f85042b88a30",
-      "appliedAt": "2026-04-16T21:52:42.738Z",
-      "outputFile": "output-d4932a11-eb39-4623-bcd8-f85042b88a30.html",
-      "jsonInput": "{\n  \"slides\": {\n    \"slide_1\": {\n      \"shared\": {\n        \"auto_div_slide_footer\": \"<span class=\\\"footer-text\\\">Solon Tax Product Roadmap 2026 · Confidential</span>\\n    <span class=\\\"footer-text\\\">Executive Steering Committee · 29 April 2026</span>\"\n      },\n      \"instances\": [\n        {\n          \"auto_div_slide_header\": \"<div class=\\\"header-top\\\">\\n      <span class=\\\"header-eyebrow\\\">Feature Catalog · Roadmap Initiative</span>\\n      <span class=\\\"nc-logo\\\">Netcompany</span>\\n    </div>\\n\\n    <div class=\\\"header-main\\\" style=\\\"padding-bottom:0; margin-top:8px;\\\">\\n      <div class=\\\"header-coral-bar\\\"></div>\\n      <div class=\\\"header-title-block\\\">\\n        <div class=\\\"header-title\\\">Taxpayer Accounting</div>\\n        <div class=\\\"header-group-tag\\\">Core Revenue Management Capabilities</div>\\n      </div>\\n    </div>\\n\\n    <div class=\\\"header-stats\\\">\\n      <div class=\\\"header-stat\\\">\\n        <span class=\\\"header-stat-value\\\">—</span>\\n        <span class=\\\"header-stat-label\\\">Total Hours</span>\\n      </div>\\n      <div class=\\\"header-stat\\\">\\n        <span class=\\\"header-stat-value\\\">TBD</span>\\n        <span class=\\\"header-stat-label\\\">Features in Scope</span>\\n      </div>\\n      <div class=\\\"header-stat\\\">\\n        <span class=\\\"header-stat-value\\\">PI 27 · PI 28</span>\\n        <span class=\\\"header-stat-label\\\">Primary Window</span>\\n      </div>\\n      <div class=\\\"header-stat\\\">\\n        <span class=\\\"header-stat-value\\\">TBD</span>\\n        <span class=\\\"header-stat-label\\\">P1 Features</span>\\n      </div>\\n      <div class=\\\"header-stat\\\">\\n        <span class=\\\"header-stat-value\\\">TBD</span>\\n        <span class=\\\"header-stat-label\\\">Unestimated</span>\\n      </div>\\n      <div class=\\\"stat-spacer\\\"></div>\\n      <div class=\\\"header-subtitle-block\\\">\\n        <span class=\\\"header-subtitle\\\">Solon Tax Product Roadmap 2026 · Executive Steering Committee</span>\\n      </div>\\n    </div>\",\n          \"auto_div_slide_body\": \"<div class=\\\"panel-main\\\">"
-    },
-    {
-      "id": "92b42393-37ad-4486-998e-83c9f1b32be1",
-      "appliedAt": "2026-04-16T21:52:56.960Z",
-      "outputFile": "output-92b42393-37ad-4486-998e-83c9f1b32be1.html",
-      "jsonInput": "{\n  \"slides\": {\n    \"slide_1\": {\n      \"shared\": {\n        \"auto_div_slide_footer\": \"<span class=\\\"footer-text\\\">Solon Tax Product Roadmap 2026 · Confidential</span>\\n    <span class=\\\"footer-text\\\">Executive Steering Committee · 29 April 2026</span>\"\n      },\n      \"instances\": [\n        {\n          \"auto_div_slide_header\": \"<div class=\\\"header-top\\\">\\n      <span class=\\\"header-eyebrow\\\">Feature Catalog · Roadmap Initiative</span>\\n      <span class=\\\"nc-logo\\\">Netcompany</span>\\n    </div>\\n\\n    <div class=\\\"header-main\\\" style=\\\"padding-bottom:0; margin-top:8px;\\\">\\n      <div class=\\\"header-coral-bar\\\"></div>\\n      <div class=\\\"header-title-block\\\">\\n        <div class=\\\"header-title\\\">Taxpayer Accounting</div>\\n        <div class=\\\"header-group-tag\\\">Core Revenue Management Capabilities</div>\\n      </div>\\n    </div>\\n\\n    <div class=\\\"header-stats\\\">\\n      <div class=\\\"header-stat\\\">\\n        <span class=\\\"header-stat-value\\\">—</span>\\n        <span class=\\\"header-stat-label\\\">Total Hours</span>\\n      </div>\\n      <div class=\\\"header-stat\\\">\\n        <span class=\\\"header-stat-value\\\">TBD</span>\\n        <span class=\\\"header-stat-label\\\">Features in Scope</span>\\n      </div>\\n      <div class=\\\"header-stat\\\">\\n        <span class=\\\"header-stat-value\\\">PI 27 · PI 28</span>\\n        <span class=\\\"header-stat-label\\\">Primary Window</span>\\n      </div>\\n      <div class=\\\"header-stat\\\">\\n        <span class=\\\"header-stat-value\\\">TBD</span>\\n        <span class=\\\"header-stat-label\\\">P1 Features</span>\\n      </div>\\n      <div class=\\\"header-stat\\\">\\n        <span class=\\\"header-stat-value\\\">TBD</span>\\n        <span class=\\\"header-stat-label\\\">Unestimated</span>\\n      </div>\\n      <div class=\\\"stat-spacer\\\"></div>\\n      <div class=\\\"header-subtitle-block\\\">\\n        <span class=\\\"header-subtitle\\\">Solon Tax Product Roadmap 2026 · Executive Steering Committee</span>\\n      </div>\\n    </div>\",\n          \"auto_div_slide_body\": \"<div class=\\\"panel-main\\\">"
-    },
-    {
-      "id": "0c7cccbf-bca0-432d-9cd8-a9e44f19edf1",
-      "appliedAt": "2026-04-16T21:58:45.926Z",
-      "outputFile": "output-0c7cccbf-bca0-432d-9cd8-a9e44f19edf1.html",
+      "id": "8777f15c-3140-46ac-93cf-7237730a0db8",
+      "appliedAt": "2026-04-16T22:23:00.118Z",
+      "outputFile": "output-8777f15c-3140-46ac-93cf-7237730a0db8.html",
       "jsonInput": "{\n  \"slides\": {\n    \"slide_1\": {\n      \"shared\": {\n        \"auto_div_slide_footer\": \"<span class=\\\"footer-text\\\">Solon Tax Product Roadmap 2026 · Confidential</span>\\n    <span class=\\\"footer-text\\\">Executive Steering Committee · 29 April 2026</span>\"\n      },\n      \"instances\": [\n        {\n          \"auto_div_slide_header\": \"<div class=\\\"header-top\\\">\\n      <span class=\\\"header-eyebrow\\\">Feature Catalog · Roadmap Initiative</span>\\n      <span class=\\\"nc-logo\\\">Netcompany</span>\\n    </div>\\n\\n    <div class=\\\"header-main\\\" style=\\\"padding-bottom:0; margin-top:8px;\\\">\\n      <div class=\\\"header-coral-bar\\\"></div>\\n      <div class=\\\"header-title-block\\\">\\n        <div class=\\\"header-title\\\">Taxpayer Accounting</div>\\n        <div class=\\\"header-group-tag\\\">Core Revenue Management Capabilities</div>\\n      </div>\\n    </div>\\n\\n    <div class=\\\"header-stats\\\">\\n      <div class=\\\"header-stat\\\">\\n        <span class=\\\"header-stat-value\\\">—</span>\\n        <span class=\\\"header-stat-label\\\">Total Hours</span>\\n      </div>\\n      <div class=\\\"header-stat\\\">\\n        <span class=\\\"header-stat-value\\\">TBD</span>\\n        <span class=\\\"header-stat-label\\\">Features in Scope</span>\\n      </div>\\n      <div class=\\\"header-stat\\\">\\n        <span class=\\\"header-stat-value\\\">PI 27 · PI 28</span>\\n        <span class=\\\"header-stat-label\\\">Primary Window</span>\\n      </div>\\n      <div class=\\\"header-stat\\\">\\n        <span class=\\\"header-stat-value\\\">TBD</span>\\n        <span class=\\\"header-stat-label\\\">P1 Features</span>\\n      </div>\\n      <div class=\\\"header-stat\\\">\\n        <span class=\\\"header-stat-value\\\">TBD</span>\\n        <span class=\\\"header-stat-label\\\">Unestimated</span>\\n      </div>\\n      <div class=\\\"stat-spacer\\\"></div>\\n      <div class=\\\"header-subtitle-block\\\">\\n        <span class=\\\"header-subtitle\\\">Solon Tax Product Roadmap 2026 · Executive Steering Committee</span>\\n      </div>\\n    </div>\",\n          \"auto_div_slide_body\": \"<div class=\\\"panel-main\\\">"
     }
   ],
@@ -37,29 +20,15 @@
     {
       "exportId": "export-1",
       "exportNumber": 1,
-      "createdAt": "2026-04-16T21:49:24.672Z",
-      "roundId": "daacca6f-8402-4faa-9de5-0cdad3f2f2e3",
-      "outputFile": "output-daacca6f-8402-4faa-9de5-0cdad3f2f2e3.html",
+      "createdAt": "2026-04-16T22:23:05.435Z",
+      "roundId": "8777f15c-3140-46ac-93cf-7237730a0db8",
+      "outputFile": "output-8777f15c-3140-46ac-93cf-7237730a0db8.html",
       "slideCount": 2,
       "totalSize": 44549,
       "path": "exports/export-1/",
       "files": {
         "metadata": "exports/export-1/export.json",
         "projectIndex": "exports/export-1/project.json"
-      }
-    },
-    {
-      "exportId": "export-2",
-      "exportNumber": 2,
-      "createdAt": "2026-04-16T21:59:40.220Z",
-      "roundId": "0c7cccbf-bca0-432d-9cd8-a9e44f19edf1",
-      "outputFile": "output-0c7cccbf-bca0-432d-9cd8-a9e44f19edf1.html",
-      "slideCount": 2,
-      "totalSize": 44549,
-      "path": "exports/export-2/",
-      "files": {
-        "metadata": "exports/export-2/export.json",
-        "projectIndex": "exports/export-2/project.json"
       }
     }
   ],
@@ -3691,9 +3660,9 @@
     "slideCount": 1
   },
   "lastExport": {
-    "exportId": "export-2",
-    "createdAt": "2026-04-16T21:59:40.220Z",
-    "roundId": "0c7cccbf-bca0-432d-9cd8-a9e44f19edf1",
+    "exportId": "export-1",
+    "createdAt": "2026-04-16T22:23:05.435Z",
+    "roundId": "8777f15c-3140-46ac-93cf-7237730a0db8",
     "slideCount": 2
   }
 }

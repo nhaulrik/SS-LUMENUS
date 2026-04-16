@@ -1170,6 +1170,24 @@ select:focus-visible {
   flex-shrink: 0;
 }
 
+.html-flow-name-input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input, var(--bg-secondary));
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.html-flow-name-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 20%, transparent);
+}
+
 /* Validation violations */
 .html-violations {
   background: rgba(232, 84, 74, 0.08);

@@ -77,6 +77,8 @@ export default function App() {
   const [htmlUploadSession, setHtmlUploadSession] = useState(null)
   // { templateId, fileName, slideCount, trees, selections, previewHtml, rawHtml, projectName }
 
+  const [pendingFlowName, setPendingFlowName] = useState(null)
+
   const [htmlProject, setHtmlProject] = useState(null)
   // { projectName, flowId, zones, selections, repeatableSlides, fullSlideGeneration }
 
@@ -194,13 +196,14 @@ export default function App() {
 
   // ── Step routing ───────────────────────────────────────────────
 
-  const handleNewFlow = useCallback(() => {
+  const handleNewFlow = useCallback((flowName) => {
     setCurrentFlowId(null)
     setHtmlUploadSession(null)
     setHtmlProject(null)
     setHtmlApplied(null)
     setHtmlRecipe('')
     setHtmlRecipeState({ recipe: '', globalPrompt: '', jsonInput: '', recipeGenerationId: null })
+    setPendingFlowName(flowName || null)
     setActiveFlow('html')
     navigateTo('html-upload')
   }, [navigateTo])
@@ -257,6 +260,7 @@ export default function App() {
           setToast={setToast}
           currentProjectName={currentProjectName}
           currentFlowId={currentFlowId}
+          pendingFlowName={pendingFlowName}
         />
       </>
     )

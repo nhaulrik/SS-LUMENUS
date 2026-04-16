@@ -462,7 +462,7 @@ router.post('/html-flow/create-project', (req, res) => {
   let templateId;
   try {
     templateId = req.body.templateId;
-    const { selections, projectName, existingProjectName, fullSlideGeneration } = req.body;
+    const { selections, projectName, existingProjectName, fullSlideGeneration, flowName } = req.body;
 
     if (!templateId || !pendingTemplates.has(templateId)) {
       return res.status(404).json({ ok: false, error: 'Template session not found. Please re-upload.' });
@@ -498,9 +498,21 @@ router.post('/html-flow/create-project', (req, res) => {
       name = projectName?.trim() || session.fileName?.replace(/\.html?$/, '') || 'html-project';
     }
 
-    const projectDir = path.join(PROJECTS_DIR, name);
-    const flowId     = 'flow-' + name.toLowerCase().replace(/[^a-z0-9-]/g, '-') + '-' + randomUUID().slice(0, 8);
-    const flowDir    = path.join(projectDir, 'flows', flowId);
+    const projectDir  = path.join(PROJECTS_DIR, name);
+    const baseSlug    = flowName?.trim()
+      ? flowName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60)
+      : name.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+    const flowsDir    = path.join(projectDir, 'flows');
+
+    // Find a unique flowId: try base slug first, then append -2, -3, …
+    let flowId, flowDir;
+    let attempt = 0;
+    do {
+      const suffix = attempt === 0 ? '' : `-${attempt + 1}`;
+      flowId  = 'flow-' + baseSlug + suffix;
+      flowDir = path.join(flowsDir, flowId);
+      attempt++;
+    } while (fs.existsSync(flowDir) && attempt < 100);
 
     fs.mkdirSync(flowDir, { recursive: true });
 
@@ -508,6 +520,7 @@ router.post('/html-flow/create-project', (req, res) => {
 
     const flow = {
       flowId,
+      name:             flowName?.trim() || null,
       projectId:        randomUUID(),
       templateId,
       templateFilename: session.fileName,
