@@ -1,16 +1,20 @@
 /**
  * server/lib/export-manager.js
  *
- * Phase 3: Versioned Exports & Slide Metadata
+ * Phase 3 & 4A: Versioned Exports & Simplified Slide Metadata
  *
  * Manages versioned exports for HTML flow chains.
  * Each export captures a generation round's output as individual slide files
  * with metadata, providing a full history of exported versions.
  *
+ * Phase 4A: Simplified exports (no embedded relationships)
+ * - Relationships are now managed separately in Phase 4B+ (Relationship Builder)
+ * - Exports remain non-destructive and reusable across multiple structures
+ *
  * Directory structure per chain:
  *   server/chains/<chainId>/exports/
  *     export-1/
- *       export.json        — export metadata
+ *       export.json        — export metadata (no relationships)
  *       project.json       — slide index
  *       slide-1.html       — self-contained slide HTML
  *       slide-2.html
@@ -251,59 +255,28 @@ export function createExport(chainId, roundId, outputFile, slideMetadata = []) {
          title: s.title,
          type: s.type,
        })),
-     };
-     fs.writeFileSync(
-       path.join(exportDir, 'project.json'),
-       JSON.stringify(projectJson, null, 2),
-       'utf8'
-     );
+      };
+      fs.writeFileSync(
+        path.join(exportDir, 'project.json'),
+        JSON.stringify(projectJson, null, 2),
+        'utf8'
+      );
 
-     // Write slides-manifest.json (Phase 4: Hierarchical Relationships)
-     const slidesManifest = {
-       exportId,
-       flowId: chainId,
-       exportedAt: createdAt,
-       slideCount: sections.length,
-       slides: slideFiles.map(s => ({
-         index: s.index,
-         file: s.file,
-         slideId: s.slideId,
-         title: s.title,
-         type: s.type,
-         metadata: {},
-         relationships: [],
-       })),
-       relationshipTypes: [
-         {
-           id: 'child_of',
-           label: 'is a model of',
-           inverse: 'has_models',
-           cardinality: 'many_to_one',
-         },
-       ],
-     };
-     fs.writeFileSync(
-       path.join(exportDir, 'slides-manifest.json'),
-       JSON.stringify(slidesManifest, null, 2),
-       'utf8'
-     );
-
-     // Update chain.json with export entry
-     const exportEntry = {
-       exportId,
-       exportNumber,
-       createdAt,
-       roundId,
-       outputFile,
-       slideCount: sections.length,
-       totalSize,
-       path: `exports/${exportId}/`,
-       files: {
-         metadata: `exports/${exportId}/export.json`,
-         projectIndex: `exports/${exportId}/project.json`,
-         manifest: `exports/${exportId}/slides-manifest.json`,
-       },
-     };
+      // Update chain.json with export entry
+      const exportEntry = {
+        exportId,
+        exportNumber,
+        createdAt,
+        roundId,
+        outputFile,
+        slideCount: sections.length,
+        totalSize,
+        path: `exports/${exportId}/`,
+        files: {
+          metadata: `exports/${exportId}/export.json`,
+          projectIndex: `exports/${exportId}/project.json`,
+        },
+      };
 
     if (!chain.exports) {
       chain.exports = [];
