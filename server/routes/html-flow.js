@@ -58,6 +58,21 @@ import {
   getOrphanedSlidesForStructure,
   getTreeVisualization,
 } from '../lib/structure-manager.js';
+import {
+  createPackage,
+  listPackages,
+  getPackage,
+  updatePackage,
+  deletePackage,
+  buildPackageStructure,
+  generateManifest,
+  generateReadme,
+  getPackageFiles,
+  createPackageZip,
+  validatePackage,
+  calculatePackageSize,
+  getPackageStats,
+} from '../lib/package-manager.js';
 
 const router = express.Router();
 
@@ -1531,6 +1546,210 @@ router.get('/html-flow/:chainId/structures/:structureId/orphans', (req, res) => 
     return res.json({ ok: true, orphans });
   } catch (err) {
     console.error('[html-flow] get-orphaned-slides error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ── Package Endpoints ─────────────────────────────────────────────────────────
+
+/**
+ * POST /api/html-flow/:chainId/packages
+ * Create a new package from a structure.
+ */
+router.post('/html-flow/:chainId/packages', (req, res) => {
+  try {
+    const { chainId } = req.params;
+    const { name, description, structureId, options } = req.body;
+
+    const chainDir = resolveChainDir(chainId);
+    if (!chainDir) return res.status(400).json({ ok: false, error: 'Invalid chainId.' });
+
+    if (!name || !structureId) {
+      return res.status(400).json({ ok: false, error: 'name and structureId are required.' });
+    }
+
+    const pkg = createPackage(chainId, name, description, structureId, options);
+    if (!pkg) {
+      return res.status(400).json({ ok: false, error: 'Failed to create package.' });
+    }
+
+    // Build package structure
+    buildPackageStructure(chainId, pkg.packageId);
+
+    // Generate manifest
+    generateManifest(chainId, pkg.packageId);
+
+    // Generate README
+    generateReadme(chainId, pkg.packageId, name, description);
+
+    // Get updated package with stats
+    const updated = getPackage(chainId, pkg.packageId);
+    return res.json({ ok: true, package: updated });
+  } catch (err) {
+    console.error('[html-flow] create-package error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+/**
+ * GET /api/html-flow/:chainId/packages
+ * List all packages for a chain.
+ */
+router.get('/html-flow/:chainId/packages', (req, res) => {
+  try {
+    const { chainId } = req.params;
+
+    const chainDir = resolveChainDir(chainId);
+    if (!chainDir) return res.status(400).json({ ok: false, error: 'Invalid chainId.' });
+
+    const packages = listPackages(chainId);
+    return res.json({ ok: true, packages });
+  } catch (err) {
+    console.error('[html-flow] list-packages error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+/**
+ * GET /api/html-flow/:chainId/packages/:id
+ * Get a specific package by ID.
+ */
+router.get('/html-flow/:chainId/packages/:id', (req, res) => {
+  try {
+    const { chainId, id } = req.params;
+
+    const chainDir = resolveChainDir(chainId);
+    if (!chainDir) return res.status(400).json({ ok: false, error: 'Invalid chainId.' });
+
+    const pkg = getPackage(chainId, id);
+    if (!pkg) {
+      return res.status(404).json({ ok: false, error: 'Package not found.' });
+    }
+
+    return res.json({ ok: true, package: pkg });
+  } catch (err) {
+    console.error('[html-flow] get-package error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+/**
+ * PUT /api/html-flow/:chainId/packages/:id
+ * Update package metadata.
+ */
+router.put('/html-flow/:chainId/packages/:id', (req, res) => {
+  try {
+    const { chainId, id } = req.params;
+    const updates = req.body;
+
+    const chainDir = resolveChainDir(chainId);
+    if (!chainDir) return res.status(400).json({ ok: false, error: 'Invalid chainId.' });
+
+    const pkg = updatePackage(chainId, id, updates);
+    if (!pkg) {
+      return res.status(400).json({ ok: false, error: 'Failed to update package.' });
+    }
+
+    return res.json({ ok: true, package: pkg });
+  } catch (err) {
+    console.error('[html-flow] update-package error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+/**
+ * DELETE /api/html-flow/:chainId/packages/:id
+ * Delete a package.
+ */
+router.delete('/html-flow/:chainId/packages/:id', (req, res) => {
+  try {
+    const { chainId, id } = req.params;
+
+    const chainDir = resolveChainDir(chainId);
+    if (!chainDir) return res.status(400).json({ ok: false, error: 'Invalid chainId.' });
+
+    const success = deletePackage(chainId, id);
+    if (!success) {
+      return res.status(404).json({ ok: false, error: 'Package not found or failed to delete.' });
+    }
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('[html-flow] delete-package error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+/**
+ * GET /api/html-flow/:chainId/packages/:id/download
+ * Download package as ZIP file.
+ */
+router.get('/html-flow/:chainId/packages/:id/download', (req, res) => {
+  try {
+    const { chainId, id } = req.params;
+
+    const chainDir = resolveChainDir(chainId);
+    if (!chainDir) return res.status(400).json({ ok: false, error: 'Invalid chainId.' });
+
+    const pkg = getPackage(chainId, id);
+    if (!pkg) {
+      return res.status(404).json({ ok: false, error: 'Package not found.' });
+    }
+
+    const archive = createPackageZip(chainId, id);
+    if (!archive) {
+      return res.status(400).json({ ok: false, error: 'Failed to create ZIP file.' });
+    }
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${pkg.name}.zip"`);
+
+    archive.pipe(res);
+    archive.finalize();
+  } catch (err) {
+    console.error('[html-flow] download-package error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+/**
+ * GET /api/html-flow/:chainId/packages/:id/validate
+ * Validate package integrity.
+ */
+router.get('/html-flow/:chainId/packages/:id/validate', (req, res) => {
+  try {
+    const { chainId, id } = req.params;
+
+    const chainDir = resolveChainDir(chainId);
+    if (!chainDir) return res.status(400).json({ ok: false, error: 'Invalid chainId.' });
+
+    const validation = validatePackage(chainId, id);
+    return res.json({ ok: true, validation });
+  } catch (err) {
+    console.error('[html-flow] validate-package error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+/**
+ * GET /api/html-flow/:chainId/packages/:id/stats
+ * Get package statistics.
+ */
+router.get('/html-flow/:chainId/packages/:id/stats', (req, res) => {
+  try {
+    const { chainId, id } = req.params;
+
+    const chainDir = resolveChainDir(chainId);
+    if (!chainDir) return res.status(400).json({ ok: false, error: 'Invalid chainId.' });
+
+    const stats = getPackageStats(chainId, id);
+    if (!stats) {
+      return res.status(404).json({ ok: false, error: 'Package not found.' });
+    }
+
+    return res.json({ ok: true, stats });
+  } catch (err) {
+    console.error('[html-flow] get-package-stats error:', err);
     return res.status(500).json({ ok: false, error: err.message });
   }
 });

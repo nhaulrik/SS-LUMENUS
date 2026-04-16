@@ -1,0 +1,423 @@
+/**
+ * client/src/components/CreatePackageDialog.module.css
+ * Styling for CreatePackageDialog component
+ */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 700px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.closeButton:hover {
+  background-color: #f0f0f0;
+  color: #1a1a1a;
+}
+
+/* Progress bar */
+.progressBar {
+  padding: 24px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.progressSteps {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.progressStep {
+  flex: 1;
+  height: 40px;
+  border-radius: 50%;
+  background: #f0f0f0;
+  border: 2px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  color: #666;
+  transition: all 0.3s;
+}
+
+.progressStep.active {
+  background: #007bff;
+  border-color: #007bff;
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.progressStep.completed {
+  background: #28a745;
+  border-color: #28a745;
+  color: white;
+}
+
+.progressLabels {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: #666;
+}
+
+.progressLabels span {
+  flex: 1;
+  text-align: center;
+}
+
+/* Step content */
+.stepContent {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.stepContent h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.stepContent > p {
+  margin: 0 0 16px 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.loading,
+.empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: #666;
+  background: #f9f9f9;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+/* Structure list */
+.structureList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.structureItem {
+  padding: 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.structureItem:hover {
+  border-color: #007bff;
+  background: #f8fbff;
+}
+
+.structureItem.selected {
+  border-color: #007bff;
+  background: #f0f7ff;
+}
+
+.structureItemHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.structureItemName {
+  font-weight: 600;
+  color: #1a1a1a;
+  font-size: 14px;
+}
+
+.checkmark {
+  color: #28a745;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.structureItemDesc {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 6px;
+}
+
+.structureItemMeta {
+  font-size: 12px;
+  color: #999;
+}
+
+/* Form groups */
+.formGroup {
+  margin-bottom: 20px;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  font-size: 14px;
+  color: #1a1a1a;
+}
+
+.formGroup input,
+.formGroup textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d0d0d0;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.formGroup input:focus,
+.formGroup textarea:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.optionsGroup {
+  background: #f9f9f9;
+  padding: 16px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.optionsGroup h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.checkboxGroup {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.checkboxGroup:last-child {
+  margin-bottom: 0;
+}
+
+.checkboxGroup input[type="checkbox"] {
+  width: auto;
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+.checkboxGroup label {
+  margin: 0;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  flex: 1;
+}
+
+/* Review section */
+.reviewSection {
+  background: #f9f9f9;
+  padding: 16px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.reviewItem {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 14px;
+}
+
+.reviewItem:last-child {
+  border-bottom: none;
+}
+
+.reviewItem .label {
+  font-weight: 600;
+  color: #666;
+}
+
+.reviewItem .value {
+  color: #1a1a1a;
+}
+
+/* Info box */
+.infoBox {
+  background: #e7f3ff;
+  border: 1px solid #b3d9ff;
+  border-radius: 4px;
+  padding: 12px;
+  font-size: 13px;
+  color: #004085;
+  margin-bottom: 16px;
+}
+
+.infoBox strong {
+  color: #002752;
+}
+
+/* Error message */
+.error {
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  color: #721c24;
+  padding: 12px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+/* Footer */
+.footer {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding: 16px 24px;
+  border-top: 1px solid #e0e0e0;
+  background: #f9f9f9;
+}
+
+.primaryButton,
+.secondaryButton {
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.primaryButton {
+  background: #007bff;
+  color: white;
+}
+
+.primaryButton:hover:not(:disabled) {
+  background: #0056b3;
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.primaryButton:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.secondaryButton {
+  background: white;
+  color: #333;
+  border: 1px solid #d0d0d0;
+}
+
+.secondaryButton:hover:not(:disabled) {
+  background: #f0f0f0;
+  border-color: #999;
+}
+
+.secondaryButton:disabled {
+  color: #999;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .dialog {
+    width: 95%;
+    max-height: 95vh;
+  }
+
+  .header {
+    padding: 16px;
+  }
+
+  .stepContent {
+    padding: 16px;
+  }
+
+  .progressBar {
+    padding: 16px;
+  }
+
+  .progressLabels {
+    font-size: 11px;
+  }
+
+  .progressStep {
+    height: 36px;
+    font-size: 12px;
+  }
+
+  .reviewItem {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .footer {
+    flex-direction: column;
+  }
+
+  .primaryButton,
+  .secondaryButton {
+    width: 100%;
+  }
+}
