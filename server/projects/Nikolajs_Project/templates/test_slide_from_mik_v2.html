@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOLON Tax – Since the last meeting</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #f4f6f6;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  .slide {
+    width: 1200px;
+    background: #ffffff;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Header */
+  .slide-header {
+    background: #41605E;
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .slide-header h1 {
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  .slide-header .slide-number {
+    color: #a0c4c0;
+    font-size: 14px;
+    font-weight: 400;
+  }
+
+  /* Top accent bar */
+  .accent-bar {
+    height: 4px;
+    background: linear-gradient(90deg, #FF6359 0%, #ff9e99 100%);
+  }
+
+  /* Content area */
+  .content {
+    padding: 20px 28px 16px 28px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 14px;
+  }
+
+  /* Section card */
+  .section {
+    background: #f8fafa;
+    border-radius: 6px;
+    border-left: 4px solid #41605E;
+    padding: 14px 16px;
+  }
+
+  .section.risk {
+    grid-column: 1 / -1;
+    border-left-color: #FF6359;
+  }
+
+  .section.delivery {
+    border-left-color: #718886;
+  }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #41605E;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #dde4e4;
+  }
+
+  .section.risk .section-title {
+    color: #FF6359;
+  }
+
+  .section.delivery .section-title {
+    color: #718886;
+  }
+
+  /* Sub-sections */
+  .sub-section {
+    margin-bottom: 10px;
+  }
+
+  .sub-section:last-child {
+    margin-bottom: 0;
+  }
+
+  .sub-title {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #2d4a48;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .sub-title::before {
+    content: '';
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #41605E;
+    flex-shrink: 0;
+  }
+
+  .section.risk .sub-title::before {
+    background: #FF6359;
+  }
+
+  .section.delivery .sub-title::before {
+    background: #718886;
+  }
+
+  ul {
+    list-style: none;
+    padding-left: 12px;
+  }
+
+  ul li {
+    font-size: 10px;
+    color: #4a5e5c;
+    line-height: 1.55;
+    padding: 1.5px 0;
+    padding-left: 10px;
+    position: relative;
+  }
+
+  ul li::before {
+    content: '–';
+    position: absolute;
+    left: 0;
+    color: #A0AFAF;
+    font-size: 10px;
+  }
+
+  /* Status pills */
+  .pill {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+
+  .pill-green {
+    background: #d4edea;
+    color: #2d7a6e;
+  }
+
+  .pill-amber {
+    background: #fef3cd;
+    color: #8a6200;
+  }
+
+  .pill-red {
+    background: #fde0de;
+    color: #c0392b;
+  }
+
+  /* Risk/Issue tags */
+  .tag {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin-right: 5px;
+    vertical-align: middle;
+    flex-shrink: 0;
+  }
+
+  .tag-issue {
+    background: #fde0de;
+    color: #c0392b;
+    border: 1px solid #f5b7b1;
+  }
+
+  .tag-risk {
+    background: #fef3cd;
+    color: #8a6200;
+    border: 1px solid #f9e79f;
+  }
+
+  .risk-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 5px 0;
+    border-bottom: 1px solid #ede9e9;
+    font-size: 10px;
+    color: #4a5e5c;
+    line-height: 1.5;
+  }
+
+  .risk-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  /* Footer */
+  .slide-footer {
+    background: #41605E;
+    padding: 8px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .footer-logo {
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .footer-page {
+    color: #a0c4c0;
+    font-size: 11px;
+  }
+
+  /* Divider inside delivery */
+  .delivery-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+  }
+
+  .delivery-col-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: #41605E;
+    margin-bottom: 5px;
+    padding-bottom: 4px;
+    border-bottom: 1px dashed #c5d3d2;
+  }
+
+  strong.highlight {
+    color: #41605E;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+
+<div class="slide">
+
+  <div class="accent-bar"></div>
+
+  <div class="slide-header">
+    <h1>1. SOLON Tax – Since the last meeting</h1>
+    <span class="slide-number">SteerCo Update · April 2026</span>
+  </div>
+
+  <div class="content">
+
+    <!-- FINDINGS FROM ANALYSIS TEAMS -->
+    <div class="section">
+      <div class="section-title">Findings from Analysis Teams</div>
+
+      <div class="sub-section">
+        <div class="sub-title">PI28 Scope (Q3) <span class="pill pill-amber">Attention</span></div>
+        <ul>
+          <li>Scope intake is complete — resulting PI28 backlog <strong class="highlight">exceeds current capacity</strong>.</li>
+          <li>Resources from PD lent out to LTN project need to return as agreed to deliver requested GRC product gaps.</li>
+          <li>Neither time nor capacity available to deliver any additional RRF scope.</li>
+        </ul>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-title">Solon Product Allocation <span class="pill pill-red">Risk</span></div>
+        <ul>
+          <li>LTN project wants to extend the PD resources they borrowed.</li>
+          <li>Key well-being and motivation issues have surfaced among lent-out resources.</li>
+          <li>These seniors hold deep Solon knowledge — critical for PD quality and pace.</li>
+        </ul>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-title">Agentic AI Adoption <span class="pill pill-green">Progress</span></div>
+        <ul>
+          <li>Two Agentic AI initiatives in progress — initial results reducing estimates by <strong class="highlight">25–40%</strong>.</li>
+          <li>PoC's and upskilling FTEs continue to refine AI-accelerated delivery.</li>
+          <li>SOLON's JSON-driven UI configuration proves a natural fit — rapid UI development potential.</li>
+        </ul>
+      </div>
+
+      <div class="sub-section">
+        <div class="sub-title">WoW & Methodology <span class="pill pill-green">On Track</span></div>
+        <ul>
+          <li>PD Reboot Initiative launched — PdM and PD leads setting direction for SOLON product.</li>
+          <li>Adoption of new PPD roadmap structure started — rollout through PI27–PI28.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- PRODUCT DELIVERY STATUS -->
+    <div class="section delivery">
+      <div class="section-title">Product Delivery Status</div>
+
+      <div class="sub-section">
+        <div class="sub-title">Overall</div>
+        <ul>
+          <li>Current release (PI27) progressing <strong class="highlight">on schedule</strong> with phased rollout.</li>
+          <li>Next release (PI28) backlog exceeds capacity — prioritization required.</li>
+          <li>Total scope revised to <strong class="highlight">~243,000 hrs</strong>: ~155,000 hrs GRC + ~88,000 hrs 2026 roadmap.</li>
+          <li>PPD roadmap structure rollout planned for current release.</li>
+        </ul>
+      </div>
+
+      <div class="delivery-grid">
+        <div>
+          <div class="delivery-col-title">Current Release (PI27) <span class="pill pill-green">On Track</span></div>
+          <ul>
+            <li>~50% of planned duration completed.</li>
+            <li>2nd sub-delivery completed.</li>
+            <li>Next deliveries: 30 Mar & 29 Apr 2026.</li>
+          </ul>
+        </div>
+        <div>
+          <div class="delivery-col-title">Next Release (PI28) <span class="pill pill-amber">At Risk</span></div>
+          <ul>
+            <li>Significant GRC RRF feature intake expanded scope.</li>
+            <li>Prioritization actively ongoing.</li>
+            <li>Delivery per NC Methodology governance.</li>
+          </ul>
+        </div>
+        <div>
+          <div class="delivery-col-title">Scope Summary</div>
+          <ul>
+            <li><strong class="highlight">243K hrs</strong> total revised scope.</li>
+            <li><strong class="highlight">155K hrs</strong> GRC scope.</li>
+            <li><strong class="highlight">88K hrs</strong> 2026 Roadmap.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAJOR RISKS AND ISSUES -->
+    <div class="section risk">
+      <div class="section-title">Major Risks (R) and Issues (I)</div>
+
+      <div class="risk-item">
+        <span class="tag tag-issue">I</span>
+        <span>Ongoing prioritization changes and late addition of significant work items during final days of PI28 backlog handover are impacting PI28 planning effectiveness.</span>
+      </div>
+      <div class="risk-item">
+        <span class="tag tag-issue">I</span>
+        <span>Ad hoc support to LT &amp; GR projects is impacting team focus and commitment reliability.</span>
+      </div>
+      <div class="risk-item">
+        <span class="tag tag-risk">R</span>
+        <span>Certain PI28 features depend on specialized resources currently allocated to projects — may affect planning and delivery timelines.</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="slide-footer">
+    <span class="footer-logo">Netcompany</span>
+    <span class="footer-page">2</span>
+  </div>
+
+</div>
+
+</body>
+</html>

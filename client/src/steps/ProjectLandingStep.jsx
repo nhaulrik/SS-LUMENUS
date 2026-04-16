@@ -108,7 +108,7 @@ export default function ProjectLandingStep({ onProjectSelected, onCreateProject 
                   <div
                     key={project.id}
                     className={styles.projectCard}
-                    onClick={() => onProjectSelected(project.id)}
+                    onClick={() => onProjectSelected(project.name)}
                   >
                     <div className={styles.projectCardHeader}>
                       <h3 className={styles.projectName}>{project.name}</h3>
