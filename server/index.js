@@ -1,3 +1,4 @@
+import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
@@ -6,6 +7,9 @@ import { PROJECTS_DIR } from './config.js';
 import htmlFlowRoutes from './routes/html-flow.js';
 import projectsRoutes from './routes/projects.js';
 import publishRoutes  from './routes/publish.js';
+import aiProxyRoutes from './routes/ai-proxy.js';
+
+dotenv.config({ path: './server/.env' });
 
 // Ensure runtime directory exists
 if (!fs.existsSync(PROJECTS_DIR)) fs.mkdirSync(PROJECTS_DIR, { recursive: true });
@@ -17,6 +21,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use('/api/projects', projectsRoutes);
 app.use('/api/projects', publishRoutes);
 app.use('/api', htmlFlowRoutes);
+app.use('/api', aiProxyRoutes);
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
 // Serve Published/ web apps statically.
