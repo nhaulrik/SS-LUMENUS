@@ -23,10 +23,10 @@
 
 import express from 'express'
 import path    from 'path'
-import { callAi }           from '../lib/ai-client.js'
-import { readContextFiles } from '../lib/context-reader.js'
-import { validateHtmlJson } from '../lib/html-recipe-builder.js'
-import { RESOLVED_PROJECTS_DIR } from '../config.js'
+import { callAi }                                                   from '../lib/ai-client.js'
+import { readContextFiles, readSingleContextFile, saveSummaryFile, getSummaryStatus } from '../lib/context-reader.js'
+import { validateHtmlJson }                      from '../lib/html-recipe-builder.js'
+import { RESOLVED_PROJECTS_DIR }                 from '../config.js'
 
 const router = express.Router()
 
@@ -45,6 +45,77 @@ function parseJson(text) {
   // Strip markdown code fences if the model wraps its output
   const cleaned = text.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim()
   return JSON.parse(cleaned)
+}
+
+// ── Summary generation ─────────────────────────────────────────────────────────
+
+function buildSummaryPrompt(filename, fileText) {
+  return `You are summarising a context file for use in an AI slide generation system.
+Create a dense, structured summary of the content below. Preserve ALL key data points:
+names, counts, values, dates, descriptions, categories, and any domain-specific information.
+The summary will REPLACE the original file — nothing important must be lost.
+Use plain text with clear headings. Maximum 600 words.
+
+File: ${filename}
+
+${fileText}`
+}
+
+/**
+ * Generate AI summaries for context files and save them as .summary.md files.
+ * Reads each file individually (no combined-text parsing) for reliability.
+ *
+ * @param {string}   projectDir  Absolute path to the project folder.
+ * @param {Function} logFn       SSE log emitter.
+ * @param {string[]|null} [onlyFiles]
+ *   If provided, only summarise these filenames. If null/omitted, summarise all.
+ * @returns {Promise<number>}  Number of summaries written.
+ */
+async function generateSummaries(projectDir, logFn, onlyFiles = null) {
+  const contextDir = path.join(projectDir, 'AI Context')
+
+  // Get the canonical file list (applies lock-file / hidden-file filters)
+  const raw = await readContextFiles(projectDir, { useSummaries: false })
+  if (raw.fileCount === 0) {
+    logFn('No context files to summarise')
+    return 0
+  }
+
+  const targets = onlyFiles
+    ? raw.files.filter(f => onlyFiles.includes(f))
+    : raw.files
+
+  if (targets.length === 0) return 0
+  logFn(`Summarising ${targets.length} file${targets.length !== 1 ? 's' : ''}...`)
+
+  // Summarise files sequentially (avoids concurrent AI calls for large files).
+  // Each file is read individually with a 400k char cap — not the combined 100k
+  // cap used for the orchestrator — so large files like big Excel sheets are
+  // fully read before being summarised.
+  let written = 0
+  for (const filename of targets) {
+    logFn(`  Summarising ${filename}...`)
+    try {
+      const { text: fileText, truncated } = await readSingleContextFile(contextDir, filename)
+
+      if (!fileText) {
+        logFn(`  Skipping ${filename} — no content could be extracted`)
+        continue
+      }
+      if (truncated) {
+        logFn(`  Note: ${filename} exceeded 400k chars and was trimmed`)
+      }
+
+      const result = await callAi(buildSummaryPrompt(filename, fileText), { maxTokens: 1200, temperature: 0.2 })
+      await saveSummaryFile(contextDir, filename, result.response.trim())
+      written++
+      logFn(`  ✓ ${filename}.summary.md saved`)
+    } catch (err) {
+      logFn(`  ✕ Failed to summarise ${filename}: ${err.message}`)
+    }
+  }
+
+  return written
 }
 
 // ── Prompt builders ────────────────────────────────────────────────────────────
@@ -226,22 +297,50 @@ router.post('/agentic/plan', async (req, res) => {
   const error = (msg) => { emit(res, 'error', msg); res.end() }
 
   try {
-    const { projectName, recipe = '', zones = [], repeatableSlides = [] } = req.body
+    const {
+      projectName,
+      recipe           = '',
+      zones            = [],
+      repeatableSlides = [],
+      summaryMode      = 'use',   // 'use' | 'regenerate'
+    } = req.body
 
     if (!projectName) return error('projectName is required')
     if (!recipe.trim()) return error('No recipe provided')
 
-    // Read context
-    phase('analyzing')
-    log('Reading AI Context files...')
     const projectDir = path.join(RESOLVED_PROJECTS_DIR, projectName)
-    const context    = await readContextFiles(projectDir)
+
+    // Read context — generate summaries as needed, then read with summaries
+    phase('analyzing')
+
+    if (summaryMode === 'regenerate') {
+      // Force-recreate summaries for every file
+      log('Regenerating AI summaries for all context files...')
+      await generateSummaries(projectDir, log)
+    } else if (summaryMode === 'use') {
+      // Generate summaries only for files that don't have one yet
+      const status  = await getSummaryStatus(projectDir)
+      const missing = [...status.entries()]
+        .filter(([, hasSummary]) => !hasSummary)
+        .map(([filename]) => filename)
+
+      if (missing.length > 0) {
+        log(`No summary found for ${missing.length} file${missing.length !== 1 ? 's' : ''} — generating now...`)
+        await generateSummaries(projectDir, log, missing)
+      }
+    }
+
+    log('Reading AI Context files (using summaries)...')
+    const context = await readContextFiles(projectDir, { useSummaries: true })
 
     if (context.fileCount === 0) {
       log('No context files found — proceeding without context')
     } else {
       const kb = (context.totalChars / 1000).toFixed(1)
-      log(`Found ${context.fileCount} file${context.fileCount !== 1 ? 's' : ''} (${kb}k chars)`)
+      for (const [filename, source] of context.summaryUsed) {
+        log(`  ${filename} — ${source === 'summary' ? 'summary' : 'original (no summary)'}`)
+      }
+      log(`Total context: ${kb}k chars`)
     }
 
     // Orchestrator

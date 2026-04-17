@@ -59,12 +59,14 @@ function phaseIndex(id) {
 
 export default function AgenticPanel({ projectName, recipe, zones, repeatableSlides, onJsonReady }) {
   // status: idle | planning | confirming | running | done | error
-  const [status,    setStatus]    = useState('idle')
-  const [phase,     setPhase]     = useState('')
-  const [logs,      setLogs]      = useState([])
-  const [agents,    setAgents]    = useState([])
-  const [errorMsg,  setErrorMsg]  = useState('')
-  const [elapsed,   setElapsed]   = useState(0)
+  const [status,      setStatus]      = useState('idle')
+  const [phase,       setPhase]       = useState('')
+  const [logs,        setLogs]        = useState([])
+  const [agents,      setAgents]      = useState([])
+  const [errorMsg,    setErrorMsg]    = useState('')
+  const [elapsed,     setElapsed]     = useState(0)
+  // 'use' = use saved summaries where available | 'regenerate' = generate + save new summaries
+  const [summaryMode, setSummaryMode] = useState('use')
 
   // Plan returned by /agentic/plan, held during confirming state
   const [plan, setPlan] = useState(null)
@@ -113,7 +115,7 @@ export default function AgenticPanel({ projectName, recipe, zones, repeatableSli
       const response = await fetch('/api/opencode/agentic/plan', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ projectName, recipe, zones, repeatableSlides }),
+        body:    JSON.stringify({ projectName, recipe, zones, repeatableSlides, summaryMode }),
       })
       if (!response.ok) throw new Error(`Server error ${response.status}`)
 
@@ -135,7 +137,7 @@ export default function AgenticPanel({ projectName, recipe, zones, repeatableSli
       setStatus('error')
       setErrorMsg(err.message)
     }
-  }, [hasRecipe, isActive, projectName, recipe, zones, repeatableSlides])
+  }, [hasRecipe, isActive, projectName, recipe, zones, repeatableSlides, summaryMode])
 
   // ── Phase 2: user accepted — call /run SSE stream ─────────────────────────
 
@@ -215,6 +217,34 @@ export default function AgenticPanel({ projectName, recipe, zones, repeatableSli
         decides how many instances to create, then runs parallel agents — one per slide instance.
         The result is pasted directly into the JSON Response field above.
       </p>
+
+      {/* ── Context source toggle ────────────────────────────────────────── */}
+      <div className={css.summaryToggle}>
+        <span className={css.summaryToggleLabel}>Context source</span>
+        <div className={css.summaryToggleBtns}>
+          <button
+            className={`${css.summaryBtn} ${summaryMode === 'use' ? css.summaryBtnActive : ''}`}
+            onClick={() => setSummaryMode('use')}
+            disabled={isActive || status === 'confirming'}
+            title="Use saved .summary.md files where available; fall back to originals otherwise"
+          >
+            Use summaries
+          </button>
+          <button
+            className={`${css.summaryBtn} ${summaryMode === 'regenerate' ? css.summaryBtnActive : ''}`}
+            onClick={() => setSummaryMode('regenerate')}
+            disabled={isActive || status === 'confirming'}
+            title="Generate and save a new .summary.md for each context file, then use them"
+          >
+            Regenerate summaries
+          </button>
+        </div>
+        <span className={css.summaryToggleHint}>
+          {summaryMode === 'use'
+            ? 'Uses saved summaries if found, otherwise reads originals'
+            : 'AI will summarise each file and save it — slower, but updates your summaries'}
+        </span>
+      </div>
 
       {/* ── Trigger row ─────────────────────────────────────────────────── */}
       <div className={css.triggerRow}>
