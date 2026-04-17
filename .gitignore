@@ -12,6 +12,7 @@ server/patches/
 server/patch-chains/
 server/chains/
 server/e2e-data/
+server/projects/
 output/
 
 # Debug / scratch files that should never be committed

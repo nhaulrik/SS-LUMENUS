@@ -515,3 +515,218 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ─── Publish Section ──────────────────────────────────────────────────────── */
+
+.publishSection {
+  border-left: 3px solid rgba(167, 139, 250, 0.4);
+  padding-left: 20px;
+}
+
+.publishSubtitle {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #71717a;
+}
+
+.exportPickerList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.exportPickerRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.exportPickerRow:hover {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(167, 139, 250, 0.25);
+}
+
+.exportPickerRow.selected {
+  border-color: rgba(167, 139, 250, 0.5);
+  background: rgba(167, 139, 250, 0.08);
+}
+
+.exportCheckbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #a78bfa;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.exportFlowName {
+  font-weight: 600;
+  color: #f1f5f9;
+  flex: 1;
+}
+
+.exportMeta {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  font-size: 12px;
+  color: #a1a1aa;
+  align-items: center;
+}
+
+.exportSlideBadge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  background: rgba(167, 139, 250, 0.12);
+  color: #a78bfa;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.selectAllLink {
+  background: none;
+  border: none;
+  color: #a78bfa;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  transition: color 0.2s;
+}
+
+.selectAllLink:hover {
+  color: #c4b5fd;
+}
+
+.publishButton {
+  background: linear-gradient(135deg, #a78bfa, #7c3aed);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.publishButton:hover:not(:disabled) {
+  background: linear-gradient(135deg, #7c3aed, #5b21b6);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(124, 58, 237, 0.3);
+}
+
+.publishButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.publishedList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.publishedListHeader {
+  font-size: 14px;
+  font-weight: 600;
+  color: #a1a1aa;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0 0 4px;
+}
+
+.publishCard {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.5));
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 12px;
+  padding: 16px 20px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.publishCard:hover {
+  border-color: rgba(167, 139, 250, 0.3);
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.8));
+}
+
+.publishCardRow {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.publishId {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  color: #a78bfa;
+  background: rgba(167, 139, 250, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.publishDate {
+  font-size: 13px;
+  color: #a1a1aa;
+}
+
+.publishStats {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  font-size: 13px;
+  color: #a1a1aa;
+  margin-top: 8px;
+}
+
+.publishFlows {
+  font-size: 12px;
+  color: #71717a;
+  margin: 4px 0 0;
+}
+
+.openButton {
+  display: inline-block;
+  padding: 5px 14px;
+  border: 1px solid rgba(167, 139, 250, 0.4);
+  border-radius: 6px;
+  color: #a78bfa;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  background: rgba(167, 139, 250, 0.06);
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.openButton:hover {
+  background: rgba(167, 139, 250, 0.15);
+  border-color: rgba(167, 139, 250, 0.6);
+  color: #c4b5fd;
+}
+
+.exportsEmpty {
+  padding: 20px;
+  text-align: center;
+  background-color: rgba(167, 139, 250, 0.04);
+  border: 1px dashed rgba(167, 139, 250, 0.15);
+  border-radius: 8px;
+}
+
+.exportsEmpty p {
+  margin: 0;
+  color: #71717a;
+  font-size: 13px;
+}

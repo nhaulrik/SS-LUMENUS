@@ -37,4 +37,7 @@ You MUST follow these rules on EVERY task, every time. They override any default
 - Be token efficient at all times
 - use md files to get up to speed with the project
 
+## 6. Use of sub-agents
+- the workflow should be to use Sonnet Vertex for planning tasks, and when implementation begins this work is delegated to sub-agents running Haiku Vertex
+
 Follow these rules religiously. If you ever feel like breaking one, ask me first.
