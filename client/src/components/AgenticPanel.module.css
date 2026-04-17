@@ -1,0 +1,326 @@
+/* AgenticPanel.module.css */
+
+.panel {
+  margin-top: 40px;
+  padding-top: 40px;
+  border-top: 1px solid rgba(228, 228, 231, 0.1);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #f1f5f9;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.titleBadge {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.12);
+  border: 1px solid rgba(96, 165, 250, 0.25);
+  border-radius: 4px;
+  padding: 2px 7px;
+  text-transform: uppercase;
+}
+
+.description {
+  font-size: 13px;
+  color: #71717a;
+  margin: 0 0 20px 0;
+  line-height: 1.5;
+}
+
+/* ── Trigger row ─────────────────────────────────────────────────────────── */
+
+.triggerRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.generateBtn {
+  padding: 10px 22px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+  white-space: nowrap;
+}
+
+.generateBtn:hover:not(:disabled) {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.generateBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.generateBtn.running {
+  background: rgba(96, 165, 250, 0.35);
+}
+
+.timer {
+  font-size: 13px;
+  color: #60a5fa;
+  font-variant-numeric: tabular-nums;
+  font-family: monospace;
+}
+
+.noRecipeHint {
+  font-size: 12px;
+  color: #71717a;
+  font-style: italic;
+}
+
+/* ── Phase stepper ───────────────────────────────────────────────────────── */
+
+.stepper {
+  display: flex;
+  align-items: center;
+  margin-top: 24px;
+  gap: 0;
+}
+
+.stepItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.stepItem:last-child {
+  flex: 0 0 auto;
+}
+
+.stepDot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #52525b;
+  flex-shrink: 0;
+  transition: all 0.3s;
+}
+
+.stepDot.active {
+  border-color: #60a5fa;
+  background: rgba(96, 165, 250, 0.15);
+  color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+  animation: pulse 2s infinite;
+}
+
+.stepDot.done {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+}
+
+.stepLabel {
+  font-size: 12px;
+  color: #52525b;
+  white-space: nowrap;
+  transition: color 0.3s;
+}
+
+.stepLabel.active {
+  color: #93c5fd;
+  font-weight: 500;
+}
+
+.stepLabel.done {
+  color: #4ade80;
+}
+
+.stepConnector {
+  flex: 1;
+  height: 1px;
+  background: rgba(148, 163, 184, 0.15);
+  margin: 0 4px;
+  transition: background 0.3s;
+}
+
+.stepConnector.done {
+  background: rgba(34, 197, 94, 0.4);
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15); }
+  50%       { box-shadow: 0 0 0 6px rgba(96, 165, 250, 0.08); }
+}
+
+/* ── Instance chips ──────────────────────────────────────────────────────── */
+
+.chipsSection {
+  margin-top: 20px;
+}
+
+.chipsLabel {
+  font-size: 12px;
+  color: #71717a;
+  margin-bottom: 8px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  transition: all 0.25s;
+}
+
+.chip.pending {
+  background: rgba(39, 39, 42, 0.6);
+  border-color: rgba(148, 163, 184, 0.15);
+  color: #52525b;
+}
+
+.chip.running {
+  background: rgba(96, 165, 250, 0.12);
+  border-color: rgba(96, 165, 250, 0.35);
+  color: #93c5fd;
+}
+
+.chip.done {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #4ade80;
+}
+
+.chip.error {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+.chipSpinner {
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid rgba(96, 165, 250, 0.3);
+  border-top-color: #60a5fa;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Activity log ────────────────────────────────────────────────────────── */
+
+.logSection {
+  margin-top: 20px;
+}
+
+.logLabel {
+  font-size: 12px;
+  color: #71717a;
+  margin-bottom: 6px;
+}
+
+.log {
+  background: rgba(9, 9, 11, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 8px;
+  padding: 10px 14px;
+  max-height: 220px;
+  overflow-y: auto;
+  font-family: 'Menlo', 'Consolas', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #71717a;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.2) transparent;
+}
+
+.logLine {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.logLine.latest {
+  color: #a1a1aa;
+}
+
+/* ── Status banners ──────────────────────────────────────────────────────── */
+
+.successBanner {
+  margin-top: 20px;
+  padding: 12px 16px;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #4ade80;
+}
+
+.errorBanner {
+  margin-top: 20px;
+  padding: 12px 16px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 8px;
+  font-size: 13px;
+  color: #f87171;
+}
+
+.errorBanner strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.resetBtn {
+  margin-top: 10px;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: transparent;
+  color: #f87171;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.resetBtn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
