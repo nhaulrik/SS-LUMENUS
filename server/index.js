@@ -8,7 +8,6 @@ import htmlFlowRoutes from './routes/html-flow.js';
 import projectsRoutes from './routes/projects.js';
 import publishRoutes  from './routes/publish.js';
 import aiProxyRoutes from './routes/ai-proxy.js';
-import opencodeRoutes   from './routes/opencode-poc.js'
 import agenticRoutes   from './routes/opencode-agentic.js';
 
 dotenv.config({ path: './server/.env' });
@@ -24,7 +23,6 @@ app.use('/api/projects', projectsRoutes);
 app.use('/api/projects', publishRoutes);
 app.use('/api', htmlFlowRoutes);
 app.use('/api', aiProxyRoutes);
-app.use('/api/opencode', opencodeRoutes);
 app.use('/api/opencode', agenticRoutes);
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 

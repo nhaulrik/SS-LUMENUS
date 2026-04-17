@@ -6,10 +6,36 @@
  * HTML template (generating a patched output file).
  */
 
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, useEffect } from 'react'
 import AppHeader     from '../components/AppHeader.jsx'
 import Breadcrumbs   from '../components/Breadcrumbs.jsx'
 import AgenticPanel  from '../components/AgenticPanel.jsx'
+
+// ── JSON syntax highlighter ────────────────────────────────────────────────────
+// Tokenises pretty-printed JSON and wraps tokens in typed spans.
+// Input must be already HTML-escaped before calling.
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+function highlightJson(raw) {
+  let pretty
+  try {
+    pretty = JSON.stringify(JSON.parse(raw), null, 2)
+  } catch {
+    return escapeHtml(raw)
+  }
+  return escapeHtml(pretty).replace(
+    /(&quot;(?:\\u[0-9a-fA-F]{4}|\\[^u]|[^\\&])*&quot;(\s*:)?|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+    (match) => {
+      if (match === 'true' || match === 'false') return `<span class="jt-bool">${match}</span>`
+      if (match === 'null')                       return `<span class="jt-null">${match}</span>`
+      if (/^-?\d/.test(match))                    return `<span class="jt-num">${match}</span>`
+      if (match.endsWith(':'))                    return `<span class="jt-key">${match}</span>`
+      return `<span class="jt-str">${match}</span>`
+    }
+  )
+}
 
 export default function HtmlRecipeStep({
   project,          // { projectName, flowId, zones, selections }
@@ -34,12 +60,22 @@ export default function HtmlRecipeStep({
   const [globalPrompt,  setGlobalPrompt]  = useState(recipeState.globalPrompt)
   const [loadingRecipe, setLoadingRecipe] = useState(false)
 
-   // ── JSON response ─────────────────────────────────────────────────────────
-   const [jsonInput,  setJsonInput]  = useState(recipeState.jsonInput)
-   const [validation, setValidation] = useState(null)
-   const [applying,   setApplying]   = useState(false)
+  // ── JSON response ─────────────────────────────────────────────────────────
+  const [jsonInput,  setJsonInput]  = useState(recipeState.jsonInput)
+  const [validation, setValidation] = useState(null)
+  const [applying,   setApplying]   = useState(false)
+  const [viewMode,   setViewMode]   = useState('edit')   // 'edit' | 'preview'
+  const [shouldAutoPreview, setShouldAutoPreview] = useState(false)
 
-   const validateTimerRef = useRef(null)
+  // Auto-switch to preview when JSON becomes valid and auto-preview is requested
+  useEffect(() => {
+    if (validation?.valid && shouldAutoPreview) {
+      setViewMode('preview')
+      setShouldAutoPreview(false)
+    }
+  }, [validation?.valid, shouldAutoPreview])
+
+  const validateTimerRef = useRef(null)
 
    // ── Generate recipe ───────────────────────────────────────────────────────
   const handleGenerateRecipe = useCallback(async () => {
@@ -190,19 +226,61 @@ export default function HtmlRecipeStep({
           <div className="html-recipe-panel">
             <div className="html-recipe-panel-header">
               <h3>JSON Response</h3>
+
+              {/* Edit / Preview toggle — shown only when there's content */}
+              {jsonInput.trim() && (
+                <div className="json-view-tabs">
+                  <button
+                    className={`json-view-tab${viewMode === 'edit' ? ' active' : ''}`}
+                    onClick={() => setViewMode('edit')}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className={`json-view-tab${viewMode === 'preview' ? ' active' : ''}`}
+                    onClick={() => setViewMode('preview')}
+                  >
+                    Preview
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="html-recipe-json-wrapper">
-              <button className="copy-btn" onClick={handleCopyJson} aria-label="Copy JSON to clipboard"><span aria-hidden="true">⧉</span></button>
-              <textarea
-                className={`json-input${validation?.valid === false ? ' has-error' : ''}`}
-                value={jsonInput}
-                onChange={e => handleJsonChange(e.target.value)}
-                placeholder='Paste the AI response JSON here…'
-                spellCheck={false}
-              />
+              <button className="copy-btn" onClick={handleCopyJson} aria-label="Copy JSON to clipboard">
+                <span aria-hidden="true">⧉</span>
+              </button>
+
+              {/* Edit mode — plain textarea */}
+              {viewMode === 'edit' && (
+                <textarea
+                  className={`json-input${validation?.valid === false ? ' has-error' : ''}`}
+                  value={jsonInput}
+                  onChange={e => handleJsonChange(e.target.value)}
+                  placeholder='Paste the AI response JSON here…'
+                  spellCheck={false}
+                />
+              )}
+
+              {/* Preview mode — syntax-highlighted, line-numbered */}
+              {viewMode === 'preview' && (
+                <div className="json-preview-pane">
+                  {(() => {
+                    let pretty
+                    try { pretty = JSON.stringify(JSON.parse(jsonInput), null, 2) } catch { pretty = jsonInput }
+                    const lines = highlightJson(jsonInput).split('\n')
+                    return lines.map((html, i) => (
+                      <div key={i} className="json-preview-line">
+                        <span className="json-preview-ln">{i + 1}</span>
+                        <span dangerouslySetInnerHTML={{ __html: html || ' ' }} />
+                      </div>
+                    ))
+                  })()}
+                </div>
+              )}
             </div>
 
+            {/* Validation feedback */}
             {validation?.valid === false && (
               <div className="validation-status invalid">
                 <strong>
@@ -225,8 +303,8 @@ export default function HtmlRecipeStep({
             )}
             {validation?.valid === true && (
               <div className="validation-status valid">
-                JSON is valid — {validation.foundFields?.length ?? 0} fields found
-                {validation.instanceCount > 0 && `, ${validation.instanceCount} slide instance${validation.instanceCount > 1 ? 's' : ''}`}
+                ✓ {validation.foundFields?.length ?? 0} fields
+                {validation.instanceCount > 0 && ` · ${validation.instanceCount} slide instance${validation.instanceCount > 1 ? 's' : ''}`}
               </div>
             )}
 
@@ -253,6 +331,7 @@ export default function HtmlRecipeStep({
         repeatableSlides={repeatableSlides}
         onJsonReady={(json) => {
           handleJsonChange(json)
+          setShouldAutoPreview(true)
           setToast({ message: 'JSON generated — review and apply when ready', type: 'success' })
         }}
       />

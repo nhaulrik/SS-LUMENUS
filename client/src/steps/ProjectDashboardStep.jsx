@@ -22,17 +22,15 @@ export default function ProjectDashboardStep({
   const [flowNameError,  setFlowNameError]  = useState(false)
   const flowNameInputRef = useRef(null)
 
+  // Tab state
+  const [activeTab, setActiveTab] = useState('flows')
+
   // Publish section state
   const [exports,         setExports]         = useState([])
   const [selectedExports, setSelectedExports] = useState(new Set())
   const [publishes,       setPublishes]       = useState([])
   const [publishLoading,  setPublishLoading]  = useState(false)
   const [exportsLoading,  setExportsLoading]  = useState(false)
-
-  // OpenCode PoC state
-  const [pocLoading,  setPocLoading]  = useState(false)
-  const [pocResults,  setPocResults]  = useState(null)
-  const [pocError,    setPocError]    = useState(null)
 
   useEffect(() => {
     const load = async () => {
@@ -151,28 +149,6 @@ export default function ProjectDashboardStep({
     }
   }
 
-  const handleRunPoc = async () => {
-    setPocLoading(true)
-    setPocError(null)
-    setPocResults(null)
-    try {
-      const res = await fetch(`/api/opencode/poc?projectName=${encodeURIComponent(projectName)}`, {
-        method: 'POST',
-      })
-      const data = await res.json()
-      if (!res.ok || !data.ok) {
-        throw new Error(data.error || 'Failed to run PoC')
-      }
-      setPocResults(data.results)
-      setToast?.({ type: 'success', message: 'OpenCode PoC completed!' })
-    } catch (err) {
-      setPocError(err.message)
-      setToast?.({ type: 'error', message: err.message })
-    } finally {
-      setPocLoading(false)
-    }
-  }
-
   if (loading) {
     return (
       <div className={styles.container}>
@@ -212,8 +188,24 @@ export default function ProjectDashboardStep({
         </div>
       </div>
 
-      {/* Flows */}
+      {/* Tab bar */}
+      <div className={styles.tabs}>
+        <button
+          className={`${styles.tab}${activeTab === 'flows' ? ` ${styles.active}` : ''}`}
+          onClick={() => setActiveTab('flows')}
+        >
+          Flows
+        </button>
+        <button
+          className={`${styles.tab}${activeTab === 'publish' ? ` ${styles.active}` : ''}`}
+          onClick={() => setActiveTab('publish')}
+        >
+          Publish
+        </button>
+      </div>
+
       <div className={styles.content}>
+        {activeTab === 'flows' && (
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
             <h2 className={styles.sectionTitle}>Flows</h2>
@@ -302,8 +294,9 @@ export default function ProjectDashboardStep({
             </div>
           )}
         </section>
+        )}
 
-        {/* Publish */}
+        {activeTab === 'publish' && (
         <section className={`${styles.section} ${styles.publishSection}`}>
           <div className={styles.sectionHeader}>
             <div>
@@ -395,49 +388,8 @@ export default function ProjectDashboardStep({
             )}
           </div>
         </section>
+        )}
 
-        {/* OpenCode PoC Section */}
-        <section className={styles.pocPanel}>
-          <h3>OpenCode PoC</h3>
-          <p className={styles.pocDescription}>
-            Demonstrate parallel AI task execution using OpenCode SDK.
-          </p>
-
-          {pocError && (
-            <div className={styles.pocError}>
-              <p>{pocError}</p>
-            </div>
-          )}
-
-          {pocLoading ? (
-            <div className={styles.pocLoading}>
-              <div className={styles.pocSpinner}></div>
-              <p>Running 3 tasks in parallel...</p>
-            </div>
-          ) : pocResults ? (
-            <div className={styles.pocResults}>
-              {pocResults.map((result, idx) => (
-                <div key={idx} className={styles.pocResultItem}>
-                  <div className={styles.pocResultHeader}>
-                    <span className={styles.pocResultTask}>✓ {result.task}</span>
-                    <span className={styles.pocResultDuration}>
-                      {(result.duration / 1000).toFixed(2)}s
-                    </span>
-                  </div>
-                  <p className={styles.pocResultText}>{result.result}</p>
-                </div>
-              ))}
-            </div>
-          ) : null}
-
-          <button
-            className={styles.pocButton}
-            onClick={handleRunPoc}
-            disabled={pocLoading}
-          >
-            {pocLoading ? 'Running...' : 'Run Parallel AI Tasks'}
-          </button>
-        </section>
       </div>
     </div>
   )
