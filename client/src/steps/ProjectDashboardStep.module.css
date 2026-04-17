@@ -135,6 +135,18 @@
   color: #64748b;
 }
 
+.newFlowInputError {
+  border-color: #f87171;
+  animation: shakeInput 0.35s ease;
+}
+
+@keyframes shakeInput {
+  0%, 100% { transform: translateX(0); }
+  20%       { transform: translateX(-6px); }
+  60%       { transform: translateX(6px); }
+  80%       { transform: translateX(-3px); }
+}
+
 /* Empty State */
 .emptyState {
   padding: 40px;

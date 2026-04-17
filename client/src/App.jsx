@@ -2,7 +2,6 @@ import { useState, useCallback } from 'react'
 import Toast                from './components/Toast.jsx'
 import ProjectLandingStep   from './steps/ProjectLandingStep.jsx'
 import ProjectDashboardStep from './steps/ProjectDashboardStep.jsx'
-import FlowSelectStep       from './steps/FlowSelectStep.jsx'
 import HtmlUploadStep       from './steps/HtmlUploadStep.jsx'
 import HtmlRecipeStep       from './steps/HtmlRecipeStep.jsx'
 import HtmlPreviewStep      from './steps/HtmlPreviewStep.jsx'
@@ -11,7 +10,6 @@ import HtmlMetadataStep     from './steps/HtmlMetadataStep.jsx'
 const ALL_STEPS = [
   'project-landing',
   'project-dashboard',
-  'flow-select',
   'html-upload',
   'html-recipe',
   'html-preview',
@@ -52,30 +50,13 @@ export default function App() {
     navigateTo('project-landing')
   }, [navigateTo])
 
-  // ── Flow selection ─────────────────────────────────────────────
-  const [activeFlow, setActiveFlow] = useState(null)
-
-  const handleSelectFlow = useCallback((flow) => {
-    setActiveFlow(flow)
-    if (flow === 'html') navigateTo('html-upload')
-  }, [navigateTo])
-
-  const handleBackToFlowSelect = useCallback(() => {
-    setActiveFlow(null)
-    setHtmlUploadSession(null)
-    setHtmlProject(null)
-    setHtmlApplied(null)
-    setHtmlRecipe('')
-    navigateTo('flow-select')
-  }, [navigateTo])
-
   const handleBackToHtmlUpload = useCallback(() => {
     navigateTo('html-upload')
   }, [navigateTo])
 
   // ── HTML flow state ────────────────────────────────────────────
   const [htmlUploadSession, setHtmlUploadSession] = useState(null)
-  // { templateId, fileName, slideCount, trees, selections, previewHtml, rawHtml, projectName }
+  // { templateId, fileName, slideCount, trees, selections, previewHtml, rawHtml }
 
   const [pendingFlowName, setPendingFlowName] = useState(null)
 
@@ -145,25 +126,22 @@ export default function App() {
   const canNavigateTo = useCallback((s) => {
     if (s === 'project-landing')   return true
     if (s === 'project-dashboard') return !!currentProjectName
-    if (s === 'flow-select')       return true
-    if (s === 'html-upload')       return activeFlow === 'html' || step === 'html-recipe' || !!currentFlowId
+    if (s === 'html-upload')       return step === 'html-recipe' || !!currentFlowId
     if (s === 'html-recipe')       return !!htmlProject
     if (s === 'html-preview')      return !!(htmlProject && htmlApplied)
     if (s === 'html-metadata')     return !!(htmlProject && htmlApplied)
     return false
-  }, [activeFlow, htmlProject, htmlApplied, step, currentProjectName, currentFlowId])
+  }, [htmlProject, htmlApplied, step, currentProjectName, currentFlowId])
 
   // ── Debug context ──────────────────────────────────────────────
   const debugContext = {
     timestamp:  new Date().toISOString(),
     step,
-    activeFlow,
     uploadSession: htmlUploadSession
       ? {
           templateId:       htmlUploadSession.templateId,
           fileName:         htmlUploadSession.fileName,
           slideCount:       htmlUploadSession.slideCount,
-          projectName:      htmlUploadSession.projectName,
           selectionCount:   htmlUploadSession.selections?.length ?? 0,
           selections:       htmlUploadSession.selections ?? [],
           repeatableSlides: htmlUploadSession.repeatableSlides ?? [],
@@ -204,7 +182,6 @@ export default function App() {
     setHtmlRecipe('')
     setHtmlRecipeState({ recipe: '', globalPrompt: '', jsonInput: '', recipeGenerationId: null })
     setPendingFlowName(flowName || null)
-    setActiveFlow('html')
     navigateTo('html-upload')
   }, [navigateTo])
 
@@ -230,18 +207,6 @@ export default function App() {
           onNewFlow={handleNewFlow}
           onBackToProjects={handleBackToProjects}
           setToast={setToast}
-        />
-      </>
-    )
-  }
-
-  if (step === 'flow-select') {
-    return (
-      <>
-        <Toast toast={toast} onDismiss={() => setToast(null)} />
-        <FlowSelectStep
-          onSelectFlow={handleSelectFlow}
-          debugContext={debugContext}
         />
       </>
     )

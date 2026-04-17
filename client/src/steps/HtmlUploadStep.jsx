@@ -256,7 +256,14 @@ export default function HtmlUploadStep({
      setCreating(true)
      try {
        if (isExistingFlow && currentProjectName && currentFlowId) {
-         // Existing flow — load zones from server and proceed
+         // Persist any UI edits (e.g. Generation prompt) back to the server before proceeding.
+         fetch(`/api/projects/${encodeURIComponent(currentProjectName)}/flows/${encodeURIComponent(currentFlowId)}`, {
+           method: 'PATCH',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({ repeatableSlides }),
+         }).catch(() => {})
+
+         // Load current zones from server (zone assignments live in flow.json)
          const res = await fetch(`/api/projects/${encodeURIComponent(currentProjectName)}/flows/${encodeURIComponent(currentFlowId)}`)
          if (!res.ok) throw new Error('Failed to load flow')
          const data = await res.json()
@@ -266,7 +273,7 @@ export default function HtmlUploadStep({
            flowId:              currentFlowId,
            selections:          meta.selections          || selections,
            zones:               meta.zones               || [],
-           repeatableSlides:    meta.repeatableSlides    || repeatableSlides,
+           repeatableSlides,
            fullSlideGeneration: meta.fullSlideGeneration || fullSlideGeneration,
          })
        } else {

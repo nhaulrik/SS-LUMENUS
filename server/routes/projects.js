@@ -96,7 +96,7 @@ router.get('/:projectName/flows/:flowId', (req, res) => {
 
 router.patch('/:projectName/flows/:flowId', (req, res) => {
   try {
-    const { globalPrompt, status } = req.body;
+    const { globalPrompt, status, repeatableSlides } = req.body;
     const flow = loadFlow(req.params.projectName, req.params.flowId);
     if (!flow) return res.status(404).json({ error: 'Flow not found' });
 
@@ -106,6 +106,10 @@ router.patch('/:projectName/flows/:flowId', (req, res) => {
         return res.status(400).json({ error: 'Invalid status' });
       }
       flow.status = status;
+    }
+    if (Array.isArray(repeatableSlides)) {
+      flow._metadata = flow._metadata || {};
+      flow._metadata.repeatableSlides = repeatableSlides;
     }
     flow.updatedAt = new Date().toISOString();
 

@@ -15,10 +15,11 @@ export default function ProjectDashboardStep({
   onBackToProjects,
   setToast,
 }) {
-  const [project,       setProject]       = useState(null)
-  const [loading,       setLoading]       = useState(true)
-  const [error,         setError]         = useState(null)
-  const [newFlowName,   setNewFlowName]   = useState('')
+  const [project,        setProject]        = useState(null)
+  const [loading,        setLoading]        = useState(true)
+  const [error,          setError]          = useState(null)
+  const [newFlowName,    setNewFlowName]    = useState('')
+  const [flowNameError,  setFlowNameError]  = useState(false)
   const flowNameInputRef = useRef(null)
 
   useEffect(() => {
@@ -97,20 +98,26 @@ export default function ProjectDashboardStep({
               className={styles.newFlowForm}
               onSubmit={e => {
                 e.preventDefault()
-                onNewFlow(newFlowName.trim() || undefined)
+                if (!newFlowName.trim()) {
+                  setFlowNameError(true)
+                  flowNameInputRef.current?.focus()
+                  setTimeout(() => setFlowNameError(false), 600)
+                  return
+                }
+                onNewFlow(newFlowName.trim())
                 setNewFlowName('')
               }}
             >
               <input
                 ref={flowNameInputRef}
-                className={styles.newFlowInput}
+                className={`${styles.newFlowInput}${flowNameError ? ` ${styles.newFlowInputError}` : ''}`}
                 type="text"
                 value={newFlowName}
-                onChange={e => setNewFlowName(e.target.value)}
+                onChange={e => { setNewFlowName(e.target.value); setFlowNameError(false) }}
                 placeholder="Flow name…"
                 maxLength={80}
               />
-              <button className={styles.primaryButton} type="submit" disabled={!newFlowName.trim()}>
+              <button className={styles.primaryButton} type="submit">
                 + New Flow
               </button>
             </form>

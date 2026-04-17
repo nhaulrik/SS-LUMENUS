@@ -26,7 +26,7 @@ export default function HtmlRecipeStep({
   setToast,
   debugContext,
 }) {
-  const { selections = [], zones = [] } = project
+  const { selections = [], zones = [], repeatableSlides = [] } = project
 
   // ── Recipe ────────────────────────────────────────────────────────────────
   const [recipe,        setRecipe]        = useState(recipeState.recipe)
@@ -47,7 +47,7 @@ export default function HtmlRecipeStep({
       const res = await fetch('/api/html-flow/generate-recipe', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ projectName, flowId, globalPrompt }),
+        body:    JSON.stringify({ projectName, flowId, globalPrompt, repeatableSlides }),
       })
       if (!res.ok) throw new Error(`Server error ${res.status}`)
       const data = await res.json()
@@ -60,7 +60,7 @@ export default function HtmlRecipeStep({
     } finally {
       setLoadingRecipe(false)
     }
-  }, [projectName, flowId, globalPrompt, setToast, onRecipeStateChange, onRecipeChange])
+  }, [projectName, flowId, globalPrompt, repeatableSlides, setToast, onRecipeStateChange, onRecipeChange])
 
   // ── Validate JSON (debounced) ─────────────────────────────────────────────
   const validateJson = useCallback(async (value) => {
@@ -203,7 +203,12 @@ export default function HtmlRecipeStep({
 
             {validation?.valid === false && (
               <div className="validation-status invalid">
-                <strong>{validation.error || 'Invalid JSON'}</strong>
+                <strong>
+                  {validation.error ||
+                    (validation.missingFields?.length > 0
+                      ? `Missing ${validation.missingFields.length} required field${validation.missingFields.length !== 1 ? 's' : ''}`
+                      : 'Invalid JSON')}
+                </strong>
                 {validation.missingFields?.length > 0 && (
                   <ul className="html-recipe-missing-fields">
                     {validation.missingFields.slice(0, 8).map(f => (

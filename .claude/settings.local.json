@@ -15,7 +15,16 @@
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); slides = set\\(t['slideIndex'] for t in d.get\\('tags',[]\\)\\); print\\('slide indexes in tags:', sorted\\(slides\\)\\); print\\('tags count:', len\\(d.get\\('tags',[]\\)\\)\\);print\\('pptxFile:', d.get\\('pptxFile',''\\)\\)\")",
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); slides = set\\(t['slideIndex'] for t in d.get\\('tags',[]\\)\\); print\\('slide indexes:', sorted\\(slides\\)\\); print\\('tags count:', len\\(d.get\\('tags',[]\\)\\)\\);print\\('pptxFile:', d.get\\('pptxFile',''\\)\\)\")",
       "Bash(tee /tmp/propagate-results.txt)",
-      "Bash(echo \"EXIT:$?\")"
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(ls -la /c/source/SOLON/client/src/components/*.jsx)",
+      "Bash(find server/lib server/routes -name \"*.js\" -exec grep -l \"export \" {} \\\\;)",
+      "Bash(grep -n \"resolveProjectDir\\\\|resolveFlowDir\" /c/source/SOLON/server/lib/*.js /c/source/SOLON/server/routes/*.js)",
+      "Bash(grep -n \"validateName\" /c/source/SOLON/server/lib/*.js /c/source/SOLON/server/routes/*.js)",
+      "Bash(wc -l /c/source/SOLON/server/lib/*.js /c/source/SOLON/server/routes/*.js)",
+      "Bash(ls -la /c/source/SOLON/server/__tests__/*.js)",
+      "Bash(grep -l \"generation-manager\\\\|structure-manager\\\\|package-manager\\\\|relationship-manager\" /c/source/SOLON/server/__tests__/*.test.js)",
+      "Bash(grep -n \"chainId\\\\|zones.json\\\\|templates/\" /c/source/SOLON/e2e/*.spec.js)",
+      "Bash(ls -la /c/source/SOLON/client/src/components/*.module.css)"
     ]
   }
 }
