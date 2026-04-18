@@ -11,32 +11,6 @@ import AppHeader     from '../components/AppHeader.jsx'
 import Breadcrumbs   from '../components/Breadcrumbs.jsx'
 import AgenticPanel  from '../components/AgenticPanel.jsx'
 
-// ── JSON syntax highlighter ────────────────────────────────────────────────────
-// Tokenises pretty-printed JSON and wraps tokens in typed spans.
-// Input must be already HTML-escaped before calling.
-function escapeHtml(str) {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
-
-function highlightJson(raw) {
-  let pretty
-  try {
-    pretty = JSON.stringify(JSON.parse(raw), null, 2)
-  } catch {
-    return escapeHtml(raw)
-  }
-  return escapeHtml(pretty).replace(
-    /(&quot;(?:\\u[0-9a-fA-F]{4}|\\[^u]|[^\\&])*&quot;(\s*:)?|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
-    (match) => {
-      if (match === 'true' || match === 'false') return `<span class="jt-bool">${match}</span>`
-      if (match === 'null')                       return `<span class="jt-null">${match}</span>`
-      if (/^-?\d/.test(match))                    return `<span class="jt-num">${match}</span>`
-      if (match.endsWith(':'))                    return `<span class="jt-key">${match}</span>`
-      return `<span class="jt-str">${match}</span>`
-    }
-  )
-}
-
 export default function HtmlRecipeStep({
   project,          // { projectName, flowId, zones, selections }
   projectName,
@@ -84,16 +58,16 @@ export default function HtmlRecipeStep({
   const [jsonInput,  setJsonInput]  = useState(recipeState.jsonInput)
   const [validation, setValidation] = useState(null)
   const [applying,   setApplying]   = useState(false)
-  const [viewMode,   setViewMode]   = useState('edit')   // 'edit' | 'preview'
-  const [shouldAutoPreview, setShouldAutoPreview] = useState(false)
 
-  // Auto-switch to preview when JSON becomes valid and auto-preview is requested
+  // Expand/collapse state for collapsible panels
+  const [recipeExpanded, setRecipeExpanded] = useState(false)
+  const [jsonExpanded,   setJsonExpanded]   = useState(false)
+
+  // Reset scroll position on component mount to ensure user starts at top of page
+  // This fixes autoscroll issues when navigating between recipe steps
   useEffect(() => {
-    if (validation?.valid && shouldAutoPreview) {
-      setViewMode('preview')
-      setShouldAutoPreview(false)
-    }
-  }, [validation?.valid, shouldAutoPreview])
+    window.scrollTo(0, 0)
+  }, [])
 
   const validateTimerRef = useRef(null)
 
@@ -201,6 +175,13 @@ export default function HtmlRecipeStep({
           <div className="html-recipe-panel">
             <div className="html-recipe-panel-header">
               <h3>Recipe Prompt</h3>
+              <button
+                className="recipe-expand-btn"
+                onClick={() => setRecipeExpanded(v => !v)}
+                aria-label={recipeExpanded ? 'Collapse recipe prompt' : 'Expand recipe prompt'}
+              >
+                {recipeExpanded ? '↑ Collapse' : '↓ Expand'}
+              </button>
             </div>
 
             <div className="html-recipe-global-prompt">
@@ -229,9 +210,11 @@ export default function HtmlRecipeStep({
             </button>
 
             {recipe ? (
-              <div className="html-recipe-area-wrapper">
-                <button className="copy-btn" onClick={handleCopyRecipe} aria-label="Copy recipe to clipboard"><span aria-hidden="true">⧉</span></button>
-                <div className="html-recipe-area">{recipe}</div>
+              <div className={`recipe-collapsible${recipeExpanded ? ' expanded' : ''}`}>
+                <div className="html-recipe-area-wrapper">
+                  <button className="copy-btn" onClick={handleCopyRecipe} aria-label="Copy recipe to clipboard"><span aria-hidden="true">⧉</span></button>
+                  <div className="html-recipe-area">{recipe}</div>
+                </div>
               </div>
             ) : (
               <div className="html-recipe-empty">
@@ -246,33 +229,20 @@ export default function HtmlRecipeStep({
           <div className="html-recipe-panel">
             <div className="html-recipe-panel-header">
               <h3>JSON Response</h3>
-
-              {/* Edit / Preview toggle — shown only when there's content */}
-              {jsonInput.trim() && (
-                <div className="json-view-tabs">
-                  <button
-                    className={`json-view-tab${viewMode === 'edit' ? ' active' : ''}`}
-                    onClick={() => setViewMode('edit')}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className={`json-view-tab${viewMode === 'preview' ? ' active' : ''}`}
-                    onClick={() => setViewMode('preview')}
-                  >
-                    Preview
-                  </button>
-                </div>
-              )}
+              <button
+                className="recipe-expand-btn"
+                onClick={() => setJsonExpanded(v => !v)}
+                aria-label={jsonExpanded ? 'Collapse JSON response' : 'Expand JSON response'}
+              >
+                {jsonExpanded ? '↑ Collapse' : '↓ Expand'}
+              </button>
             </div>
 
-            <div className="html-recipe-json-wrapper">
-              <button className="copy-btn" onClick={handleCopyJson} aria-label="Copy JSON to clipboard">
-                <span aria-hidden="true">⧉</span>
-              </button>
-
-              {/* Edit mode — plain textarea */}
-              {viewMode === 'edit' && (
+            <div className={`recipe-collapsible${jsonExpanded ? ' expanded' : ''}`}>
+              <div className="html-recipe-json-wrapper">
+                <button className="copy-btn" onClick={handleCopyJson} aria-label="Copy JSON to clipboard">
+                  <span aria-hidden="true">⧉</span>
+                </button>
                 <textarea
                   className={`json-input${validation?.valid === false ? ' has-error' : ''}`}
                   value={jsonInput}
@@ -280,24 +250,7 @@ export default function HtmlRecipeStep({
                   placeholder='Paste the AI response JSON here…'
                   spellCheck={false}
                 />
-              )}
-
-              {/* Preview mode — syntax-highlighted, line-numbered */}
-              {viewMode === 'preview' && (
-                <div className="json-preview-pane">
-                  {(() => {
-                    let pretty
-                    try { pretty = JSON.stringify(JSON.parse(jsonInput), null, 2) } catch { pretty = jsonInput }
-                    const lines = highlightJson(jsonInput).split('\n')
-                    return lines.map((html, i) => (
-                      <div key={i} className="json-preview-line">
-                        <span className="json-preview-ln">{i + 1}</span>
-                        <span dangerouslySetInnerHTML={{ __html: html || ' ' }} />
-                      </div>
-                    ))
-                  })()}
-                </div>
-              )}
+              </div>
             </div>
 
             {/* Validation feedback */}
@@ -371,7 +324,6 @@ export default function HtmlRecipeStep({
         setPlan={setAgenticPlan}
         onJsonReady={(json) => {
           handleJsonChange(json)
-          setShouldAutoPreview(true)
           setToast({ message: 'JSON generated — review and apply when ready', type: 'success' })
         }}
       />

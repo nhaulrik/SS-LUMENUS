@@ -16,8 +16,6 @@ import { useState, useRef, useCallback, useMemo, useEffect } from 'react'
 import AppHeader    from '../components/AppHeader.jsx'
 import Breadcrumbs  from '../components/Breadcrumbs.jsx'
 import HtmlTreePanel from '../components/HtmlTreePanel.jsx'
-import { lazy, Suspense } from 'react'
-const HtmlEditorPanel = lazy(() => import('../components/HtmlEditorPanel.jsx'))
 
 export default function HtmlUploadStep({
   step, canNavigateTo, navigateTo,
@@ -65,13 +63,10 @@ export default function HtmlUploadStep({
 
   // ── Stage C: proceed ─────────────────────────────────────────────────────
   const [creating,     setCreating]     = useState(false)
-  const [replaceArmed, setReplaceArmed] = useState(false)
   const [isExistingFlow, setIsExistingFlow] = useState(false)
   const [loadingFlow,    setLoadingFlow]    = useState(false)
 
-  // ── Editor (opt-in) ───────────────────────────────────────────────────────
-  const [rawHtml,    setRawHtml]    = useState(initialSession?.rawHtml ?? '')
-  const [editorOpen, setEditorOpen] = useState(false)
+   const [rawHtml,    setRawHtml]    = useState(initialSession?.rawHtml ?? '')
 
   // ── Sync session state up to App.jsx ─────────────────────────────────────
   const syncSession = useCallback((patch) => {
@@ -113,19 +108,20 @@ export default function HtmlUploadStep({
       setSlideCount(data.slideCount)
       setTrees(data.trees ?? [])
       setSelections(data.selections ?? [])
-      setPreviewHtml(data.previewHtml)
-      setRawHtml(html)
-      syncSession({
-        templateId:          data.templateId,
-        fileName:            file.name,
-        slideCount:          data.slideCount,
-        trees:               data.trees ?? [],
-        selections:          data.selections ?? [],
-        repeatableSlides:    [],
-        fullSlideGeneration: [],
-        previewHtml:         data.previewHtml,
-        rawHtml:             html,
-      })
+       setPreviewHtml(data.previewHtml)
+       setFullSlideGeneration(Array.from({ length: data.slideCount }, (_, i) => i))
+       setRawHtml(html)
+       syncSession({
+         templateId:          data.templateId,
+         fileName:            file.name,
+         slideCount:          data.slideCount,
+         trees:               data.trees ?? [],
+         selections:          data.selections ?? [],
+         repeatableSlides:    [],
+         fullSlideGeneration: Array.from({ length: data.slideCount }, (_, i) => i),
+         previewHtml:         data.previewHtml,
+         rawHtml:             html,
+       })
     } catch (err) {
       setToast({ message: 'Upload error: ' + err.message, type: 'error' })
     } finally {
@@ -318,20 +314,7 @@ export default function HtmlUploadStep({
     }).catch(() => {})
   }, [violations])
 
-  // ── Editor apply ──────────────────────────────────────────────────────────
-  // Called by HtmlEditorPanel with (newHtml, newSelections).
-  // newSelections comes from re-parsing the edited HTML on the server.
-  const handleEditorApply = useCallback((newHtml, newSelections) => {
-    setRawHtml(newHtml)
-    setPreviewHtml(newHtml)
-    setEditorOpen(false)
-    if (Array.isArray(newSelections) && newSelections.length > 0) {
-      setSelections(newSelections)
-      syncSession({ rawHtml: newHtml, previewHtml: newHtml, selections: newSelections })
-    } else {
-      syncSession({ rawHtml: newHtml, previewHtml: newHtml })
-    }
-  }, [syncSession])
+
 
   // ── Preview HTML with highlight injection ─────────────────────────────────
   // Inject a <style> that highlights the hovered tree node by data-solon-id,
@@ -374,19 +357,6 @@ ${highlightCss}
   const canProceed = isExistingFlow
     ? hasSelectionsOrFullSlide
     : (templateId && hasSelectionsOrFullSlide)
-
-  // ── Editor overlay ────────────────────────────────────────────────────────
-  if (editorOpen && rawHtml) {
-    return (
-      <Suspense fallback={<div className="html-editor-overlay" style={{display:'flex',alignItems:'center',justifyContent:'center',color:'var(--text-muted)'}}>Loading editor…</div>}>
-        <HtmlEditorPanel
-          uploadedHtml={rawHtml}
-          onApply={handleEditorApply}
-          onClose={() => setEditorOpen(false)}
-        />
-      </Suspense>
-    )
-  }
 
   return (
     <div className="app">
@@ -446,33 +416,7 @@ ${highlightCss}
                       </p>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
-                    <button
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => setEditorOpen(true)}
-                      title="Open HTML editor"
-                    >
-                      ✎ Edit HTML
-                    </button>
-                    <button
-                      className="btn btn-link"
-                      aria-label={replaceArmed ? 'Click again to confirm replacing the file' : 'Replace file'}
-                      onClick={() => {
-                        if (selections.length === 0 || replaceArmed) {
-                          setTemplateId(null); setTrees([]); setSelections([]); setRepeatableSlides([])
-                          setPreviewHtml(''); setRawHtml(''); setFileName(''); setViolations([])
-                          syncSession({ templateId: null, trees: [], selections: [], repeatableSlides: [], previewHtml: '', rawHtml: '', fileName: '' })
-                          setReplaceArmed(false)
-                        } else {
-                          setReplaceArmed(true)
-                          setTimeout(() => setReplaceArmed(false), 3000)
-                        }
-                      }}
-                      onBlur={() => setReplaceArmed(false)}
-                    >
-                      {replaceArmed ? 'Confirm replace' : 'Replace file'}
-                    </button>
-                  </div>
+
                 </div>
 
                 {/* Non-fatal violations (e.g. NO_ZONES warning) */}
