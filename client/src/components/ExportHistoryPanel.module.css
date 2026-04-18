@@ -114,7 +114,7 @@
 /* ── Action buttons ──────────────────────────────────────────────────────────── */
 
 .actionBtn {
-  padding: 4px 10px;
+  padding: var(--space-xs) 10px;
   border-radius: var(--radius-xs);
   font-size: 0.75rem;
   font-weight: 600;
@@ -151,7 +151,7 @@
   color: var(--text-muted);
   border-color: transparent;
   font-size: 1rem;
-  padding: 2px 8px;
+  padding: var(--space-xs) 8px;
 }
 
 .deleteBtn:hover {
@@ -166,7 +166,7 @@
   padding: var(--space-xs) var(--space-sm) var(--space-sm) calc(var(--space-sm) + 12px + var(--space-sm));
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-xs);
   background: var(--bg-primary);
   border-top: 1px solid var(--border-subtle);
 }
@@ -223,7 +223,7 @@
   font-size: 0.7rem;
   color: var(--accent-secondary);
   background: var(--accent-muted);
-  padding: 1px 6px;
+  padding: var(--space-xs) 6px;
   border-radius: var(--radius-xs);
   flex-shrink: 0;
 }

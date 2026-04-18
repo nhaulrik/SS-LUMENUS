@@ -2,45 +2,45 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
-  color: #e4e4e7;
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+  color: var(--text-primary);
   overflow-y: auto;
 }
 
 .header {
-  padding: 40px;
+  padding: var(--space-xl);
   border-bottom: 1px solid rgba(228, 228, 231, 0.1);
-  background: linear-gradient(135deg, rgba(10, 14, 39, 0.8), rgba(26, 31, 58, 0.8));
+  background: linear-gradient(135deg, rgba(6, 18, 16, 0.8), rgba(10, 31, 27, 0.8));
 }
 
 .headerTop {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-md);
   margin-bottom: 12px;
 }
 
 .backButton {
   background: none;
   border: none;
-  color: #60a5fa;
+  color: var(--accent-primary);
   font-size: 16px;
   cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 6px;
+  padding: var(--space-sm) 12px;
+  border-radius: var(--radius-xs);
   transition: all 0.2s;
   font-weight: 600;
 }
 
 .backButton:hover {
-  background-color: rgba(96, 165, 250, 0.1);
+  background-color: rgba(76, 175, 128, 0.1);
 }
 
 .projectTitle {
   font-size: 36px;
   font-weight: 700;
   margin: 0;
-  background: linear-gradient(135deg, #60a5fa, #a78bfa);
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -49,14 +49,14 @@
 .projectStatus {
   margin: 0;
   font-size: 14px;
-  color: #a1a1aa;
+  color: var(--text-secondary);
 }
 
 .statusBadge {
   display: inline-block;
-  padding: 4px 12px;
+  padding: var(--space-xs) 12px;
   background-color: rgba(34, 197, 94, 0.1);
-  color: #86efac;
+  color: var(--success);
   border-radius: 20px;
   font-weight: 500;
   text-transform: capitalize;
@@ -64,17 +64,17 @@
 
 .content {
   flex: 1;
-  padding: 40px;
+  padding: var(--space-xl);
   display: flex;
   flex-direction: column;
-  gap: 40px;
+  gap: var(--space-xl);
 }
 
 /* Sections */
 .section {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--space-md);
 }
 
 .sectionHeader {
@@ -87,14 +87,14 @@
   font-size: 24px;
   font-weight: 600;
   margin: 0;
-  color: #f1f5f9;
+  color: var(--text-primary);
 }
 
 .primaryButton {
-  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  background: var(--accent-primary);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 10px 20px;
   font-size: 14px;
   font-weight: 600;
@@ -104,23 +104,23 @@
 }
 
 .primaryButton:hover {
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  background: var(--accent-primary);
   transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
+  box-shadow: var(--shadow-glow);
 }
 
 .newFlowForm {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-sm);
 }
 
 .newFlowInput {
-  padding: 8px 12px;
+  padding: var(--space-sm) 12px;
   border: 1px solid rgba(148, 163, 184, 0.3);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: rgba(15, 23, 42, 0.6);
-  color: #f1f5f9;
+  color: var(--text-primary);
   font-size: 14px;
   width: 200px;
   transition: border-color 0.2s;
@@ -128,11 +128,11 @@
 
 .newFlowInput:focus {
   outline: none;
-  border-color: #60a5fa;
+  border-color: var(--accent-primary);
 }
 
 .newFlowInput::placeholder {
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .newFlowInputError {
@@ -149,35 +149,35 @@
 
 /* Empty State */
 .emptyState {
-  padding: 40px;
+  padding: var(--space-xl);
   text-align: center;
-  background-color: rgba(96, 165, 250, 0.05);
-  border: 1px dashed rgba(96, 165, 250, 0.2);
-  border-radius: 8px;
+  background-color: rgba(76, 175, 128, 0.05);
+  border: 1px dashed rgba(76, 175, 128, 0.2);
+  border-radius: var(--radius-sm);
 }
 
 .emptyState p {
   margin: 0;
-  color: #a1a1aa;
+  color: var(--text-secondary);
 }
 
 /* Templates List */
 .templatesList {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-md);
 }
 
 .templateCard {
   background: linear-gradient(135deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.5));
   border: 1px solid rgba(148, 163, 184, 0.1);
-  border-radius: 12px;
-  padding: 24px;
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .templateCard:hover {
-  border-color: rgba(96, 165, 250, 0.3);
+  border-color: rgba(76, 175, 128, 0.3);
   background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.8));
 }
 
@@ -192,30 +192,30 @@
   font-size: 18px;
   font-weight: 600;
   margin: 0;
-  color: #f1f5f9;
+  color: var(--text-primary);
   flex: 1;
   word-break: break-word;
 }
 
 .templateSize {
   font-size: 12px;
-  color: #71717a;
+  color: var(--text-muted);
   white-space: nowrap;
   margin-left: 12px;
 }
 
 .templateDescription {
-  margin: 8px 0;
+  margin: var(--space-sm) 0;
   font-size: 14px;
-  color: #a1a1aa;
+  color: var(--text-secondary);
 }
 
 .templateMeta {
   display: flex;
-  gap: 16px;
+  gap: var(--space-md);
   margin: 12px 0;
   font-size: 12px;
-  color: #71717a;
+  color: var(--text-muted);
 }
 
 .metaItem {
@@ -226,29 +226,29 @@
   display: block;
   font-size: 11px;
   text-transform: uppercase;
-  color: #52525b;
+  color: var(--text-muted);
   margin-bottom: 2px;
 }
 
 .metaValue {
   display: block;
   font-size: 14px;
-  color: #60a5fa;
+  color: var(--accent-primary);
   font-weight: 500;
 }
 
 .templateActions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-sm);
   margin-top: 12px;
 }
 
 .actionButton {
-  background-color: rgba(96, 165, 250, 0.1);
-  color: #60a5fa;
-  border: 1px solid rgba(96, 165, 250, 0.2);
-  border-radius: 6px;
-  padding: 8px 16px;
+  background-color: rgba(76, 175, 128, 0.1);
+  color: var(--accent-primary);
+  border: 1px solid rgba(76, 175, 128, 0.2);
+  border-radius: var(--radius-xs);
+  padding: var(--space-sm) 16px;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -256,22 +256,22 @@
 }
 
 .actionButton:hover {
-  background-color: rgba(96, 165, 250, 0.2);
-  border-color: rgba(96, 165, 250, 0.4);
+  background-color: rgba(76, 175, 128, 0.2);
+  border-color: rgba(76, 175, 128, 0.4);
 }
 
 /* Flows List */
 .flowsList {
-  margin-top: 16px;
-  padding-top: 16px;
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
   border-top: 1px solid rgba(148, 163, 184, 0.1);
 }
 
 .flowsListHeader {
   font-size: 12px;
   text-transform: uppercase;
-  color: #71717a;
-  margin-bottom: 8px;
+  color: var(--text-muted);
+  margin-bottom: var(--space-sm);
   font-weight: 500;
 }
 
@@ -280,12 +280,12 @@
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  padding: 8px 12px;
-  margin: 4px 0;
-  background-color: rgba(96, 165, 250, 0.05);
-  border: 1px solid rgba(96, 165, 250, 0.1);
-  border-radius: 6px;
-  color: #60a5fa;
+  padding: var(--space-sm) 12px;
+  margin: var(--space-xs) 0;
+  background-color: rgba(76, 175, 128, 0.05);
+  border: 1px solid rgba(76, 175, 128, 0.1);
+  border-radius: var(--radius-xs);
+  color: var(--accent-primary);
   font-size: 13px;
   cursor: pointer;
   transition: all 0.2s;
@@ -293,8 +293,8 @@
 }
 
 .flowLink:hover {
-  background-color: rgba(96, 165, 250, 0.15);
-  border-color: rgba(96, 165, 250, 0.3);
+  background-color: rgba(76, 175, 128, 0.15);
+  border-color: rgba(76, 175, 128, 0.3);
 }
 
 .flowName {
@@ -314,21 +314,21 @@
 .flowsGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
+  gap: var(--space-md);
 }
 
 .flowCard {
   background: linear-gradient(135deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.5));
   border: 1px solid rgba(148, 163, 184, 0.1);
-  border-radius: 12px;
-  padding: 20px;
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
 }
 
 .flowCard:hover {
-  border-color: rgba(96, 165, 250, 0.3);
+  border-color: rgba(76, 175, 128, 0.3);
   background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.8));
   transform: translateY(-4px);
 }
@@ -344,37 +344,37 @@
   font-size: 16px;
   font-weight: 600;
   margin: 0;
-  color: #f1f5f9;
+  color: var(--text-primary);
   flex: 1;
 }
 
 .flowStatus {
   display: inline-block;
-  padding: 4px 12px;
+  padding: var(--space-xs) 12px;
   background-color: rgba(34, 197, 94, 0.1);
-  color: #86efac;
+  color: var(--success);
   border-radius: 20px;
   font-size: 11px;
   font-weight: 500;
   text-transform: capitalize;
   white-space: nowrap;
-  margin-left: 8px;
+  margin-left: var(--space-sm);
 }
 
 .flowMeta {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
 }
 
 .flowOpenButton {
-  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  background: var(--accent-primary);
   color: white;
   border: none;
-  border-radius: 6px;
-  padding: 8px 16px;
+  border-radius: var(--radius-xs);
+  padding: var(--space-sm) 16px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -383,7 +383,7 @@
 }
 
 .flowOpenButton:hover {
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  background: var(--accent-primary);
   transform: translateY(-1px);
 }
 
@@ -393,15 +393,15 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: var(--space-md);
   min-height: 400px;
 }
 
 .spinner {
   width: 48px;
   height: 48px;
-  border: 3px solid rgba(96, 165, 250, 0.2);
-  border-top-color: #60a5fa;
+  border: 3px solid rgba(76, 175, 128, 0.2);
+  border-top-color: var(--accent-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -413,7 +413,7 @@
 }
 
 .loadingSpinner p {
-  color: #a1a1aa;
+  color: var(--text-secondary);
   font-size: 16px;
 }
 
@@ -423,21 +423,21 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 24px;
+  gap: var(--space-lg);
   min-height: 400px;
-  padding: 40px;
+  padding: var(--space-xl);
   text-align: center;
 }
 
 .errorContainer h2 {
   font-size: 24px;
-  color: #f1f5f9;
+  color: var(--text-primary);
   margin: 0;
 }
 
 .errorContainer p {
   font-size: 16px;
-  color: #a1a1aa;
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -446,8 +446,8 @@
   display: flex;
   gap: 0;
   border-bottom: 1px solid rgba(228, 228, 231, 0.1);
-  background: rgba(10, 14, 39, 0.5);
-  padding: 0 40px;
+  background: rgba(6, 18, 16, 0.5);
+  padding: 0 var(--space-xl);
   overflow-x: auto;
 }
 
@@ -455,10 +455,10 @@
   flex-shrink: 0;
   background: none;
   border: none;
-  color: #a1a1aa;
+  color: var(--text-secondary);
   font-size: 14px;
   font-weight: 500;
-  padding: 16px 24px;
+  padding: var(--space-md) var(--space-lg);
   cursor: pointer;
   transition: all 0.2s;
   border-bottom: 2px solid transparent;
@@ -467,19 +467,19 @@
 }
 
 .tab:hover {
-  color: #e4e4e7;
-  background: rgba(96, 165, 250, 0.05);
+  color: var(--text-primary);
+  background: rgba(76, 175, 128, 0.05);
 }
 
 .tab.active {
-  color: #60a5fa;
-  border-bottom-color: #60a5fa;
+  color: var(--accent-primary);
+  border-bottom-color: var(--accent-primary);
 }
 
 /* Responsive */
 @media (max-width: 768px) {
   .header {
-    padding: 24px;
+    padding: var(--space-lg);
   }
 
   .projectTitle {
@@ -487,8 +487,8 @@
   }
 
   .content {
-    padding: 24px;
-    gap: 24px;
+    padding: var(--space-lg);
+    gap: var(--space-lg);
   }
 
   .sectionHeader {
@@ -508,7 +508,7 @@
 
   .templateSize {
     margin-left: 0;
-    margin-top: 4px;
+    margin-top: var(--space-xs);
   }
 
   .flowsGrid {
@@ -519,20 +519,20 @@
 /* ─── Publish Section ──────────────────────────────────────────────────────── */
 
 .publishSection {
-  border-left: 3px solid rgba(167, 139, 250, 0.4);
+  border-left: 3px solid rgba(115, 170, 135, 0.4);
   padding-left: 20px;
 }
 
 .publishSubtitle {
   margin: 4px 0 0;
   font-size: 13px;
-  color: #71717a;
+  color: var(--text-muted);
 }
 
 .exportPickerList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-sm);
 }
 
 .exportPickerRow {
@@ -541,7 +541,7 @@
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: rgba(30, 41, 59, 0.5);
   border: 1px solid rgba(148, 163, 184, 0.1);
   cursor: pointer;
@@ -550,34 +550,34 @@
 
 .exportPickerRow:hover {
   background: rgba(30, 41, 59, 0.8);
-  border-color: rgba(167, 139, 250, 0.25);
+  border-color: rgba(115, 170, 135, 0.25);
 }
 
 .exportPickerRow.selected {
-  border-color: rgba(167, 139, 250, 0.5);
-  background: rgba(167, 139, 250, 0.08);
+  border-color: rgba(115, 170, 135, 0.5);
+  background: rgba(115, 170, 135, 0.08);
 }
 
 .exportCheckbox {
   width: 16px;
   height: 16px;
-  accent-color: #a78bfa;
+  accent-color: var(--accent-secondary);
   cursor: pointer;
   flex-shrink: 0;
 }
 
 .exportFlowName {
   font-weight: 600;
-  color: #f1f5f9;
+  color: var(--text-primary);
   flex: 1;
 }
 
 .exportMeta {
   display: flex;
   flex-direction: row;
-  gap: 8px;
+  gap: var(--space-sm);
   font-size: 12px;
-  color: #a1a1aa;
+  color: var(--text-secondary);
   align-items: center;
 }
 
@@ -585,8 +585,8 @@
   display: inline-block;
   padding: 2px 8px;
   border-radius: 20px;
-  background: rgba(167, 139, 250, 0.12);
-  color: #a78bfa;
+  background: rgba(115, 170, 135, 0.12);
+  color: var(--accent-secondary);
   font-size: 11px;
   font-weight: 500;
 }
@@ -594,7 +594,7 @@
 .selectAllLink {
   background: none;
   border: none;
-  color: #a78bfa;
+  color: var(--accent-secondary);
   font-size: 12px;
   cursor: pointer;
   padding: 0;
@@ -604,14 +604,14 @@
 }
 
 .selectAllLink:hover {
-  color: #c4b5fd;
+  color: var(--accent-secondary);
 }
 
 .publishButton {
-  background: linear-gradient(135deg, #a78bfa, #7c3aed);
+  background: var(--accent-secondary);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 10px 20px;
   font-size: 14px;
   font-weight: 600;
@@ -621,9 +621,9 @@
 }
 
 .publishButton:hover:not(:disabled) {
-  background: linear-gradient(135deg, #7c3aed, #5b21b6);
+  background: var(--accent-secondary);
   transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(124, 58, 237, 0.3);
+  box-shadow: 0 10px 15px -3px rgba(115, 170, 135, 0.3);
 }
 
 .publishButton:disabled {
@@ -636,13 +636,13 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-top: 20px;
+  margin-top: var(--space-md);
 }
 
 .publishedListHeader {
   font-size: 14px;
   font-weight: 600;
-  color: #a1a1aa;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 1px;
   margin: 0 0 4px;
@@ -651,13 +651,13 @@
 .publishCard {
   background: linear-gradient(135deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.5));
   border: 1px solid rgba(148, 163, 184, 0.1);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 16px 20px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .publishCard:hover {
-  border-color: rgba(167, 139, 250, 0.3);
+  border-color: rgba(115, 170, 135, 0.3);
   background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.8));
 }
 
@@ -671,63 +671,63 @@
 .publishId {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-size: 12px;
-  color: #a78bfa;
-  background: rgba(167, 139, 250, 0.1);
+  color: var(--accent-secondary);
+  background: rgba(115, 170, 135, 0.1);
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 
 .publishDate {
   font-size: 13px;
-  color: #a1a1aa;
+  color: var(--text-secondary);
 }
 
 .publishStats {
   display: flex;
   flex-direction: row;
-  gap: 16px;
+  gap: var(--space-md);
   font-size: 13px;
-  color: #a1a1aa;
-  margin-top: 8px;
+  color: var(--text-secondary);
+  margin-top: var(--space-sm);
 }
 
 .publishFlows {
   font-size: 12px;
-  color: #71717a;
+  color: var(--text-muted);
   margin: 4px 0 0;
 }
 
 .openButton {
   display: inline-block;
   padding: 5px 14px;
-  border: 1px solid rgba(167, 139, 250, 0.4);
-  border-radius: 6px;
-  color: #a78bfa;
+  border: 1px solid rgba(115, 170, 135, 0.4);
+  border-radius: var(--radius-xs);
+  color: var(--accent-secondary);
   font-size: 13px;
   font-weight: 500;
   text-decoration: none;
-  background: rgba(167, 139, 250, 0.06);
+  background: rgba(115, 170, 135, 0.06);
   transition: all 0.2s;
   cursor: pointer;
 }
 
 .openButton:hover {
-  background: rgba(167, 139, 250, 0.15);
-  border-color: rgba(167, 139, 250, 0.6);
-  color: #c4b5fd;
+  background: rgba(115, 170, 135, 0.15);
+  border-color: rgba(115, 170, 135, 0.6);
+  color: var(--accent-secondary);
 }
 
 .exportsEmpty {
-  padding: 20px;
+  padding: var(--space-md);
   text-align: center;
-  background-color: rgba(167, 139, 250, 0.04);
-  border: 1px dashed rgba(167, 139, 250, 0.15);
-  border-radius: 8px;
+  background-color: rgba(115, 170, 135, 0.04);
+  border: 1px dashed rgba(115, 170, 135, 0.15);
+  border-radius: var(--radius-sm);
 }
 
 .exportsEmpty p {
   margin: 0;
-  color: #71717a;
+  color: var(--text-muted);
   font-size: 13px;
 }
 

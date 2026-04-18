@@ -2,22 +2,22 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
-  color: #e4e4e7;
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+  color: var(--text-primary);
   overflow-y: auto;
 }
 
 .header {
-  padding: 60px 40px 40px;
+  padding: var(--space-2xl) var(--space-xl) var(--space-xl);
   text-align: center;
-  border-bottom: 1px solid rgba(228, 228, 231, 0.1);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .title {
   font-size: 48px;
   font-weight: 700;
-  margin: 0 0 12px 0;
-  background: linear-gradient(135deg, #60a5fa, #a78bfa);
+  margin: 0 0 var(--space-sm) 0;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -25,8 +25,8 @@
 
 .subtitle {
   font-size: 16px;
-  color: #a1a1aa;
-  margin: 0 0 20px;
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-md);
 }
 
 .newProjectForm {
@@ -38,23 +38,23 @@
 }
 
 .newProjectInput {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 8px;
-  padding: 10px 16px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
   font-size: 14px;
-  color: #f1f5f9;
+  color: var(--text-primary);
   width: 240px;
   outline: none;
   transition: border-color 0.2s;
 }
 
 .newProjectInput::placeholder {
-  color: #71717a;
+  color: var(--text-muted);
 }
 
 .newProjectInput:focus {
-  border-color: rgba(96, 165, 250, 0.5);
+  border-color: var(--accent-primary);
 }
 
 .newProjectInput:disabled {
@@ -62,12 +62,12 @@
 }
 
 .errorBanner {
-  background-color: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: 8px;
-  padding: 12px 16px;
-  margin: 20px 40px 0;
-  color: #fca5a5;
+  background-color: rgba(232, 84, 74, 0.1);
+  border: 1px solid rgba(232, 84, 74, 0.3);
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-md);
+  margin: var(--space-md) var(--space-xl) 0;
+  color: var(--error);
 }
 
 .errorBanner p {
@@ -77,7 +77,7 @@
 
 .content {
   flex: 1;
-  padding: 40px;
+  padding: var(--space-xl);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -91,21 +91,21 @@
 
 .emptyIcon {
   font-size: 80px;
-  margin-bottom: 24px;
+  margin-bottom: var(--space-lg);
   display: block;
 }
 
 .emptyState h2 {
   font-size: 28px;
   font-weight: 600;
-  margin: 0 0 12px 0;
-  color: #f1f5f9;
+  margin: 0 0 var(--space-sm) 0;
+  color: var(--text-primary);
 }
 
 .emptyState p {
   font-size: 16px;
-  color: #a1a1aa;
-  margin: 0 0 32px 0;
+  color: var(--text-secondary);
+  margin: 0 0 var(--space-xl) 0;
   line-height: 1.6;
 }
 
@@ -119,28 +119,28 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 32px;
+  margin-bottom: var(--space-xl);
 }
 
 .projectsHeader h2 {
   font-size: 28px;
   font-weight: 600;
   margin: 0;
-  color: #f1f5f9;
+  color: var(--text-primary);
 }
 
 /* Projects List */
 .projectsList {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 20px;
+  gap: var(--space-md);
 }
 
 .projectCard {
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.5));
-  border: 1px solid rgba(148, 163, 184, 0.1);
-  border-radius: 12px;
-  padding: 24px;
+  background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
@@ -148,56 +148,56 @@
 }
 
 .projectCard:hover {
-  border-color: rgba(96, 165, 250, 0.3);
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.8));
+  border-color: var(--accent-primary);
+  background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-elevated) 100%);
   transform: translateY(-4px);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-glow);
 }
 
 .projectCardHeader {
   display: flex;
   justify-content: space-between;
   align-items: start;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-md);
 }
 
 .projectName {
   font-size: 18px;
   font-weight: 600;
   margin: 0;
-  color: #f1f5f9;
+  color: var(--text-primary);
   flex: 1;
 }
 
 .projectStatus {
   display: inline-block;
-  padding: 4px 12px;
-  background-color: rgba(34, 197, 94, 0.1);
-  color: #86efac;
+  padding: var(--space-xs) var(--space-sm);
+  background-color: rgba(76, 175, 128, 0.1);
+  color: var(--accent-primary);
   border-radius: 20px;
   font-size: 12px;
   font-weight: 500;
   text-transform: capitalize;
-  margin-left: 12px;
+  margin-left: var(--space-sm);
   white-space: nowrap;
 }
 
 .projectMeta {
   display: flex;
-  gap: 24px;
-  margin-bottom: 16px;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-md);
   flex: 1;
 }
 
 .metaItem {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-xs);
 }
 
 .metaLabel {
   font-size: 12px;
-  color: #71717a;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -205,26 +205,26 @@
 .metaValue {
   font-size: 18px;
   font-weight: 600;
-  color: #60a5fa;
+  color: var(--accent-primary);
 }
 
 .projectFooter {
-  border-top: 1px solid rgba(148, 163, 184, 0.1);
-  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: var(--space-sm);
 }
 
 .timestamp {
   font-size: 12px;
-  color: #71717a;
+  color: var(--text-muted);
 }
 
 /* Buttons */
 .primaryButton {
-  background: linear-gradient(135deg, #60a5fa, #3b82f6);
-  color: white;
+  background: var(--accent-primary);
+  color: var(--bg-primary);
   border: none;
-  border-radius: 8px;
-  padding: 12px 24px;
+  border-radius: var(--radius-sm);
+  padding: var(--space-sm) var(--space-lg);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -233,9 +233,9 @@
 }
 
 .primaryButton:hover {
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  background: var(--accent-secondary);
   transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
+  box-shadow: var(--shadow-glow);
 }
 
 .primaryButton:active {
@@ -248,15 +248,15 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: var(--space-md);
   min-height: 400px;
 }
 
 .spinner {
   width: 48px;
   height: 48px;
-  border: 3px solid rgba(96, 165, 250, 0.2);
-  border-top-color: #60a5fa;
+  border: 3px solid rgba(76, 175, 128, 0.2);
+  border-top-color: var(--accent-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -268,14 +268,14 @@
 }
 
 .loadingSpinner p {
-  color: #a1a1aa;
+  color: var(--text-secondary);
   font-size: 16px;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
   .header {
-    padding: 40px 24px 24px;
+    padding: var(--space-xl) var(--space-lg) var(--space-lg);
   }
 
   .title {
@@ -283,7 +283,7 @@
   }
 
   .content {
-    padding: 24px;
+    padding: var(--space-lg);
   }
 
   .projectsList {
@@ -292,7 +292,7 @@
 
   .projectsHeader {
     flex-direction: column;
-    gap: 16px;
+    gap: var(--space-md);
     align-items: stretch;
   }
 

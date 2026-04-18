@@ -6,7 +6,7 @@ export default function AppHeader({ title, subtitle, debugContext }) {
 
   return (
     <header>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div>
         <div>
           <h1>{title}</h1>
           {subtitle && <p>{subtitle}</p>}

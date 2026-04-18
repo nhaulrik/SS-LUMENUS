@@ -175,13 +175,6 @@ export default function HtmlRecipeStep({
           <div className="html-recipe-panel">
             <div className="html-recipe-panel-header">
               <h3>Recipe Prompt</h3>
-              <button
-                className="recipe-expand-btn"
-                onClick={() => setRecipeExpanded(v => !v)}
-                aria-label={recipeExpanded ? 'Collapse recipe prompt' : 'Expand recipe prompt'}
-              >
-                {recipeExpanded ? '↑ Collapse' : '↓ Expand'}
-              </button>
             </div>
 
             <div className="html-recipe-global-prompt">
@@ -210,11 +203,21 @@ export default function HtmlRecipeStep({
             </button>
 
             {recipe ? (
-              <div className={`recipe-collapsible${recipeExpanded ? ' expanded' : ''}`}>
-                <div className="html-recipe-area-wrapper">
-                  <button className="copy-btn" onClick={handleCopyRecipe} aria-label="Copy recipe to clipboard"><span aria-hidden="true">⧉</span></button>
-                  <div className="html-recipe-area">{recipe}</div>
+              <div className="recipe-collapsible-wrapper">
+                <div className={`recipe-collapsible${recipeExpanded ? ' expanded' : ''}${recipe ? ' has-content' : ''}`}>
+                  <div className="html-recipe-area-wrapper">
+                    <button className="copy-btn" onClick={handleCopyRecipe} aria-label="Copy recipe to clipboard"><span aria-hidden="true">⧉</span></button>
+                    <div className="html-recipe-area">{recipe}</div>
+                  </div>
                 </div>
+                <button
+                  className={`recipe-expand-btn${recipeExpanded ? ' is-expanded' : ''}`}
+                  onClick={() => setRecipeExpanded(v => !v)}
+                  aria-label={recipeExpanded ? 'Collapse recipe prompt' : 'Expand recipe prompt'}
+                >
+                  <span className="expand-chevron" aria-hidden="true">▼</span>
+                  {recipeExpanded ? 'Collapse' : 'View full recipe'}
+                </button>
               </div>
             ) : (
               <div className="html-recipe-empty">
@@ -227,31 +230,38 @@ export default function HtmlRecipeStep({
         {/* ── Right: JSON response panel ─────────────────────────────────── */}
         <div className="html-recipe-right">
           <div className="html-recipe-panel">
-            <div className="html-recipe-panel-header">
-              <h3>JSON Response</h3>
-              <button
-                className="recipe-expand-btn"
-                onClick={() => setJsonExpanded(v => !v)}
-                aria-label={jsonExpanded ? 'Collapse JSON response' : 'Expand JSON response'}
-              >
-                {jsonExpanded ? '↑ Collapse' : '↓ Expand'}
-              </button>
-            </div>
+             <div className="html-recipe-panel-header">
+               <h3>JSON Response</h3>
+             </div>
 
-            <div className={`recipe-collapsible${jsonExpanded ? ' expanded' : ''}`}>
-              <div className="html-recipe-json-wrapper">
-                <button className="copy-btn" onClick={handleCopyJson} aria-label="Copy JSON to clipboard">
-                  <span aria-hidden="true">⧉</span>
-                </button>
-                <textarea
-                  className={`json-input${validation?.valid === false ? ' has-error' : ''}`}
-                  value={jsonInput}
-                  onChange={e => handleJsonChange(e.target.value)}
-                  placeholder='Paste the AI response JSON here…'
-                  spellCheck={false}
-                />
-              </div>
-            </div>
+             <div className="recipe-collapsible-wrapper">
+               <div className={`recipe-collapsible${jsonExpanded ? ' expanded' : ''}${jsonInput ? ' has-content' : ''}`}>
+                 <div className="html-recipe-json-wrapper">
+                   {jsonInput && (
+                     <button className="copy-btn" onClick={handleCopyJson} aria-label="Copy JSON to clipboard">
+                       <span aria-hidden="true">⧉</span>
+                     </button>
+                   )}
+                   <textarea
+                     className={`json-input${validation?.valid === false ? ' has-error' : ''}`}
+                     value={jsonInput}
+                     onChange={e => handleJsonChange(e.target.value)}
+                     placeholder='Paste the AI response JSON here…'
+                     spellCheck={false}
+                   />
+                 </div>
+               </div>
+               {jsonInput && (
+                 <button
+                   className={`recipe-expand-btn${jsonExpanded ? ' is-expanded' : ''}`}
+                   onClick={() => setJsonExpanded(v => !v)}
+                   aria-label={jsonExpanded ? 'Collapse JSON response' : 'Expand JSON response'}
+                 >
+                   <span className="expand-chevron" aria-hidden="true">▼</span>
+                   {jsonExpanded ? 'Collapse' : 'View full response'}
+                 </button>
+               )}
+             </div>
 
             {/* Validation feedback */}
             {validation?.valid === false && (
