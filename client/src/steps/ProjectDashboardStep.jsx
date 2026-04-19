@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import styles from './ProjectDashboardStep.module.css'
+import SlideEditorTab from './SlideEditorTab'
 
 /**
  * ProjectDashboardStep
@@ -197,6 +198,12 @@ export default function ProjectDashboardStep({
           Flows
         </button>
         <button
+          className={`${styles.tab}${activeTab === 'editor' ? ` ${styles.active}` : ''}`}
+          onClick={() => setActiveTab('editor')}
+        >
+          Editor
+        </button>
+        <button
           className={`${styles.tab}${activeTab === 'publish' ? ` ${styles.active}` : ''}`}
           onClick={() => setActiveTab('publish')}
         >
@@ -294,6 +301,13 @@ export default function ProjectDashboardStep({
             </div>
           )}
         </section>
+        )}
+
+        {activeTab === 'editor' && (
+        <SlideEditorTab
+          projectName={projectName}
+          setToast={setToast}
+        />
         )}
 
         {activeTab === 'publish' && (

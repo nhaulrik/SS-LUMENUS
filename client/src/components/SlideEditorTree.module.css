@@ -1,0 +1,152 @@
+.tree {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.emptyState {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.emptyState p {
+  margin: 0 0 8px 0;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.exportNode {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.exportHeader {
+  display: flex;
+  align-items: center;
+  padding: 8px 8px;
+  gap: 8px;
+  background: var(--bg-tertiary);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  border-left: 3px solid transparent;
+}
+
+.exportHeader:hover {
+  background: var(--bg-elevated);
+  border-left-color: var(--accent-primary);
+}
+
+.expandButton {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  padding: 0;
+  transition: color var(--transition-fast);
+}
+
+.expandButton:hover {
+  color: var(--accent-primary);
+}
+
+.exportInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.exportTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.exportMeta {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 2px 0 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slidesList {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  border-left: 3px solid var(--border-default);
+}
+
+.slideRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background var(--transition-fast);
+}
+
+.slideRow:hover {
+  background: var(--bg-tertiary);
+}
+
+.slideRow.active {
+  background: rgba(76, 175, 128, 0.1);
+  border-left: 3px solid var(--accent-primary);
+}
+
+.checkbox {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  margin: 0 4px 0 0;
+  accent-color: var(--accent-primary);
+}
+
+.slideButton {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--text-primary);
+  text-align: left;
+  transition: all var(--transition-fast);
+  min-width: 0;
+}
+
+.slideButton:hover {
+  background: var(--bg-tertiary);
+}
+
+.slideTitle {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dirtyIndicator {
+  flex: 0 0 auto;
+  color: var(--error);
+  font-size: 16px;
+  margin-left: 4px;
+}

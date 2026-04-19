@@ -32,6 +32,7 @@ import {
   getExportCount,
   deleteExport,
   buildExportZip,
+  forkExport,
 } from '../lib/export-manager.js';
 
 const router = express.Router();
@@ -855,7 +856,11 @@ router.get('/projects/:projectName/flows/:flowId/exports', (req, res) => {
     const { projectName, flowId } = req.params;
     const exports = listExports(projectName, flowId);
     const total   = getExportCount(projectName, flowId);
-    return res.json({ ok: true, exports, total });
+    const augmented = exports.map(exp => {
+      const full = getExport(projectName, flowId, exp.exportId);
+      return { ...exp, slides: full?.content?.slides || [] };
+    });
+    return res.json({ ok: true, exports: augmented, total });
   } catch (err) {
     console.error('[html-flow] list-exports error:', err);
     return res.status(500).json({ ok: false, error: err.message });
@@ -906,6 +911,28 @@ router.get('/projects/:projectName/flows/:flowId/exports/:exportId/slides/:slide
   }
 });
 
+router.patch('/projects/:projectName/flows/:flowId/exports/:exportId/slides/:slideFile', (req, res) => {
+  try {
+    const { projectName, flowId, exportId, slideFile } = req.params;
+    const { html } = req.body;
+
+    if (!html || typeof html !== 'string') {
+      return res.status(400).json({ ok: false, error: 'html is required and must be a string' });
+    }
+
+    const filePath = resolveSlideFilePath(projectName, flowId, exportId, slideFile);
+    if (!filePath) {
+      return res.status(404).json({ ok: false, error: 'Slide file not found.' });
+    }
+
+    fs.writeFileSync(filePath, html, 'utf8');
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('[html-flow] patch-slide error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 router.get('/projects/:projectName/flows/:flowId/exports/:exportId/download', (req, res) => {
   try {
     const { projectName, flowId, exportId } = req.params;
@@ -933,6 +960,34 @@ router.delete('/projects/:projectName/flows/:flowId/exports/:exportId', (req, re
     return res.json({ ok: true });
   } catch (err) {
     console.error('[html-flow] delete-export error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+router.post('/projects/:projectName/flows/:flowId/exports/:exportId/fork', (req, res) => {
+  try {
+    const { projectName, flowId, exportId } = req.params;
+    const { slides, overrides } = req.body;
+
+    if (!Array.isArray(slides) || slides.length === 0) {
+      return res.status(400).json({ ok: false, error: 'slides must be a non-empty array' });
+    }
+
+    // Validate slide file names
+    for (const slideFile of slides) {
+      if (!/^slide-\d+\.html$/.test(slideFile)) {
+        return res.status(400).json({ ok: false, error: `Invalid slide file name: ${slideFile}` });
+      }
+    }
+
+    const result = forkExport(projectName, flowId, exportId, slides, overrides || {});
+    if (!result) {
+      return res.status(500).json({ ok: false, error: 'Failed to create forked export' });
+    }
+
+    return res.json({ ok: true, ...result });
+  } catch (err) {
+    console.error('[html-flow] fork-export error:', err);
     return res.status(500).json({ ok: false, error: err.message });
   }
 });

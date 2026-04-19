@@ -381,6 +381,169 @@ export function getExportCount(projectName, flowId) {
 }
 
 /**
+ * Fork an export: create a new export by copying selected slides from an existing export.
+ * Optionally apply overrides (edited HTML) to specific slides.
+ *
+ * @param {string} projectName
+ * @param {string} flowId
+ * @param {string} sourceExportId
+ * @param {Array<string>} slideFiles - e.g. ['slide-1.html', 'slide-2.html']
+ * @param {Object} overrides - e.g. { 'slide-1.html': '<html>...</html>' }
+ * @returns {{ exportId: string, exportNumber: number, slideCount: number } | null}
+ */
+export function forkExport(projectName, flowId, sourceExportId, slideFiles, overrides = {}) {
+  try {
+    const sourceExportDir = resolveExportDir(projectName, flowId, sourceExportId);
+    if (!sourceExportDir || !fs.existsSync(sourceExportDir)) return null;
+
+    const flow = loadFlow(projectName, flowId);
+    if (!flow) return null;
+
+    // Get the source export metadata
+    const sourceExport = getExport(projectName, flowId, sourceExportId);
+    if (!sourceExport) return null;
+
+    // Generate new export ID and number
+    const exportNumber = (flow.exports || []).length + 1;
+    const exportId = `export-${exportNumber}`;
+    const exportDir = path.join(path.dirname(sourceExportDir), exportId);
+
+    if (fs.existsSync(exportDir)) {
+      throw new Error(`Export directory already exists: ${exportId}`);
+    }
+
+    fs.mkdirSync(exportDir, { recursive: true });
+
+    // Copy and optionally override selected slides
+    const copiedSlides = [];
+    let totalSize = 0;
+
+    for (const slideFile of slideFiles) {
+      const sourceSlideFile = path.join(sourceExportDir, slideFile);
+      if (!fs.existsSync(sourceSlideFile)) continue;
+
+      let slideContent;
+      if (overrides[slideFile]) {
+        // Use override (edited HTML)
+        slideContent = overrides[slideFile];
+      } else {
+        // Copy from source
+        slideContent = fs.readFileSync(sourceSlideFile, 'utf8');
+      }
+
+      const destSlideFile = path.join(exportDir, slideFile);
+      fs.writeFileSync(destSlideFile, slideContent, 'utf8');
+
+      const size = Buffer.byteLength(slideContent, 'utf8');
+      totalSize += size;
+
+      // Extract slide metadata from source
+      const sourceSlideMetadata = sourceExport.content?.slides?.find(s => s.file === slideFile);
+      copiedSlides.push({
+        file: slideFile,
+        index: sourceSlideMetadata?.index || copiedSlides.length + 1,
+        slideId: sourceSlideMetadata?.slideId || `slide-${copiedSlides.length + 1}`,
+        title: sourceSlideMetadata?.title || `Slide ${copiedSlides.length + 1}`,
+        type: sourceSlideMetadata?.type || 'content',
+        size,
+      });
+    }
+
+    const createdAt = new Date().toISOString();
+
+    // Write export.json
+    const exportJson = {
+      exportId,
+      exportNumber,
+      createdAt,
+      source: {
+        roundId: sourceExport.source?.roundId,
+        outputFile: sourceExport.source?.outputFile,
+      },
+      content: {
+        slideCount: copiedSlides.length,
+        totalSize,
+        slides: copiedSlides,
+      },
+      metadata: {
+        projectName,
+        flowId,
+        templateFile: sourceExport.metadata?.templateFile || '',
+      },
+    };
+
+    fs.writeFileSync(
+      path.join(exportDir, 'export.json'),
+      JSON.stringify(exportJson, null, 2),
+      'utf8'
+    );
+
+    // Write project.json
+    const projectJson = {
+      name: projectName,
+      exportId,
+      exportNumber,
+      exportedAt: createdAt,
+      slideCount: copiedSlides.length,
+      slides: copiedSlides.map(s => ({
+        index: s.index,
+        file: s.file,
+        slideId: s.slideId,
+        title: s.title,
+        type: s.type,
+      })),
+    };
+
+    fs.writeFileSync(
+      path.join(exportDir, 'project.json'),
+      JSON.stringify(projectJson, null, 2),
+      'utf8'
+    );
+
+    // Update flow.json
+    const exportEntry = {
+      exportId,
+      exportNumber,
+      createdAt,
+      roundId: sourceExport.source?.roundId,
+      outputFile: sourceExport.source?.outputFile,
+      slideCount: copiedSlides.length,
+      totalSize,
+      path: `exports/${exportId}/`,
+      files: {
+        metadata: `exports/${exportId}/export.json`,
+        projectIndex: `exports/${exportId}/project.json`,
+      },
+    };
+
+    if (!flow.exports) {
+      flow.exports = [];
+    }
+    flow.exports.push(exportEntry);
+    flow.lastExport = {
+      exportId,
+      createdAt,
+      roundId: sourceExport.source?.roundId,
+      slideCount: copiedSlides.length,
+    };
+    flow.updatedAt = createdAt;
+
+    if (!saveFlow(projectName, flowId, flow)) {
+      throw new Error('Failed to update flow.json with fork export entry');
+    }
+
+    return {
+      exportId,
+      exportNumber,
+      slideCount: copiedSlides.length,
+    };
+  } catch (err) {
+    console.error('[export-manager] forkExport error:', err.message);
+    return null;
+  }
+}
+
+/**
  * Delete an export and its files from disk.
  * Also removes the entry from flow.json.
  *
