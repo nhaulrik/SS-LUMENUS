@@ -139,26 +139,11 @@ router.post('/agentic/plan', async (req, res) => {
 
     const projectDir = path.join(RESOLVED_PROJECTS_DIR, projectName)
 
-    // ── Context / summaries ──────────────────────────────────────────────────
-    phase('analyzing')
+     // ── Context / summaries ──────────────────────────────────────────────────
+     phase('analyzing')
 
-    if (summaryMode === 'regenerate') {
-      log('Regenerating AI summaries for all context files...')
-      await generateSummaries(projectDir, log, null, summaryPrompt, zones)
-    } else if (summaryMode === 'use') {
-      const status  = await getSummaryStatus(projectDir)
-      const missing = [...status.entries()]
-        .filter(([, hasSummary]) => !hasSummary)
-        .map(([filename]) => filename)
-
-      if (missing.length > 0) {
-        log(`No summary found for ${missing.length} file${missing.length !== 1 ? 's' : ''} — generating now...`)
-        await generateSummaries(projectDir, log, missing, summaryPrompt, zones)
-      }
-    }
-
-    log('Reading AI Context files (using summaries)...')
-    const context = await readContextFiles(projectDir, { useSummaries: true })
+     log('Reading AI Context files...')
+     const context = await readContextFiles(projectDir)
 
     if (context.fileCount === 0) {
       log('No context files found — proceeding without context')

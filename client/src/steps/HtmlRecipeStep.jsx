@@ -151,23 +151,7 @@ export default function HtmlRecipeStep({
   const validateTimerRef = useRef(null)
   const promptSaveTimerRef = useRef(null)
 
-  // Auto-save summary/content prompts to flow.json via PATCH (debounced)
-  const savePromptsToFlow = useCallback((summaryPrompt, contentPrompt) => {
-    clearTimeout(promptSaveTimerRef.current)
-    promptSaveTimerRef.current = setTimeout(async () => {
-      try {
-        await fetch(`/api/projects/${projectName}/flows/${flowId}`, {
-          method:  'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ summaryPrompt, contentPrompt }),
-        })
-      } catch {
-        // silent — prompts are non-critical
-      }
-    }, 600)
-  }, [projectName, flowId])
-
-   // ── Generate recipe ───────────────────────────────────────────────────────
+    // ── Generate recipe ───────────────────────────────────────────────────────
   const handleGenerateRecipe = useCallback(async () => {
     setLoadingRecipe(true)
     try {

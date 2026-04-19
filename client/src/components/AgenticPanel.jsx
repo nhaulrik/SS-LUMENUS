@@ -70,8 +70,6 @@ export default function AgenticPanel({
   agents,
   errorMsg,
   elapsed,
-  summaryMode,
-  summaryPrompt,
   contentPrompt,
   plan,
   // Setters
@@ -81,8 +79,6 @@ export default function AgenticPanel({
   setAgents,
   setErrorMsg,
   setElapsed,
-  setSummaryMode,
-  setSummaryPrompt,
   setContentPrompt,
   setPlan,
 }) {
@@ -133,7 +129,7 @@ export default function AgenticPanel({
       const response = await fetch('/api/opencode/agentic/plan', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ projectName, recipe, zones, repeatableSlides, summaryMode, summaryPrompt, contentPrompt }),
+        body:    JSON.stringify({ projectName, recipe, zones, repeatableSlides, contentPrompt }),
       })
       if (!response.ok) throw new Error(`Server error ${response.status}`)
 
@@ -155,7 +151,7 @@ export default function AgenticPanel({
       setStatus('error')
       setErrorMsg(err.message)
     }
-  }, [hasRecipe, isActive, projectName, recipe, zones, repeatableSlides, summaryMode, summaryPrompt, contentPrompt, setStatus, setPhase, setLogs, setAgents, setErrorMsg, setElapsed, setPlan])
+  }, [hasRecipe, isActive, projectName, recipe, zones, repeatableSlides, contentPrompt, setStatus, setPhase, setLogs, setAgents, setErrorMsg, setElapsed, setPlan])
 
   // ── Phase 2: user accepted — call /run SSE stream ─────────────────────────
 
@@ -236,50 +232,6 @@ export default function AgenticPanel({
         decides how many instances to create, then runs parallel agents — one per slide instance.
         The result is pasted directly into the JSON Response field above.
       </p>
-
-      {/* ── Context source toggle ────────────────────────────────────────── */}
-      <div className={css.summaryToggle}>
-        <span className={css.summaryToggleLabel}>Context source</span>
-        <div className={css.summaryToggleBtns}>
-          <button
-            className={`${css.summaryBtn} ${summaryMode === 'use' ? css.summaryBtnActive : ''}`}
-            onClick={() => setSummaryMode('use')}
-            disabled={isActive || status === 'confirming'}
-            title="Use saved .summary.md files where available; fall back to originals otherwise"
-          >
-            Use summaries
-          </button>
-          <button
-            className={`${css.summaryBtn} ${summaryMode === 'regenerate' ? css.summaryBtnActive : ''}`}
-            onClick={() => setSummaryMode('regenerate')}
-            disabled={isActive || status === 'confirming'}
-            title="Generate and save a new .summary.md for each context file, then use them"
-          >
-            Regenerate summaries
-          </button>
-        </div>
-        <span className={css.summaryToggleHint}>
-          {summaryMode === 'use'
-            ? 'Uses saved summaries if found, otherwise reads originals'
-            : 'AI will summarise each file and save it — slower, but updates your summaries'}
-        </span>
-      </div>
-
-      {/* ── Summary instructions ─────────────────────────────────────────── */}
-      <div className={css.promptSection}>
-        <label htmlFor="summaryPrompt" className={css.promptLabel}>
-          Summary instructions
-          <span className={css.promptHint}>Guides how context files are summarised</span>
-        </label>
-        <textarea
-          id="summaryPrompt"
-          className={css.promptTextarea}
-          value={summaryPrompt}
-          onChange={(e) => setSummaryPrompt(e.target.value)}
-          disabled={isActive || status === 'confirming'}
-          placeholder="e.g. Focus on pricing tiers, product names, and key metrics"
-        />
-      </div>
 
       {/* ── Content instructions ─────────────────────────────────────────── */}
       <div className={css.promptSection}>
