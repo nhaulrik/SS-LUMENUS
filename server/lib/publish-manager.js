@@ -17,39 +17,20 @@
 
 import fs   from 'fs';
 import path from 'path';
-import { PROJECTS_DIR } from '../config.js';
+import { resolveProjectDir }    from './project-manager.js';
+import { NAME_RE, EXPORT_ID_RE } from './validation.js';
 
-// ── Security helpers ──────────────────────────────────────────────────────────
-
-const PROJECT_NAME_RE = /^[\w-]{1,100}$/;
-const FLOW_ID_RE      = /^[\w-]{1,100}$/;
-const EXPORT_ID_RE    = /^export-\d+$/;
+// ── Path helpers ──────────────────────────────────────────────────────────────
 
 /**
- * Validate projectName and return the absolute project directory, or null.
- */
-function resolveProjectDir(projectName) {
-  if (!projectName || typeof projectName !== 'string') return null;
-  if (!PROJECT_NAME_RE.test(projectName)) return null;
-  const projectDir = path.join(PROJECTS_DIR, projectName);
-  const resolvedBase = path.resolve(PROJECTS_DIR);
-  const resolved = path.resolve(projectDir);
-  if (!resolved.startsWith(resolvedBase + path.sep) && resolved !== resolvedBase) return null;
-  return projectDir;
-}
-
-/**
- * Validate flowId relative to a known projectDir and return the export dir, or null.
+ * Validate flowId and exportId relative to a resolved projectDir, or return null.
+ * Takes an already-resolved projectDir so it can be reused without re-resolving.
  */
 function resolveExportDir(projectDir, flowId, exportId) {
-  if (!flowId || typeof flowId !== 'string') return null;
-  if (!FLOW_ID_RE.test(flowId)) return null;
-  if (!exportId || typeof exportId !== 'string') return null;
-  if (!EXPORT_ID_RE.test(exportId)) return null;
-
+  if (!flowId || typeof flowId !== 'string' || !NAME_RE.test(flowId)) return null;
+  if (!exportId || typeof exportId !== 'string' || !EXPORT_ID_RE.test(exportId)) return null;
   const exportDir = path.join(projectDir, 'flows', flowId, 'exports', exportId);
-  const resolvedProject = path.resolve(projectDir);
-  if (!path.resolve(exportDir).startsWith(resolvedProject + path.sep)) return null;
+  if (!path.resolve(exportDir).startsWith(path.resolve(projectDir) + path.sep)) return null;
   return exportDir;
 }
 
@@ -550,7 +531,7 @@ function escapeHtml(str) {
  */
 export async function createPublish(projectName, selections) {
   // ── Validate projectName ──────────────────────────────────────────────────
-  if (!projectName || typeof projectName !== 'string' || !PROJECT_NAME_RE.test(projectName)) {
+  if (!projectName || typeof projectName !== 'string' || !NAME_RE.test(projectName)) {
     throw Object.assign(new Error('Invalid project name'), { statusCode: 400 });
   }
 
@@ -568,7 +549,7 @@ export async function createPublish(projectName, selections) {
     if (!sel || typeof sel !== 'object') {
       throw Object.assign(new Error('Each selection must be an object with flowId and exportId'), { statusCode: 400 });
     }
-    if (!FLOW_ID_RE.test(sel.flowId)) {
+    if (!NAME_RE.test(sel.flowId)) {
       throw Object.assign(new Error(`Invalid flowId: ${sel.flowId}`), { statusCode: 400 });
     }
     if (!EXPORT_ID_RE.test(sel.exportId)) {
@@ -694,7 +675,7 @@ export async function createPublish(projectName, selections) {
  * @throws {Error} on validation failure
  */
 export async function listPublishes(projectName) {
-  if (!projectName || typeof projectName !== 'string' || !PROJECT_NAME_RE.test(projectName)) {
+  if (!projectName || typeof projectName !== 'string' || !NAME_RE.test(projectName)) {
     throw Object.assign(new Error('Invalid project name'), { statusCode: 400 });
   }
 

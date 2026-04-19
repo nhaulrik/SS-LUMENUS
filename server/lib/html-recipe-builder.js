@@ -18,29 +18,11 @@
  * All zones include their full exampleHtml — no truncation.
  */
 
+import { isIgnoredOrDescendantOfIgnored } from './zone-utils.js'
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const isGenerated = (z) => z.autoGenerate !== false;
-
-/** Check if a zone is ignored directly or is a descendant of an ignored parent. */
-function isIgnoredOrDescendantOfIgnored(zone, allZones) {
-  if (zone.ignored) return true;
-  
-  // Check if any ancestor is ignored
-  let current = zone;
-  while (current.nodeId) {
-    // Find the parent by checking if another zone's nodeId is a prefix
-    const parent = allZones.find(z => 
-      current.nodeId !== z.nodeId && 
-      current.nodeId.startsWith(z.nodeId + '>')
-    );
-    if (!parent) break;
-    if (parent.ignored) return true;
-    current = parent;
-  }
-  
-  return false;
-}
+const isGenerated = (z) => z.autoGenerate !== false
 
 /** Set of slideIndex values that are repeatable. */
 function repeatableSlideIndexSet(zones, repeatableSlides = []) {

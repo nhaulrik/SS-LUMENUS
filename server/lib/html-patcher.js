@@ -13,7 +13,8 @@
  * Supports both the new { shared, instances } format and the legacy array format.
  */
 
-import { parse } from 'node-html-parser';
+import { parse }                            from 'node-html-parser'
+import { isIgnoredOrDescendantOfIgnored }  from './zone-utils.js'
 
 /**
  * Apply AI JSON to an HTML template string.
@@ -111,26 +112,6 @@ export function applyHtmlContent(templateHtml, data, zones, repeatableSlides = [
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
-
-/** Check if a zone is ignored directly or is a descendant of an ignored parent. */
-function isIgnoredOrDescendantOfIgnored(zone, allZones) {
-  if (zone.ignored) return true;
-  
-  // Check if any ancestor is ignored
-  let current = zone;
-  while (current.nodeId) {
-    // Find the parent by checking if another zone's nodeId is a prefix
-    const parent = allZones.find(z => 
-      current.nodeId !== z.nodeId && 
-      current.nodeId.startsWith(z.nodeId + '>')
-    );
-    if (!parent) break;
-    if (parent.ignored) return true;
-    current = parent;
-  }
-  
-  return false;
-}
 
 /**
  * Resolve a nodeId CSS-path fingerprint (e.g. "div.header>div.header-left[1]")

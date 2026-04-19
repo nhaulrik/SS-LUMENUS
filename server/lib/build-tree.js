@@ -12,6 +12,7 @@
  *   buildSectionTree(sectionNode, slideIndex) → { tree, selections }
  *   flattenTree(tree) → Node[]
  *   findNodeById(tree, id) → Node | null
+ *   descendantIds(node) → string[]
  */
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -238,10 +239,6 @@ export function flattenTree(tree) {
 
 /**
  * Find a node by its id in a tree.
- *
- * @param {Object[]} tree
- * @param {string}   id
- * @returns {Object|null}
  */
 export function findNodeById(tree, id) {
   for (const node of flattenTree(tree)) {
@@ -252,10 +249,6 @@ export function findNodeById(tree, id) {
 
 /**
  * Collect all descendant node ids of a given node (inclusive).
- * Used for conflict detection when a parent block zone supersedes children.
- *
- * @param {Object} node
- * @returns {string[]}
  */
 export function descendantIds(node) {
   const ids = [node.id]

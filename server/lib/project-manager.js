@@ -125,6 +125,22 @@ export function loadFlow(projectName, flowId) {
   }
 }
 
+/**
+ * Persist a flow object back to its flow.json.
+ * Returns true on success, false on failure.
+ */
+export function saveFlow(projectName, flowId, flow) {
+  const flowDir = resolveFlowDir(projectName, flowId);
+  if (!flowDir) return false;
+  try {
+    fs.writeFileSync(path.join(flowDir, 'flow.json'), JSON.stringify(flow, null, 2), 'utf-8');
+    return true;
+  } catch (err) {
+    console.error(`[project-manager] Failed to save flow ${projectName}/${flowId}:`, err.message);
+    return false;
+  }
+}
+
 // ── Mutation helpers ──────────────────────────────────────────────────────────
 
 /**

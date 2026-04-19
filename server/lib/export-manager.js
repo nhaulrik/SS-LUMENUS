@@ -27,85 +27,22 @@
 
 import fs   from 'fs';
 import path from 'path';
-import { PROJECTS_DIR, isInsideDir } from '../config.js';
+import { resolveFlowDir, loadFlow, saveFlow } from './project-manager.js';
+import { EXPORT_ID_RE }                       from './validation.js';
 
-// ── Security helpers ──────────────────────────────────────────────────────────
-
-/**
- * Validate a projectName and return safe project directory path, or null.
- */
-function resolveProjectDir(projectName) {
-  if (!projectName || typeof projectName !== 'string') return null;
-  if (!/^[\w-]{1,100}$/.test(projectName)) return null;
-  const projectDir = path.join(PROJECTS_DIR, projectName);
-  const resolved = path.resolve(PROJECTS_DIR);
-  const resolvedProjectDir = path.resolve(projectDir);
-  if (!resolvedProjectDir.startsWith(resolved + path.sep) && resolvedProjectDir !== resolved) return null;
-  return projectDir;
-}
+// ── Path helpers ──────────────────────────────────────────────────────────────
 
 /**
- * Validate a flowId and return safe flow directory path, or null.
- */
-function resolveFlowDir(projectName, flowId) {
-  const projectDir = resolveProjectDir(projectName);
-  if (!projectDir) return null;
-  if (!flowId || typeof flowId !== 'string') return null;
-  if (!/^[\w-]{1,100}$/.test(flowId)) return null;
-  const flowDir = path.join(projectDir, 'flows', flowId);
-  const resolvedProject = path.resolve(projectDir);
-  if (!path.resolve(flowDir).startsWith(resolvedProject + path.sep)) return null;
-  return flowDir;
-}
-
-/**
- * Validate an exportId and return safe export directory path, or null.
+ * Validate an exportId and return the safe export directory path, or null.
  */
 function resolveExportDir(projectName, flowId, exportId) {
   const flowDir = resolveFlowDir(projectName, flowId);
   if (!flowDir) return null;
   if (!exportId || typeof exportId !== 'string') return null;
-  if (!/^export-\d+$/.test(exportId)) return null;
+  if (!EXPORT_ID_RE.test(exportId)) return null;
   const exportDir = path.join(flowDir, 'exports', exportId);
-  const resolvedFlow = path.resolve(flowDir);
-  if (!path.resolve(exportDir).startsWith(resolvedFlow + path.sep)) return null;
+  if (!path.resolve(exportDir).startsWith(path.resolve(flowDir) + path.sep)) return null;
   return exportDir;
-}
-
-// ── Flow I/O ──────────────────────────────────────────────────────────────────
-
-/**
- * Load flow.json from a project flow directory.
- * Returns the parsed flow object, or null if not found or parse fails.
- */
-function loadFlow(projectName, flowId) {
-  const flowDir = resolveFlowDir(projectName, flowId);
-  if (!flowDir) return null;
-  const flowPath = path.join(flowDir, 'flow.json');
-  if (!fs.existsSync(flowPath)) return null;
-  try {
-    return JSON.parse(fs.readFileSync(flowPath, 'utf8'));
-  } catch (err) {
-    console.error(`[export-manager] Failed to load flow ${projectName}/${flowId}:`, err.message);
-    return null;
-  }
-}
-
-/**
- * Save flow.json to a project flow directory.
- * Returns true on success, false on failure.
- */
-function saveFlow(projectName, flowId, flow) {
-  const flowDir = resolveFlowDir(projectName, flowId);
-  if (!flowDir) return false;
-  const flowPath = path.join(flowDir, 'flow.json');
-  try {
-    fs.writeFileSync(flowPath, JSON.stringify(flow, null, 2), 'utf8');
-    return true;
-  } catch (err) {
-    console.error(`[export-manager] Failed to save flow ${projectName}/${flowId}:`, err.message);
-    return false;
-  }
 }
 
 // ── HTML extraction helpers ───────────────────────────────────────────────────
