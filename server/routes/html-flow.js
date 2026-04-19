@@ -753,6 +753,70 @@ router.post('/html-flow/apply-content', (req, res) => {
   }
 });
 
+// ── PATCH /api/html-flow/update-preview-html ─────────────────────────────────
+// Save edited text back to the output file after inline editing in preview.
+// Accepts a CSS selector and plain text, finds the element, updates its text content.
+
+router.patch('/html-flow/update-preview-html', (req, res) => {
+  try {
+    const { projectName, flowId, roundId, selector, newText } = req.body;
+
+    if (!projectName || !/^[\w-]{1,100}$/.test(projectName)) {
+      return res.status(400).json({ ok: false, error: 'Invalid projectName.' });
+    }
+    if (!flowId || !/^[\w-]{1,100}$/.test(flowId)) {
+      return res.status(400).json({ ok: false, error: 'Invalid flowId.' });
+    }
+    if (!roundId || typeof roundId !== 'string') {
+      return res.status(400).json({ ok: false, error: 'Invalid roundId.' });
+    }
+    if (!selector || typeof selector !== 'string') {
+      return res.status(400).json({ ok: false, error: 'selector is required.' });
+    }
+    if (newText === undefined || typeof newText !== 'string') {
+      return res.status(400).json({ ok: false, error: 'newText is required.' });
+    }
+
+    const flowDir  = path.join(PROJECTS_DIR, projectName, 'flows', flowId);
+    const flowPath = path.join(flowDir, 'flow.json');
+
+    if (!fs.existsSync(flowPath)) {
+      return res.status(404).json({ ok: false, error: 'Flow not found.' });
+    }
+
+    const flow = JSON.parse(fs.readFileSync(flowPath, 'utf8'));
+    const generation = (flow.generations || []).find(g => g.id === roundId);
+
+    if (!generation) {
+      return res.status(404).json({ ok: false, error: 'Generation not found.' });
+    }
+
+    const outputPath = path.join(flowDir, generation.outputFile);
+    const html = fs.readFileSync(outputPath, 'utf8');
+
+    // Parse HTML and find element by selector
+    const root = parse(html);
+    const element = root.querySelector(selector);
+
+    if (!element) {
+      return res.status(404).json({ ok: false, error: 'Element not found in HTML.' });
+    }
+
+    // Update the element's text content (not innerHTML)
+    element.set_content(newText);
+
+    // Write updated HTML back to disk
+    const updatedHtml = root.toString();
+    fs.writeFileSync(outputPath, updatedHtml, 'utf8');
+
+    const previewHtml = buildOutputPreviewHtml(updatedHtml);
+    return res.json({ ok: true, previewHtml });
+  } catch (err) {
+    console.error('[html-flow] update-preview-html error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // ── Versioned Export API Endpoints ────────────────────────────────────────────
 
 router.post('/projects/:projectName/flows/:flowId/exports', (req, res) => {

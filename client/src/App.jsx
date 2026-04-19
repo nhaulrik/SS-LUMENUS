@@ -113,6 +113,13 @@ export default function App() {
     navigateTo('html-preview')
   }, [navigateTo])
 
+  const handlePreviewHtmlChange = useCallback((newHtml) => {
+    setHtmlApplied(prev => ({
+      ...prev,
+      previewHtml: newHtml,
+    }))
+  }, [])
+
   const handleBackToHtmlRecipe = useCallback(() => {
     setHtmlApplied(null)
     navigateTo('html-recipe')
@@ -296,11 +303,13 @@ export default function App() {
         <HtmlPreviewStep
           projectName={currentProjectName}
           applied={htmlApplied}
+          flowId={currentFlowId}
           step={step}
           canNavigateTo={canNavigateTo}
           navigateTo={navigateTo}
           onBack={handleBackToHtmlRecipe}
           onNext={handlePreviewNext}
+          onPreviewHtmlChange={handlePreviewHtmlChange}
           setToast={setToast}
           debugContext={debugContext}
         />
