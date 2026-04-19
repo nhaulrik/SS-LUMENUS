@@ -1,0 +1,123 @@
+.wrapper {
+  overflow-x: auto;
+  margin: 14px 0 18px 0;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  min-width: 500px;
+}
+
+.table thead tr {
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.table th {
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #52525b;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  white-space: nowrap;
+}
+
+.zoneCol {
+  width: 130px;
+  min-width: 100px;
+}
+
+.valueCol {
+  min-width: 160px;
+}
+
+.table tbody tr {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.07);
+  transition: background 0.15s;
+}
+
+.table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.blockRow {
+  background: rgba(96, 165, 250, 0.03);
+}
+
+.instanceRow {
+  background: transparent;
+}
+
+.blockRow:hover,
+.instanceRow:hover {
+  background: rgba(148, 163, 184, 0.04);
+}
+
+.zoneKey {
+  padding: 8px 10px;
+  color: #60a5fa;
+  font-family: 'Menlo', 'Consolas', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.valueCell {
+  padding: 4px 6px;
+  vertical-align: top;
+}
+
+.emptyCell {
+  padding: 4px 6px;
+  background: rgba(9, 9, 11, 0.2);
+}
+
+.cellInput {
+  width: 100%;
+  background: rgba(24, 24, 27, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 5px;
+  color: #e4e4e7;
+  font-size: 12px;
+  font-family: inherit;
+  padding: 5px 8px;
+  resize: vertical;
+  min-height: 42px;
+  transition: border-color 0.15s, background 0.15s;
+  box-sizing: border-box;
+}
+
+.cellInput:focus {
+  outline: none;
+  border-color: rgba(96, 165, 250, 0.4);
+  background: rgba(24, 24, 27, 0.9);
+}
+
+.infoBar {
+  padding: 6px 10px;
+  background: rgba(9, 9, 11, 0.4);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+  font-size: 11px;
+  color: #52525b;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.infoBarWarning {
+  color: #f59e0b;
+  font-size: 11px;
+}
+
+.infoStat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}

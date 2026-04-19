@@ -554,3 +554,13 @@
 .resetBtn:hover {
   background: rgba(239, 68, 68, 0.1);
 }
+
+/* ── Content review table wrapper ────────────────────────────────────────── */
+
+.reviewTableWrapper {
+  margin: 4px 0 8px 0;
+  max-height: 420px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.2) transparent;
+}

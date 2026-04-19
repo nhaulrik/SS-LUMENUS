@@ -12,6 +12,7 @@ import { useRef, useState, useCallback, useEffect } from 'react'
 import AppHeader     from '../components/AppHeader.jsx'
 import Breadcrumbs   from '../components/Breadcrumbs.jsx'
 import agenticCss    from '../components/AgenticPanel.module.css'
+import ContentReviewTable from '../components/ContentReviewTable'
 
 export default function HtmlRecipeStep({
   project,          // { projectName, flowId, zones, selections }
@@ -85,6 +86,7 @@ export default function HtmlRecipeStep({
   const [agenticElapsedLocal, setAgenticElapsedLocal] = useState(0)
   const [agenticPlanLocal, setAgenticPlanLocal] = useState(null)
   const [agenticErrorMsgLocal, setAgenticErrorMsgLocal] = useState('')
+  const [editableContentTable, setEditableContentTable] = useState(null)
 
   // Reset scroll position on component mount to ensure user starts at top of page
   // This fixes autoscroll issues when navigating between recipe steps
@@ -125,19 +127,32 @@ export default function HtmlRecipeStep({
   }, [projectName, project.selectedContextFiles, setToast])
 
   // Save selected files to flow
-  const saveSelectedFilesToFlow = useCallback(async (files) => {
-    try {
-      await fetch(`/api/projects/${projectName}/flows/${flowId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ selectedContextFiles: files }),
-      })
-    } catch {
-      // silent — context files selection is non-critical
-    }
-  }, [projectName, flowId])
+   const saveSelectedFilesToFlow = useCallback(async (files) => {
+     try {
+       await fetch(`/api/projects/${projectName}/flows/${flowId}`, {
+         method: 'PATCH',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ selectedContextFiles: files }),
+       })
+     } catch {
+       // silent — context files selection is non-critical
+     }
+   }, [projectName, flowId])
 
-  // Initialise agentic prompts from persisted flow data (runs once on mount)
+   const savePromptsToFlow = useCallback(async (summaryPrompt, contentPrompt) => {
+     if (!projectName || !flowId) return
+     try {
+       await fetch(`/api/projects/${projectName}/flows/${flowId}`, {
+         method: 'PATCH',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ summaryPrompt, contentPrompt }),
+       })
+     } catch {
+       // silent — prompt persistence is non-critical
+     }
+   }, [projectName, flowId])
+
+   // Initialise agentic prompts from persisted flow data (runs once on mount)
   useEffect(() => {
     if (project.summaryPrompt && !agenticSummaryPrompt) {
       setAgenticSummaryPrompt(project.summaryPrompt)
@@ -344,10 +359,13 @@ export default function HtmlRecipeStep({
           case 'log':
             setAgenticLogsLocal(prev => [...prev, data])
             break
-          case 'plan':
-            setAgenticPlanLocal(JSON.parse(data))
-            setAgenticStatus('confirming')
-            break
+           case 'plan': {
+             const planData = JSON.parse(data)
+             setAgenticPlanLocal(planData)
+             setEditableContentTable(planData.dataTable ? JSON.parse(JSON.stringify(planData.dataTable)) : null)
+             setAgenticStatus('confirming')
+             break
+           }
           case 'error':
             setAgenticStatus('error')
             setAgenticErrorMsgLocal(data)
@@ -371,22 +389,22 @@ export default function HtmlRecipeStep({
     setAgenticElapsedLocal(0)
 
     try {
-      const response = await fetch('/api/opencode/agentic/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectName,
-          flowId,
-          recipe,
-          zones,
-          repeatableSlides,
-          instances: agenticPlanLocal.instances,
-          instanceNames: agenticPlanLocal.instanceNames,
-          contextSummary: agenticPlanLocal.contextSummary,
-          contentPrompt: agenticContentPrompt,
-          selectedFiles,
-        }),
-      })
+        const response = await fetch('/api/opencode/agentic/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            projectName,
+            flowId,
+            recipe,
+            zones,
+            repeatableSlides,
+            instances: agenticPlanLocal.instances,
+            instanceNames: agenticPlanLocal.instanceNames,
+            dataTable: editableContentTable || agenticPlanLocal.dataTable,
+            contentPrompt: agenticContentPrompt,
+            selectedFiles,
+          }),
+        })
 
       if (!response.ok) throw new Error(`Server error ${response.status}`)
 
@@ -744,26 +762,36 @@ export default function HtmlRecipeStep({
               <div className={agenticCss.confirmCard}>
                 <div className={agenticCss.confirmHeader}>
                   <span className={agenticCss.confirmIcon}>◎</span>
-                  <span className={agenticCss.confirmTitle}>Ready to generate</span>
+                  <span className={agenticCss.confirmTitle}>Review generated content</span>
                 </div>
 
                 {agenticPlanLocal.rationale && (
                   <p className={agenticCss.confirmRationale}>{agenticPlanLocal.rationale}</p>
                 )}
 
-                <ul className={agenticCss.confirmList}>
-                  {agenticPlanLocal.agentPlan.map(a => (
-                    <li key={a.id} className={agenticCss.confirmItem}>
-                      <span className={agenticCss.confirmDot} />
-                      {a.id === 'blocks' ? a.label : <strong>{a.label}</strong>}
-                    </li>
-                  ))}
-                </ul>
-
-                <p className={agenticCss.confirmCount}>
-                  {agenticPlanLocal.agentPlan.length} agent{agenticPlanLocal.agentPlan.length !== 1 ? 's' : ''} will run in parallel
-                  {agenticPlanLocal.contextFiles > 0 && ` · ${agenticPlanLocal.contextFiles} context file${agenticPlanLocal.contextFiles !== 1 ? 's' : ''} loaded`}
-                </p>
+                {editableContentTable ? (
+                    <div className={agenticCss.reviewTableWrapper}>
+                      <ContentReviewTable
+                        contentTable={editableContentTable}
+                        instanceNames={agenticPlanLocal.instanceNames || []}
+                        zones={zones}
+                        repeatableSlides={repeatableSlides}
+                        onChange={setEditableContentTable}
+                      />
+                      {/* Status text below table */}
+                      <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '12px', marginTop: '8px' }}>
+                        {editableContentTable.slides && Object.keys(editableContentTable.slides).length > 0 ? (
+                          <>✓ {agenticPlanLocal.instanceNames?.length || 0} slide instance{(agenticPlanLocal.instanceNames?.length || 0) !== 1 ? 's' : ''} mapped — review data above then generate</>
+                        ) : (
+                          <>ℹ All zones treated as shared content (no repeatable slides detected)</>
+                        )}
+                      </div>
+                   </div>
+                 ) : (
+                   <p className={agenticCss.confirmRationale} style={{fontStyle:'italic'}}>
+                     No content table was returned. Generation will proceed without preview.
+                   </p>
+                 )}
 
                 <div className={agenticCss.confirmActions}>
                   <button className={agenticCss.acceptBtn} onClick={handleAgenticAccept}>

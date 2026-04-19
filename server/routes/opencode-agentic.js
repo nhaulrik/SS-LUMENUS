@@ -76,6 +76,48 @@ function remapInstances(instances, repeatableSlides) {
 }
 
 /**
+ * Normalize dataTable structure — the AI frequently returns slides as a plain array
+ * instead of { instances: [...] }, and puts repeatable zone values in blocks.
+ */
+function normalizeDataTable(dt, repSlides) {
+  if (!dt) return null
+  const normalized = { blocks: { ...(dt.blocks || {}) }, slides: {} }
+  const repKeys = new Set(repSlides.map(rs => rs.key))
+
+  // Normalize slides: wrap plain arrays into { instances: [...] }
+  for (const [slideKey, slideVal] of Object.entries(dt.slides || {})) {
+    if (Array.isArray(slideVal)) {
+      normalized.slides[slideKey] = { instances: slideVal }
+    } else if (slideVal && typeof slideVal === 'object') {
+      normalized.slides[slideKey] = slideVal
+    }
+  }
+
+  // Move any blocks keys that belong to repeatable slides into each instance
+  // (AI sometimes puts repeatable zone values in blocks instead of instances)
+  const blocksToMove = {}
+  for (const [blockKey, blockVal] of Object.entries(normalized.blocks)) {
+    blocksToMove[blockKey] = blockVal
+  }
+
+  // Only move blocks into instances if all zones are repeatable (no true block zones)
+  if (Object.keys(normalized.slides).length > 0 && Object.keys(blocksToMove).length > 0) {
+    for (const [slideKey, slideData] of Object.entries(normalized.slides)) {
+      if (slideData.instances) {
+        slideData.instances = slideData.instances.map(inst => ({
+          ...blocksToMove,
+          ...inst  // inst values override blocksToMove values (inst is more specific)
+        }))
+      }
+    }
+    // Clear blocks since they've been merged into instances
+    normalized.blocks = {}
+  }
+
+  return normalized
+}
+
+/**
  * Derive which zone categories are present given the current repeatable-slide set.
  */
 function buildRepSetInfo(zones, repeatableSlides) {
@@ -160,10 +202,13 @@ router.post('/agentic/plan', async (req, res) => {
     phase('planning')
     log('Orchestrator: analysing recipe + context...')
 
-    const orchestratorPrompt = buildOrchestratorPrompt(recipe, context.text, contentPrompt, repeatableSlides)
+    console.log('[agentic/plan] repeatableSlides:', JSON.stringify(repeatableSlides))
+    console.log('[agentic/plan] zones count:', zones.length)
+    console.log('[agentic/plan] zones slideIndexes:', zones.map(z => z.slideIndex))
+    const orchestratorPrompt = buildOrchestratorPrompt(recipe, context.text, contentPrompt, repeatableSlides, zones)
     log(`Sending orchestrator prompt (${orchestratorPrompt.length} chars) to AI...`)
 
-    const orchRaw = await callAi(orchestratorPrompt, { maxTokens: 2000, temperature: 0.3 })
+     const orchRaw = await callAi(orchestratorPrompt, { maxTokens: 6000, temperature: 0.3 })
     log(`Orchestrator response received (${orchRaw.response.length} chars)`)
 
     let orchResult
@@ -173,8 +218,13 @@ router.post('/agentic/plan', async (req, res) => {
       return error(`Orchestrator returned invalid JSON: ${orchRaw.response.slice(0, 200)}`)
     }
 
-    const { instances = {}, instanceNames = [], contextSummary = '', rationale = '' } = orchResult
-    const remappedInstances = remapInstances(instances, repeatableSlides)
+      const { instances: rawInstances = {}, instanceNames = [], rationale = '', dataTable: rawDataTable = null } = orchResult
+      const remappedInstances = remapInstances(rawInstances, repeatableSlides)
+      const dataTable = normalizeDataTable(rawDataTable, repeatableSlides)
+      
+      log('Normalized dataTable slides: ' + JSON.stringify(Object.keys(dataTable?.slides || {})))
+      console.log('[agentic/plan] dataTable:', JSON.stringify(dataTable, null, 2))
+      console.log('[agentic/plan] instances:', JSON.stringify(rawInstances))
 
     // Save orchestrator prompt for debugging
     if (flowId) {
@@ -184,10 +234,10 @@ router.post('/agentic/plan', async (req, res) => {
       }
     }
 
-    log(`Instances: ${JSON.stringify(remappedInstances)}`)
-    log(`Context summary: ${contextSummary.length} chars`)
-    log(`Instance names: ${instanceNames.join(', ') || '(none)'}`)
-    if (rationale) log(`Orchestrator: ${rationale}`)
+     log(`Instances: ${JSON.stringify(remappedInstances)}`)
+     log(`Data table: ${dataTable ? Object.keys(dataTable.blocks || {}).length + ' block zones, ' + Object.keys(dataTable.slides || {}).length + ' slide key(s)' : 'none'}`)
+     log(`Instance names: ${instanceNames.join(', ') || '(none)'}`)
+     if (rationale) log(`Orchestrator: ${rationale}`)
     for (const [key, n] of Object.entries(remappedInstances)) {
       log(`  ${key}: ${n} instance${n !== 1 ? 's' : ''}`)
     }
@@ -208,14 +258,14 @@ router.post('/agentic/plan', async (req, res) => {
 
     log(`Plan ready — ${agentPlan.length} agent${agentPlan.length !== 1 ? 's' : ''} queued`)
 
-    emit(res, 'plan', JSON.stringify({
-      instances: remappedInstances,
-      instanceNames,
-      contextSummary,
-      rationale,
-      agentPlan,
-      contextFiles: context.fileCount,
-    }))
+      emit(res, 'plan', JSON.stringify({
+        instances: remappedInstances,
+        instanceNames,
+        dataTable,
+        rationale,
+        agentPlan,
+        contextFiles: context.fileCount,
+      }))
     res.end()
 
   } catch (err) {
@@ -234,15 +284,15 @@ router.post('/agentic/run', async (req, res) => {
   const error = (msg)  => { emit(res, 'error', msg); res.end() }
 
   try {
-    const {
-      projectName,
-      flowId,
-      zones            = [],
-      repeatableSlides = [],
-      instances        = {},
-      contextSummary   = '',
-      contentPrompt    = '',
-    } = req.body
+      const {
+        projectName,
+        flowId,
+        zones            = [],
+        repeatableSlides = [],
+        instances        = {},
+        dataTable        = null,
+        contentPrompt    = '',
+      } = req.body
 
     if (!projectName) return error('projectName is required')
 
@@ -266,14 +316,35 @@ router.post('/agentic/run', async (req, res) => {
     phase('generating')
     log(`Starting ${agents.length} parallel agent${agents.length !== 1 ? 's' : ''}...`)
 
-    // ── Parallel generation ───────────────────────────────────────────────────
-    const agentResults = await Promise.all(agents.map(async (agent) => {
-      emit(res, 'agent_update', { id: agent.id, state: 'running' })
-      const t0 = Date.now()
+      // ── Parallel generation ───────────────────────────────────────────────────
+      const agentResults = await Promise.all(agents.map(async (agent) => {
+        emit(res, 'agent_update', { id: agent.id, state: 'running' })
+        const t0 = Date.now()
 
-      const prompt = agent.type === 'blocks'
-        ? buildBlocksPrompt(zones, repeatableSlides, contextSummary, repSet, contentPrompt)
-        : buildInstancePrompt(zones, repeatableSlides, agent.slideKey, agent.instanceIndex, agent.instanceCount, contextSummary, contentPrompt)
+        let agentContext = ''
+
+        if (agent.type === 'blocks') {
+          if (dataTable?.blocks && Object.keys(dataTable.blocks).length > 0) {
+            const lines = ['RAW SOURCE DATA FOR THIS SLIDE (extracted verbatim from the spreadsheet — use these values to generate content):']
+            Object.entries(dataTable.blocks).forEach(([key, value]) => {
+              lines.push(`  ${key}: ${value}`)
+            })
+            agentContext = lines.join('\n')
+          }
+        } else {
+          const instanceData = dataTable?.slides?.[agent.slideKey]?.instances?.[agent.instanceIndex]
+          if (instanceData && Object.keys(instanceData).length > 0) {
+            const lines = ['RAW SOURCE DATA FOR THIS SLIDE INSTANCE (extracted verbatim from the spreadsheet — use these values to generate content):']
+            Object.entries(instanceData).forEach(([key, value]) => {
+              lines.push(`  ${key}: ${value}`)
+            })
+            agentContext = lines.join('\n')
+          }
+        }
+
+       const prompt = agent.type === 'blocks'
+         ? buildBlocksPrompt(zones, repeatableSlides, agentContext, repSet, contentPrompt)
+         : buildInstancePrompt(zones, repeatableSlides, agent.slideKey, agent.instanceIndex, agent.instanceCount, agentContext, contentPrompt)
 
       log(`[${agent.label}] Sending prompt (${prompt.length} chars)...`)
       const result = await callAi(prompt, { maxTokens: 3000, temperature: 0.4 })
