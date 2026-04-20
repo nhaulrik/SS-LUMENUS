@@ -47,6 +47,38 @@ const pendingTemplates = new Map();
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /**
+ * Extract slide names from patched HTML using keySelector from repeatableSlides.
+ * Returns an array of { index, name, keyMissing }.
+ */
+function extractSlideNamesFromHtml(html, repeatableSlides) {
+  try {
+    const root = parse(html);
+    const sections = root.querySelectorAll('section');
+    const names = [];
+    
+    sections.forEach((section, idx) => {
+      const repSlide = repeatableSlides[0];
+      
+      if (repSlide?.keySelector) {
+        const el = section.querySelector(repSlide.keySelector);
+        const text = el?.text?.trim() || el?.innerText?.trim();
+        if (text) {
+          names.push({ index: idx + 1, name: text, keyMissing: false });
+        } else {
+          names.push({ index: idx + 1, name: `Slide ${idx + 1}`, keyMissing: true });
+        }
+      } else {
+        names.push({ index: idx + 1, name: `Slide ${idx + 1}`, keyMissing: false });
+      }
+    });
+    
+    return names;
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Build a preview HTML document for the full patched output (all sections).
  *
  * Wraps all <section> elements in a #solon-slide-shell div so the client can
@@ -364,26 +396,28 @@ router.get('/html-flow/load-flow', (req, res) => {
       ? parsedViolations.filter(v => v.rule !== 'NO_ZONES')
       : parsedViolations;
 
-    const previewHtml = buildPreviewHtml(html, trees[0]);
+     const previewHtml = buildPreviewHtml(html, trees[0]);
+     const latestGeneration = (flow.generations || []).slice(-1)[0];
 
-    return res.json({
-      ok: true,
-      projectName,
-      flowId,
-      fileName: flow.templateFilename || 'template.html',
-      slideCount,
-      trees,
-      selections,
-      repeatableSlides:    metadata.repeatableSlides    || [],
-      fullSlideGeneration: metadata.fullSlideGeneration || [],
-      summaryPrompt:       flow.summaryPrompt           || '',
-      contentPrompt:       flow.contentPrompt           || '',
-      agenticCustomInput:  flow.agenticCustomInput      || '',
-      agenticJsonResponse: flow.agenticJsonResponse     || null,
-      previewHtml,
-      violations: violations.length ? violations : undefined,
-      isExistingFlow: true,
-    });
+     return res.json({
+       ok: true,
+       projectName,
+       flowId,
+       fileName: flow.templateFilename || 'template.html',
+       slideCount,
+       trees,
+       selections,
+       repeatableSlides:    metadata.repeatableSlides    || [],
+       fullSlideGeneration: metadata.fullSlideGeneration || [],
+       summaryPrompt:       flow.summaryPrompt           || '',
+       contentPrompt:       flow.contentPrompt           || '',
+       agenticCustomInput:  flow.agenticCustomInput      || '',
+       agenticJsonResponse: flow.agenticJsonResponse     || null,
+       previewHtml,
+       slideNames:          latestGeneration?.slideNames || [],
+       violations: violations.length ? violations : undefined,
+       isExistingFlow: true,
+     });
   } catch (err) {
     console.error('[html-flow] load-flow error:', err);
     return res.status(500).json({ ok: false, error: err.message });
@@ -702,7 +736,7 @@ router.post('/html-flow/validate-json', (req, res) => {
 
 router.post('/html-flow/apply-content', (req, res) => {
   try {
-    const { projectName, flowId, jsonString } = req.body;
+    const { projectName, flowId, jsonString, instanceNames } = req.body;
 
     if (!jsonString) {
       return res.status(400).json({ ok: false, error: 'jsonString is required.' });
@@ -731,28 +765,36 @@ router.post('/html-flow/apply-content', (req, res) => {
       return res.status(422).json({ ok: false, error: 'JSON validation failed', missingFields: validation.missingFields });
     }
 
-    const data         = JSON.parse(jsonString);
-    const templateHtml = fs.readFileSync(templatePath, 'utf8');
-    const patchedHtml  = applyHtmlContent(templateHtml, data, zones, repeatableSlides);
+     const data         = JSON.parse(jsonString);
+     const templateHtml = fs.readFileSync(templatePath, 'utf8');
+     const patchedHtml  = applyHtmlContent(templateHtml, data, zones, repeatableSlides);
 
-    const roundId    = randomUUID();
-    const outputFile = `output-${roundId}.html`;
-    const outputPath = path.join(flowDir, outputFile);
-    fs.writeFileSync(outputPath, patchedHtml, 'utf8');
+     let slideNames;
+     if (Array.isArray(instanceNames) && instanceNames.length > 0) {
+       slideNames = instanceNames.map((name, i) => ({ index: i + 1, name, keyMissing: false }));
+     } else {
+       slideNames = extractSlideNamesFromHtml(patchedHtml, repeatableSlides);
+     }
 
-    flow.generations = [...(flow.generations || []), {
-      id:         roundId,
-      appliedAt:  new Date().toISOString(),
-      outputFile,
-      jsonInput:  jsonString.slice(0, 2000),
-    }];
-    flow.updatedAt = new Date().toISOString();
-    fs.writeFileSync(flowPath, JSON.stringify(flow, null, 2), 'utf8');
+     const roundId    = randomUUID();
+     const outputFile = `output-${roundId}.html`;
+     const outputPath = path.join(flowDir, outputFile);
+     fs.writeFileSync(outputPath, patchedHtml, 'utf8');
 
-    const previewHtml = buildOutputPreviewHtml(patchedHtml);
-    const slideCount  = (patchedHtml.match(/<section/g) || []).length;
+     flow.generations = [...(flow.generations || []), {
+       id:         roundId,
+       appliedAt:  new Date().toISOString(),
+       outputFile,
+       jsonInput:  jsonString.slice(0, 2000),
+       slideNames,
+     }];
+     flow.updatedAt = new Date().toISOString();
+     fs.writeFileSync(flowPath, JSON.stringify(flow, null, 2), 'utf8');
 
-    return res.json({ ok: true, roundId, outputFile, previewHtml, slideCount });
+     const previewHtml = buildOutputPreviewHtml(patchedHtml);
+     const slideCount  = (patchedHtml.match(/<section/g) || []).length;
+
+     return res.json({ ok: true, roundId, outputFile, previewHtml, slideCount, slideNames });
   } catch (err) {
     console.error('[html-flow] apply-content error:', err);
     return res.status(500).json({ ok: false, error: err.message });

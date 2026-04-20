@@ -110,10 +110,15 @@ router.patch('/:projectName/flows/:flowId', (req, res) => {
       }
       flow.status = status;
     }
-    if (Array.isArray(repeatableSlides)) {
-      flow._metadata = flow._metadata || {};
-      flow._metadata.repeatableSlides = repeatableSlides;
-    }
+     if (Array.isArray(repeatableSlides)) {
+       flow._metadata = flow._metadata || {};
+       flow._metadata.repeatableSlides = repeatableSlides.map(rs => ({
+         slideIndex: rs.slideIndex,
+         key: rs.key,
+         prompt: rs.prompt,
+         ...(rs.keySelector !== undefined && { keySelector: rs.keySelector }),
+       }));
+     }
     if (Array.isArray(selections)) {
       flow._metadata = flow._metadata || {};
       flow._metadata.selections = selections;

@@ -21,7 +21,7 @@ import { useFocusTrap } from '../utils/useFocusTrap'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function sanitizeKey(raw) {
+export function sanitizeKey(raw) {
   return raw.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').slice(0, 60)
 }
 
@@ -63,41 +63,47 @@ function isAncestorIgnored(nodeId, selections) {
 
 // ── Slide control bar ─────────────────────────────────────────────────────────
 
-function SlideControlBar({ slideIndex, repeatableSlides, onRepeatableSlides, fullSlideGeneration = [], onFullSlideGeneration, hasZones }) {
-  const existing = repeatableSlides.find(rs => rs.slideIndex === slideIndex)
-  const isRep    = !!existing
-  const isFullSlide = fullSlideGeneration.includes(slideIndex)
+function SlideControlBar({ slideIndex, repeatableSlides, onRepeatableSlides, fullSlideGeneration = [], onFullSlideGeneration, hasZones, onKeySelectionModeChange, keySelectionMode, keySelectionSlide }) {
+   const existing = repeatableSlides.find(rs => rs.slideIndex === slideIndex)
+   const isRep    = !!existing
+   const isFullSlide = fullSlideGeneration.includes(slideIndex)
+   const isKeySelecting = keySelectionMode && keySelectionSlide === slideIndex
 
-  const handleToggle = (e) => {
-    if (e.target.checked) {
-      onRepeatableSlides([...repeatableSlides, { slideIndex, key: `slide_${slideIndex}`, prompt: '' }])
-    } else {
-      onRepeatableSlides(repeatableSlides.filter(rs => rs.slideIndex !== slideIndex))
-    }
-  }
+   const handleToggle = (e) => {
+     if (e.target.checked) {
+       onRepeatableSlides([...repeatableSlides, { slideIndex, key: `slide_${slideIndex}`, prompt: '', keySelector: null }])
+     } else {
+       onRepeatableSlides(repeatableSlides.filter(rs => rs.slideIndex !== slideIndex))
+     }
+   }
 
-  const handleFullSlideToggle = (e) => {
-    if (onFullSlideGeneration) {
-      if (e.target.checked) {
-        onFullSlideGeneration([...fullSlideGeneration, slideIndex])
-      } else {
-        onFullSlideGeneration(fullSlideGeneration.filter(idx => idx !== slideIndex))
-      }
-    }
-  }
+   const handleFullSlideToggle = (e) => {
+     if (onFullSlideGeneration) {
+       if (e.target.checked) {
+         onFullSlideGeneration([...fullSlideGeneration, slideIndex])
+       } else {
+         onFullSlideGeneration(fullSlideGeneration.filter(idx => idx !== slideIndex))
+       }
+     }
+   }
 
-  const handleKey = (val) => {
-    const sanitized = val.toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/^_+/, '').slice(0, 60)
-    onRepeatableSlides(repeatableSlides.map(rs =>
-      rs.slideIndex === slideIndex ? { ...rs, key: sanitized } : rs
-    ))
-  }
+   const handlePrompt = (val) => {
+     onRepeatableSlides(repeatableSlides.map(rs =>
+       rs.slideIndex === slideIndex ? { ...rs, prompt: val } : rs
+     ))
+   }
 
-  const handlePrompt = (val) => {
-    onRepeatableSlides(repeatableSlides.map(rs =>
-      rs.slideIndex === slideIndex ? { ...rs, prompt: val } : rs
-    ))
-  }
+   const handleSetKeyClick = () => {
+     if (onKeySelectionModeChange) {
+       onKeySelectionModeChange(true, slideIndex)
+     }
+   }
+
+   const handleCancelKeySelection = () => {
+     if (onKeySelectionModeChange) {
+       onKeySelectionModeChange(false, null)
+     }
+   }
 
   return (
     <div className={`html-tree-slide-bar${isRep ? ' html-tree-slide-bar--repeatable' : ''}`}
@@ -129,36 +135,52 @@ function SlideControlBar({ slideIndex, repeatableSlides, onRepeatableSlides, ful
          </div>
        </div>
 
-      {isRep && (
-        <div className="html-tree-slide-bar-fields">
-          <div className="html-tree-slide-bar-field">
-            <label>Slide key</label>
-            <input
-              className="html-tree-slide-bar-input"
-              value={existing.key}
-              onChange={e => handleKey(e.target.value)}
-              placeholder="brand_slide"
-              data-testid={`slide-key-input-${slideIndex}`}
-            />
-          </div>
-          <div className="html-tree-slide-bar-field">
-            <label>Generation prompt</label>
-            <textarea
-              className="html-tree-slide-bar-input html-tree-slide-bar-textarea"
-              rows={2}
-              value={existing.prompt}
-              onChange={e => handlePrompt(e.target.value)}
-              placeholder='e.g. "Generate one slide per car brand found in your context"'
-              data-testid={`slide-prompt-input-${slideIndex}`}
-            />
-          </div>
-          {!hasZones && (
-            <p className="html-tree-slide-bar-warning" data-testid={`slide-no-zones-warning-${slideIndex}`}>
-              ⚠ No zones assigned to this slide. Mark at least one zone as unique for meaningful instances.
-            </p>
-          )}
-        </div>
-      )}
+       {isRep && (
+         <div className="html-tree-slide-bar-fields">
+           <div className="html-tree-slide-bar-field">
+             <label>Slide key element</label>
+             <div className="html-tree-slide-bar-key-controls">
+               {isKeySelecting ? (
+                 <button
+                   className="btn btn-secondary html-tree-slide-bar-key-btn html-tree-slide-bar-key-btn--cancel"
+                   onClick={handleCancelKeySelection}
+                   data-testid={`slide-key-cancel-${slideIndex}`}
+                 >
+                   Cancel selection
+                 </button>
+               ) : (
+                 <button
+                   className="btn btn-secondary html-tree-slide-bar-key-btn"
+                   onClick={handleSetKeyClick}
+                   data-testid={`slide-key-button-${slideIndex}`}
+                   title="Click to select a key element from the preview"
+                 >
+                   {existing.keySelector ? `Key: ${existing.keySelector.split('>').pop().slice(0, 30)}` : 'Set Slide Key'}
+                 </button>
+               )}
+             </div>
+             {!existing.keySelector && (
+               <p className="html-tree-slide-bar-note">No slide key — names will fall back to index</p>
+             )}
+           </div>
+           <div className="html-tree-slide-bar-field">
+             <label>Generation prompt</label>
+             <textarea
+               className="html-tree-slide-bar-input html-tree-slide-bar-textarea"
+               rows={2}
+               value={existing.prompt}
+               onChange={e => handlePrompt(e.target.value)}
+               placeholder='e.g. "Generate one slide per car brand found in your context"'
+               data-testid={`slide-prompt-input-${slideIndex}`}
+             />
+           </div>
+           {!hasZones && (
+             <p className="html-tree-slide-bar-warning" data-testid={`slide-no-zones-warning-${slideIndex}`}>
+               ⚠ No zones assigned to this slide. Mark at least one zone as unique for meaningful instances.
+             </p>
+           )}
+         </div>
+       )}
     </div>
   )
 }
@@ -463,18 +485,21 @@ const TreeNode = memo(function TreeNode({
 // ── Main component ────────────────────────────────────────────────────────
 
 export default function HtmlTreePanel({
-  trees,
-  selections,
-  onSelections,
-  onClearAll,
-  repeatableSlides = [],
-  onRepeatableSlides,
-  fullSlideGeneration = [],
-  onFullSlideGeneration,
-  slideCount,
-  highlightNodeId,
-  onHighlight,
-}) {
+   trees,
+   selections,
+   onSelections,
+   onClearAll,
+   repeatableSlides = [],
+   onRepeatableSlides,
+   fullSlideGeneration = [],
+   onFullSlideGeneration,
+   slideCount,
+   highlightNodeId,
+   onHighlight,
+   keySelectionMode = false,
+   onKeySelectionModeChange,
+   keySelectionSlide = null,
+ }) {
   const [slideIdx,      setSlideIdx]      = useState(0)   // 0-based
   const [expandedIds,   setExpandedIds]   = useState(() => new Set())
   const [selectedIds,   setSelectedIds]   = useState(() => new Set())
@@ -662,6 +687,9 @@ export default function HtmlTreePanel({
            hasZones={selections.some(s => s.slideIndex === slideIndex)}
            fullSlideGeneration={fullSlideGeneration}
            onFullSlideGeneration={onFullSlideGeneration}
+           onKeySelectionModeChange={onKeySelectionModeChange}
+           keySelectionMode={keySelectionMode}
+           keySelectionSlide={keySelectionSlide}
          />
        )}
 

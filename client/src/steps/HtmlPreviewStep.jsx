@@ -5,38 +5,60 @@
  * Users can click on text elements to edit them directly in the preview.
  */
 
-import { useCallback, useRef, useState, useEffect } from 'react'
+import { useCallback, useRef, useState, useEffect, useMemo } from 'react'
 import AppHeader   from '../components/AppHeader.jsx'
 import Breadcrumbs from '../components/Breadcrumbs.jsx'
 
 export default function HtmlPreviewStep({
-  projectName,
-  applied,      // { outputFile, previewHtml, roundId, slideCount }
-  flowId,
-  step,
-  canNavigateTo,
-  navigateTo,
-  onBack,
-  onNext,
-  onPreviewHtmlChange,
-  setToast,
-  debugContext,
-}) {
-  const { previewHtml, slideCount = 1, roundId } = applied
+   projectName,
+   applied,      // { outputFile, previewHtml, roundId, slideCount }
+   flowId,
+   step,
+   canNavigateTo,
+   navigateTo,
+   onBack,
+   onNext,
+   onPreviewHtmlChange,
+   setToast,
+   debugContext,
+   repeatableSlides = [],
+ }) {
+   const { previewHtml, slideCount = 1, roundId } = applied
   const isMultiSlide = slideCount > 1
 
-  // Local copy of the preview HTML — initialized from prop, updated after each backend save.
-  // We intentionally do NOT sync srcDoc back from the prop on every render so that inline
-  // edits (contentEditable inside the iframe) are never erased by a React re-render.
-  // When a new apply round arrives (roundId changes) we do reset to the fresh HTML.
-  const [srcDoc, setSrcDoc] = useState(previewHtml)
-  const prevRoundRef = useRef(roundId)
-  useEffect(() => {
-    if (roundId !== prevRoundRef.current) {
-      setSrcDoc(previewHtml)
-      prevRoundRef.current = roundId
-    }
-  }, [roundId, previewHtml])
+   // Local copy of the preview HTML — initialized from prop, updated after each backend save.
+   // We intentionally do NOT sync srcDoc back from the prop on every render so that inline
+   // edits (contentEditable inside the iframe) are never erased by a React re-render.
+   // When a new apply round arrives (roundId changes) we do reset to the fresh HTML.
+   const [srcDoc, setSrcDoc] = useState(previewHtml)
+   const prevRoundRef = useRef(roundId)
+   useEffect(() => {
+     if (roundId !== prevRoundRef.current) {
+       setSrcDoc(previewHtml)
+       prevRoundRef.current = roundId
+     }
+   }, [roundId, previewHtml])
+
+   // ── Inject key element indicators into srcDoc ──────────────────────────────
+   const srcDocWithKeyIndicators = useMemo(() => {
+     if (!srcDoc) return srcDoc
+     
+     const keySelectors = repeatableSlides
+       .filter(rs => rs.keySelector)
+       .map(rs => rs.keySelector)
+     
+     if (keySelectors.length === 0) return srcDoc
+     
+     const keyIndicatorCss = keySelectors.map(ks => 
+       `${ks} { outline: 2px solid rgba(245,158,11,0.4) !important; }`
+     ).join('\n')
+     
+     const injection = `<style>\n${keyIndicatorCss}\n</style>`
+     
+     return srcDoc.includes('</head>')
+       ? srcDoc.replace('</head>', injection + '</head>')
+       : injection + srcDoc
+   }, [srcDoc, repeatableSlides])
 
   // ── Scale: identical to HtmlUploadStep ────────────────────────────────────
   const [previewScale,  setPreviewScale]  = useState(1)
@@ -64,11 +86,12 @@ export default function HtmlPreviewStep({
   const iframeRef = useRef(null)
   const editDebounceRef = useRef(null)
 
-   // Handle postMessage events from the iframe
-   useEffect(() => {
-     const handleMessage = (event) => {
-       if (event.origin !== window.location.origin) return
-       if (event.data.type !== 'solon-edit') return
+    // Handle postMessage events from the iframe
+    useEffect(() => {
+      const handleMessage = (event) => {
+        // srcDoc iframes have origin 'null', allow that or same-origin
+        if (event.origin !== window.location.origin && event.origin !== 'null') return
+        if (event.data.type !== 'solon-edit') return
 
        const { selector, newText } = event.data
        if (!selector || newText === undefined) return
@@ -260,17 +283,17 @@ export default function HtmlPreviewStep({
               transformOrigin: 'top left',
             }
             return (
-              <div style={wrapperStyle} ref={wrapperCallbackRef}>
-                <iframe
-                   ref={iframeRef}
-                   className="html-preview-step-frame"
-                   srcDoc={srcDoc}
-                   title="Output preview"
-                   sandbox="allow-same-origin allow-scripts"
-                   onLoad={handleIframeLoad}
-                   style={iframeStyle}
-                 />
-              </div>
+             <div style={wrapperStyle} ref={wrapperCallbackRef}>
+                 <iframe
+                    ref={iframeRef}
+                    className="html-preview-step-frame"
+                    srcDoc={srcDocWithKeyIndicators}
+                    title="Output preview"
+                    sandbox="allow-same-origin allow-scripts"
+                    onLoad={handleIframeLoad}
+                    style={iframeStyle}
+                  />
+               </div>
             )
           })()}
 

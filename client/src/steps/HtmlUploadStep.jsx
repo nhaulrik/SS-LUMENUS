@@ -15,7 +15,7 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from 'react'
 import AppHeader    from '../components/AppHeader.jsx'
 import Breadcrumbs  from '../components/Breadcrumbs.jsx'
-import HtmlTreePanel from '../components/HtmlTreePanel.jsx'
+import HtmlTreePanel, { sanitizeKey } from '../components/HtmlTreePanel.jsx'
 
 export default function HtmlUploadStep({
   step, canNavigateTo, navigateTo,
@@ -43,8 +43,12 @@ export default function HtmlUploadStep({
     roRef.current.observe(el)
   }, [])
 
-  // ── Highlight: tree hover → preview iframe ────────────────────────────────
-  const [highlightNodeId, setHighlightNodeId] = useState(null)
+   // ── Highlight: tree hover → preview iframe ────────────────────────────────
+   const [highlightNodeId, setHighlightNodeId] = useState(null)
+
+   // ── Key selection mode ─────────────────────────────────────────────────────
+   const [keySelectionMode, setKeySelectionMode] = useState(false)
+   const [keySelectionSlide, setKeySelectionSlide] = useState(null)
 
   // ── Stage A: file selection ───────────────────────────────────────────────
   const [fileName,  setFileName]  = useState(initialSession?.fileName  ?? '')
@@ -306,47 +310,103 @@ export default function HtmlUploadStep({
      }
    }, [isExistingFlow, currentProjectName, currentFlowId, templateId, selections, repeatableSlides, fullSlideGeneration, pendingFlowName, onProjectCreated, setToast])
 
-  // ── Copy AI fix prompt ────────────────────────────────────────────────────
-  const handleCopyPrompt = useCallback(() => {
-    const issueList = violations.map(v => v.rule).join(', ')
-    const prompt = `You are an expert HTML developer helping to prepare a slide template for use with an AI content generation tool.\n\nThe following validation issues were found:\n${issueList}\n\nPlease fix the HTML file so that:\n- Each slide is wrapped in a <section> element\n\nReturn only the corrected HTML.`
-    navigator.clipboard.writeText(prompt).then(() => {
-      setPromptCopied(true)
-      setTimeout(() => setPromptCopied(false), 2000)
-    }).catch(() => {})
-  }, [violations])
+   // ── Copy AI fix prompt ────────────────────────────────────────────────────
+   const handleCopyPrompt = useCallback(() => {
+     const issueList = violations.map(v => v.rule).join(', ')
+     const prompt = `You are an expert HTML developer helping to prepare a slide template for use with an AI content generation tool.\n\nThe following validation issues were found:\n${issueList}\n\nPlease fix the HTML file so that:\n- Each slide is wrapped in a <section> element\n\nReturn only the corrected HTML.`
+     navigator.clipboard.writeText(prompt).then(() => {
+       setPromptCopied(true)
+       setTimeout(() => setPromptCopied(false), 2000)
+     }).catch(() => {})
+   }, [violations])
+
+   // ── Handle key selection mode changes ──────────────────────────────────────
+   const handleKeySelectionModeChange = useCallback((enabled, slideIdx) => {
+     setKeySelectionMode(enabled)
+     setKeySelectionSlide(enabled ? slideIdx : null)
+   }, [])
+
+   // ── Handle key element selection from iframe ───────────────────────────────
+   useEffect(() => {
+     // When key selection mode is active, ensure all iframes can receive clicks
+     if (keySelectionMode) {
+       document.querySelectorAll('iframe').forEach(iframe => {
+         iframe.style.pointerEvents = ''
+       })
+     }
+   }, [keySelectionMode])
+
+   useEffect(() => {
+     const handleMessage = (event) => {
+       if (event.data.type === 'solon-key-select' && keySelectionMode && keySelectionSlide) {
+         const nodeId = event.data.nodeId
+         const updated = repeatableSlides.map(rs =>
+           rs.slideIndex === keySelectionSlide
+             ? { ...rs, keySelector: nodeId, key: sanitizeKey(nodeId) }
+             : rs
+         )
+         setRepeatableSlides(updated)
+         syncSession({ repeatableSlides: updated })
+         setKeySelectionMode(false)
+         setKeySelectionSlide(null)
+       }
+     }
+     window.addEventListener('message', handleMessage)
+     return () => window.removeEventListener('message', handleMessage)
+   }, [keySelectionMode, keySelectionSlide, repeatableSlides, syncSession])
 
 
 
-  // ── Preview HTML with highlight injection ─────────────────────────────────
-  // Inject a <style> that highlights the hovered tree node by data-solon-id,
-  // and a <script> that posts back when the user hovers elements in the iframe.
-  const highlightedPreviewHtml = useMemo(() => {
-    if (!previewHtml) return ''
-    const highlightCss = highlightNodeId ? `
+   // ── Preview HTML with highlight injection ─────────────────────────────────
+   // Inject a <style> that highlights the hovered tree node by data-solon-id,
+   // and a <script> that posts back when the user hovers elements in the iframe.
+   const highlightedPreviewHtml = useMemo(() => {
+     if (!previewHtml) return ''
+     const highlightCss = highlightNodeId ? `
 [data-solon-id="${CSS.escape(highlightNodeId)}"] {
-  outline: 3px solid #4CAF80 !important;
-  outline-offset: 2px !important;
-  box-shadow: 0 0 0 4px rgba(76,175,128,0.4), 0 4px 12px rgba(115,170,135,0.4) !important;
-  background: rgba(115,170,135,0.15) !important;
-  position: relative !important;
-  z-index: 9999 !important;
+   outline: 3px solid #4CAF80 !important;
+   outline-offset: 2px !important;
+   box-shadow: 0 0 0 4px rgba(76,175,128,0.4), 0 4px 12px rgba(115,170,135,0.4) !important;
+   background: rgba(115,170,135,0.15) !important;
+   position: relative !important;
+   z-index: 9999 !important;
 }` : ''
 
-    // Bake the scale into the srcDoc as a <style> block.
-    // previewScale = wrapperWidth / 1280 — computed by ResizeObserver.
-    // This avoids any iframe scripts or sandbox permissions.
-    const injection = `<style>
+     const keySelectionCss = keySelectionMode ? `
+[data-solon-id] { cursor: crosshair !important; }
+[data-solon-id]:hover { outline: 2px solid #f59e0b !important; outline-offset: 2px !important; background: rgba(245,158,11,0.12) !important; }
+` : ''
+
+     const keySelectionScript = keySelectionMode ? `
+<script>
+(function() {
+  document.addEventListener('click', function(e) {
+    var el = e.target.closest('[data-solon-id]');
+    if (el) {
+      e.preventDefault();
+      e.stopPropagation();
+      window.parent.postMessage({ type: 'solon-key-select', nodeId: el.getAttribute('data-solon-id') }, '*');
+    }
+  }, true);
+})();
+</script>
+` : ''
+
+     // Bake the scale into the srcDoc as a <style> block.
+     // previewScale = wrapperWidth / 1280 — computed by ResizeObserver.
+     // This avoids any iframe scripts or sandbox permissions.
+     const injection = `<style>
 #solon-slide-shell { transform: scale(${previewScale}); }
 [data-solon-id] { cursor: pointer; }
 [data-solon-id]:hover { outline: 1px dashed rgba(76,175,128,0.5); }
 ${highlightCss}
-</style>`
+${keySelectionCss}
+</style>${keySelectionScript}`
 
-    return previewHtml.includes('</head>')
-      ? previewHtml.replace('</head>', injection + '</head>')
-      : injection + previewHtml
-  }, [previewHtml, highlightNodeId, previewScale])
+     return previewHtml.includes('</head>')
+       ? previewHtml.replace('</head>', injection + '</head>')
+       : injection + previewHtml
+   }, [previewHtml, highlightNodeId, previewScale, keySelectionMode])
 
   // ── Can proceed ───────────────────────────────────────────────────────────
   // Allow proceeding if:
@@ -447,20 +507,23 @@ ${highlightCss}
                   </div>
                 )}
 
-                {/* DOM Tree panel */}
-                <HtmlTreePanel
-                  trees={trees}
-                  selections={selections}
-                  onSelections={handleSelectionsChange}
-                  onClearAll={handleClearAll}
-                  repeatableSlides={repeatableSlides}
-                  onRepeatableSlides={handleRepeatableSlidesChange}
-                  fullSlideGeneration={fullSlideGeneration}
-                  onFullSlideGeneration={handleFullSlideGenerationChange}
-                  slideCount={slideCount}
-                  highlightNodeId={highlightNodeId}
-                  onHighlight={setHighlightNodeId}
-                />
+                 {/* DOM Tree panel */}
+                 <HtmlTreePanel
+                   trees={trees}
+                   selections={selections}
+                   onSelections={handleSelectionsChange}
+                   onClearAll={handleClearAll}
+                   repeatableSlides={repeatableSlides}
+                   onRepeatableSlides={handleRepeatableSlidesChange}
+                   fullSlideGeneration={fullSlideGeneration}
+                   onFullSlideGeneration={handleFullSlideGenerationChange}
+                   slideCount={slideCount}
+                   highlightNodeId={highlightNodeId}
+                   onHighlight={setHighlightNodeId}
+                   keySelectionMode={keySelectionMode}
+                   onKeySelectionModeChange={handleKeySelectionModeChange}
+                   keySelectionSlide={keySelectionSlide}
+                 />
 
                 {/* Proceed footer */}
                 <div className="html-project-footer">
@@ -543,7 +606,7 @@ ${highlightCss}
                 <iframe
                   className="html-preview-frame"
                   srcDoc={highlightedPreviewHtml}
-                  sandbox="allow-same-origin"
+                  sandbox="allow-same-origin allow-scripts"
                   title="Slide preview"
                 />
               </div>

@@ -109,6 +109,7 @@ export default function App() {
       previewHtml: result.previewHtml,
       roundId:     result.roundId,
       slideCount:  result.slideCount,
+      slideNames:  result.slideNames ?? [],
     })
     navigateTo('html-preview')
   }, [navigateTo])
@@ -296,26 +297,27 @@ export default function App() {
     )
   }
 
-  if (step === 'html-preview' && htmlProject && htmlApplied) {
-    return (
-      <>
-        <Toast toast={toast} onDismiss={() => setToast(null)} />
-        <HtmlPreviewStep
-          projectName={currentProjectName}
-          applied={htmlApplied}
-          flowId={currentFlowId}
-          step={step}
-          canNavigateTo={canNavigateTo}
-          navigateTo={navigateTo}
-          onBack={handleBackToHtmlRecipe}
-          onNext={handlePreviewNext}
-          onPreviewHtmlChange={handlePreviewHtmlChange}
-          setToast={setToast}
-          debugContext={debugContext}
-        />
-      </>
-    )
-  }
+   if (step === 'html-preview' && htmlProject && htmlApplied) {
+     return (
+       <>
+         <Toast toast={toast} onDismiss={() => setToast(null)} />
+         <HtmlPreviewStep
+           projectName={currentProjectName}
+           applied={htmlApplied}
+           flowId={currentFlowId}
+           step={step}
+           canNavigateTo={canNavigateTo}
+           navigateTo={navigateTo}
+           onBack={handleBackToHtmlRecipe}
+           onNext={handlePreviewNext}
+           onPreviewHtmlChange={handlePreviewHtmlChange}
+           setToast={setToast}
+           debugContext={debugContext}
+           repeatableSlides={htmlProject?.repeatableSlides ?? []}
+         />
+       </>
+     )
+   }
 
   if (step === 'html-metadata' && htmlProject && htmlApplied) {
     return (
@@ -325,6 +327,7 @@ export default function App() {
           projectName={currentProjectName}
           flowId={currentFlowId}
           applied={htmlApplied}
+          slideNames={htmlApplied?.slideNames ?? []}
           step={step}
           canNavigateTo={canNavigateTo}
           navigateTo={navigateTo}

@@ -550,11 +550,13 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
     }
 
     const handleMouseUp = () => {
-      if (splitContainerRef.current) splitContainerRef.current.dataset.dragging = ''
-      // Re-enable pointer events on iframes
-      document.querySelectorAll('iframe').forEach(iframe => {
-        iframe.style.pointerEvents = ''
-      })
+      if (splitContainerRef.current) {
+        splitContainerRef.current.dataset.dragging = ''
+        // Re-enable pointer events on iframes within this component
+        splitContainerRef.current.querySelectorAll('iframe').forEach(iframe => {
+          iframe.style.pointerEvents = ''
+        })
+      }
     }
 
     document.addEventListener('mousemove', handleMouseMove)
@@ -568,11 +570,13 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
 
   const onDividerMouseDown = useCallback((e) => {
     e.preventDefault()
-    // Disable pointer events on iframes to allow dragging over them
-    document.querySelectorAll('iframe').forEach(iframe => {
-      iframe.style.pointerEvents = 'none'
-    })
-    if (splitContainerRef.current) splitContainerRef.current.dataset.dragging = '1'
+    // Disable pointer events only on iframes within this component
+    if (splitContainerRef.current) {
+      splitContainerRef.current.querySelectorAll('iframe').forEach(iframe => {
+        iframe.style.pointerEvents = 'none'
+      })
+      splitContainerRef.current.dataset.dragging = '1'
+    }
   }, [])
 
   // ── Tree panel resize ────────────────────────────────────────────────────────
@@ -588,11 +592,13 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
     }
 
     const handleMouseUp = () => {
-      if (bodyDivRef.current) bodyDivRef.current.dataset.dragging = ''
-      // Re-enable pointer events on iframes
-      document.querySelectorAll('iframe').forEach(iframe => {
-        iframe.style.pointerEvents = ''
-      })
+      if (bodyDivRef.current) {
+        bodyDivRef.current.dataset.dragging = ''
+        // Re-enable pointer events on iframes within this component
+        bodyDivRef.current.querySelectorAll('iframe').forEach(iframe => {
+          iframe.style.pointerEvents = ''
+        })
+      }
     }
 
     document.addEventListener('mousemove', handleMouseMove)
@@ -606,11 +612,13 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
 
   const onTreeDividerMouseDown = useCallback((e) => {
     e.preventDefault()
-    // Disable pointer events on iframes to allow dragging over them
-    document.querySelectorAll('iframe').forEach(iframe => {
-      iframe.style.pointerEvents = 'none'
-    })
-    if (bodyDivRef.current) bodyDivRef.current.dataset.dragging = '1'
+    // Disable pointer events only on iframes within this component
+    if (bodyDivRef.current) {
+      bodyDivRef.current.querySelectorAll('iframe').forEach(iframe => {
+        iframe.style.pointerEvents = 'none'
+      })
+      bodyDivRef.current.dataset.dragging = '1'
+    }
   }, [])
 
   // ── Derived ──────────────────────────────────────────────────────────────────

@@ -134,11 +134,13 @@ export default function HtmlEditorPanel({
     }
 
     const handleMouseUp = () => {
-      if (containerRef.current) containerRef.current.dataset.dragging = ''
-      // Re-enable pointer events on iframes
-      document.querySelectorAll('iframe').forEach(iframe => {
-        iframe.style.pointerEvents = ''
-      })
+      if (containerRef.current) {
+        containerRef.current.dataset.dragging = ''
+        // Re-enable pointer events on iframes within this component
+        containerRef.current.querySelectorAll('iframe').forEach(iframe => {
+          iframe.style.pointerEvents = ''
+        })
+      }
     }
 
     document.addEventListener('mousemove', handleMouseMove)
@@ -152,11 +154,13 @@ export default function HtmlEditorPanel({
 
   const onDividerMouseDown = useCallback((e) => {
     e.preventDefault()
-    // Disable pointer events on iframes to allow dragging over them
-    document.querySelectorAll('iframe').forEach(iframe => {
-      iframe.style.pointerEvents = 'none'
-    })
-    if (containerRef.current) containerRef.current.dataset.dragging = '1'
+    // Disable pointer events only on iframes within this component
+    if (containerRef.current) {
+      containerRef.current.querySelectorAll('iframe').forEach(iframe => {
+        iframe.style.pointerEvents = 'none'
+      })
+      containerRef.current.dataset.dragging = '1'
+    }
   }, [])
 
   // ── Preview debounce ─────────────────────────────────────────────────────────

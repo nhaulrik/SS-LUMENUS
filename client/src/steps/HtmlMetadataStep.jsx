@@ -1,21 +1,19 @@
 /**
  * HtmlMetadataStep — Stage 4 of the HTML Visual Flow.
  *
- * Assign per-slide metadata (id, name, type), export to individual slide files,
+ * Assign per-slide metadata (name), export slides with metadata,
  * and finish back to the project dashboard.
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react'
-import AppHeader          from '../components/AppHeader.jsx'
-import Breadcrumbs        from '../components/Breadcrumbs.jsx'
-import ExportHistoryPanel from '../components/ExportHistoryPanel.jsx'
-
-const SLIDE_TYPES = ['content', 'title', 'conclusion', 'other']
+import { useState, useCallback, useEffect } from 'react'
+import AppHeader   from '../components/AppHeader.jsx'
+import Breadcrumbs from '../components/Breadcrumbs.jsx'
 
 export default function HtmlMetadataStep({
   projectName,
   flowId,
   applied,        // { outputFile, previewHtml, roundId, slideCount }
+  slideNames,     // [{ index, name, keyMissing }, ...]
   step,
   canNavigateTo,
   navigateTo,
@@ -26,59 +24,36 @@ export default function HtmlMetadataStep({
 }) {
   const { outputFile, roundId, slideCount = 1 } = applied
 
+  const [exportName, setExportName] = useState('')
+
   const [metadata, setMetadata] = useState(
     Array.from({ length: slideCount }, (_, i) => ({
-      slideId: `slide-${i + 1}`,
-      name:    `Slide ${i + 1}`,
-      type:    'content',
+      name: `Slide ${i + 1}`,
+      keyMissing: false,
     }))
   )
 
   const [isExporting, setIsExporting] = useState(false)
-  const [exportRefreshTrigger, setExportRefreshTrigger] = useState(0)
 
-  // Resizable divider
-  const [splitPct, setSplitPct] = useState(60)
-  const containerRef = useRef(null)
-
+  // Pre-fill metadata from slideNames prop
   useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!containerRef.current?.dataset.dragging) return
-      const rect = containerRef.current.getBoundingClientRect()
-      const pct  = Math.min(80, Math.max(40, ((e.clientX - rect.left) / rect.width) * 100))
-      setSplitPct(pct)
+    if (slideNames?.length) {
+      setMetadata(
+        Array.from({ length: slideCount }, (_, i) => {
+          const found = slideNames.find(s => s.index === i + 1)
+          return {
+            name: found?.name ?? `Slide ${i + 1}`,
+            keyMissing: found?.keyMissing ?? false,
+          }
+        })
+      )
     }
+  }, [slideNames, slideCount])
 
-    const handleMouseUp = () => {
-      if (containerRef.current) containerRef.current.dataset.dragging = ''
-      // Re-enable pointer events on iframes
-      document.querySelectorAll('iframe').forEach(iframe => {
-        iframe.style.pointerEvents = ''
-      })
-    }
-
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-    }
-  }, [])
-
-  const onDividerMouseDown = useCallback((e) => {
-    e.preventDefault()
-    // Disable pointer events on iframes to allow dragging over them
-    document.querySelectorAll('iframe').forEach(iframe => {
-      iframe.style.pointerEvents = 'none'
-    })
-    if (containerRef.current) containerRef.current.dataset.dragging = '1'
-  }, [])
-
-  const handleMetadataChange = useCallback((index, field, value) => {
+  const handleMetadataChange = useCallback((index, value) => {
     setMetadata(prev => {
       const updated = [...prev]
-      updated[index] = { ...updated[index], [field]: value }
+      updated[index] = { ...updated[index], name: value }
       return updated
     })
   }, [])
@@ -86,21 +61,31 @@ export default function HtmlMetadataStep({
   const handleExport = useCallback(async () => {
     setIsExporting(true)
     try {
+      const slideMetadata = metadata.map((m, i) => ({
+        slideId: `slide-${i + 1}`,
+        name: m.name,
+        type: 'content',
+      }))
+
       const res = await fetch(`/api/projects/${projectName}/flows/${flowId}/exports`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ roundId, outputFile, slideMetadata: metadata }),
+        body:    JSON.stringify({ 
+          roundId, 
+          outputFile, 
+          exportName: exportName.trim(),
+          slideMetadata 
+        }),
       })
       const data = await res.json()
       if (!data.ok) throw new Error(data.error || 'Export failed')
       setToast({ type: 'success', message: `Exported ${data.slideCount} slide${data.slideCount !== 1 ? 's' : ''}` })
-      setExportRefreshTrigger(n => n + 1)
     } catch (err) {
       setToast({ type: 'error', message: err.message })
     } finally {
       setIsExporting(false)
     }
-  }, [projectName, flowId, roundId, outputFile, metadata, setToast])
+  }, [projectName, flowId, roundId, outputFile, metadata, exportName, setToast])
 
 
 
@@ -113,112 +98,67 @@ export default function HtmlMetadataStep({
       />
       <Breadcrumbs step={step} canNavigateTo={canNavigateTo} navigateTo={navigateTo} flow="html" />
 
-      <div className="html-metadata-layout" ref={containerRef}>
-
-        {/* ── Left: metadata form ───────────────────────────────────── */}
-        <div className="html-metadata-left" style={{ width: splitPct + '%' }}>
-          <div className="html-metadata-panel">
-            <h3 className="html-metadata-panel-title">Slide Metadata</h3>
-            <p className="html-metadata-panel-desc">
-              Assign an ID, name, and type to each slide before exporting.
-            </p>
-
-            <div className="html-metadata-table-wrap">
-              <table className="html-metadata-table">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Slide ID</th>
-                    <th>Name</th>
-                    <th>Type</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {metadata.map((slide, i) => (
-                    <tr key={i}>
-                      <td className="html-metadata-index">{i + 1}</td>
-                      <td>
-                        <input
-                          className="html-metadata-input"
-                          value={slide.slideId}
-                          onChange={e => handleMetadataChange(i, 'slideId', e.target.value)}
-                          placeholder={`slide-${i + 1}`}
-                          disabled={isExporting}
-                        />
-                      </td>
-                      <td>
-                        <input
-                          className="html-metadata-input"
-                          value={slide.name}
-                          onChange={e => handleMetadataChange(i, 'name', e.target.value)}
-                          placeholder={`Slide ${i + 1}`}
-                          disabled={isExporting}
-                        />
-                      </td>
-                      <td>
-                        <select
-                          className="html-metadata-select"
-                          value={slide.type}
-                          onChange={e => handleMetadataChange(i, 'type', e.target.value)}
-                          disabled={isExporting}
-                        >
-                          {SLIDE_TYPES.map(t => (
-                            <option key={t} value={t}>{t}</option>
-                          ))}
-                        </select>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="html-metadata-actions">
-              <button className="btn btn-link" onClick={onBack}>
-                <span aria-hidden="true">←</span> Back to preview
-              </button>
-              <div className="html-metadata-right-actions">
-                <button
-                  className="btn btn-secondary"
-                  onClick={handleExport}
-                  disabled={isExporting}
-                  data-testid="btn-export-slides"
-                >
-                  {isExporting ? 'Exporting…' : `Export ${slideCount} Slide${slideCount !== 1 ? 's' : ''}`}
-                </button>
-                <button
-                  className="btn btn-primary"
-                  onClick={onFinish}
-                >
-                  Finish
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Divider */}
-        <div
-          className="html-metadata-divider"
-          onMouseDown={onDividerMouseDown}
-          title="Drag to resize"
-        >
-          <div className="html-metadata-divider-handle" />
-        </div>
-
-        {/* ── Right: export history ─────────────────────────────────── */}
-        <div className="html-metadata-right" style={{ width: (100 - splitPct) + '%' }}>
-          <ExportHistoryPanel
-            projectName={projectName}
-            flowId={flowId}
-            refreshTrigger={exportRefreshTrigger}
-            setToast={setToast}
+      <div className="html-metadata-panel">
+        {/* Export Name Field */}
+        <div className="html-metadata-export-name">
+          <label htmlFor="export-name">Export Name</label>
+          <input
+            id="export-name"
+            type="text"
+            value={exportName}
+            onChange={e => setExportName(e.target.value)}
+            placeholder="e.g., Q2 Product Launch"
+            disabled={isExporting}
           />
         </div>
 
+        {/* Slide List */}
+        <div className="html-metadata-slide-list">
+          {metadata.map((slide, i) => (
+            <div key={i} className="html-metadata-slide-row">
+              <span className="html-metadata-index">{i + 1}</span>
+              <input
+                className="html-metadata-input"
+                value={slide.name}
+                onChange={e => handleMetadataChange(i, e.target.value)}
+                placeholder={`Slide ${i + 1}`}
+                disabled={isExporting}
+              />
+              {slide.keyMissing && (
+                <span
+                  className="html-metadata-warning"
+                  title="Key element not found — name was auto-generated"
+                >
+                  ⚠
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Actions */}
+        <div className="html-metadata-actions">
+          <button className="btn btn-link" onClick={onBack}>
+            <span aria-hidden="true">←</span> Back
+          </button>
+          <div className="html-metadata-right-actions">
+            <button
+              className="btn btn-secondary"
+              onClick={handleExport}
+              disabled={isExporting || exportName.trim() === ''}
+              data-testid="btn-export-slides"
+            >
+              {isExporting ? 'Packaging…' : 'Package'}
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={onFinish}
+            >
+              Done
+            </button>
+          </div>
+        </div>
       </div>
-
-
     </div>
   )
 }
