@@ -21,6 +21,7 @@ export default function ProjectDashboardStep({
   const [error,          setError]          = useState(null)
   const [newFlowName,    setNewFlowName]    = useState('')
   const [flowNameError,  setFlowNameError]  = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
   const flowNameInputRef = useRef(null)
 
   // Tab state
@@ -138,8 +139,7 @@ export default function ProjectDashboardStep({
     }
   }
 
-  const handleDeleteFlow = async (flowId, flowDisplayName) => {
-    if (!confirm(`Delete flow "${flowDisplayName}"? This cannot be undone.`)) return
+  const handleDeleteFlow = async (flowId) => {
     try {
       const res = await fetch(`/api/projects/${projectName}/flows/${flowId}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('Failed to delete flow')
@@ -147,6 +147,8 @@ export default function ProjectDashboardStep({
       setToast?.({ type: 'success', message: `Flow "${flowId}" deleted.` })
     } catch (err) {
       setToast?.({ type: 'error', message: err.message })
+    } finally {
+      setConfirmDeleteId(null)
     }
   }
 
@@ -215,7 +217,7 @@ export default function ProjectDashboardStep({
         {activeTab === 'flows' && (
         <section className={styles.section}>
           <div className={styles.sectionHeader}>
-            <h2 className={styles.sectionTitle}>Flows</h2>
+            <h2 className={`${styles.sectionTitle} ${styles.srOnly}`}>Flows</h2>
             <form
               className={styles.newFlowForm}
               onSubmit={e => {
@@ -230,7 +232,9 @@ export default function ProjectDashboardStep({
                 setNewFlowName('')
               }}
             >
+              <label htmlFor="new-flow-name" className={styles.srOnly}>Flow name</label>
               <input
+                id="new-flow-name"
                 ref={flowNameInputRef}
                 className={`${styles.newFlowInput}${flowNameError ? ` ${styles.newFlowInputError}` : ''}`}
                 type="text"
@@ -238,7 +242,12 @@ export default function ProjectDashboardStep({
                 onChange={e => { setNewFlowName(e.target.value); setFlowNameError(false) }}
                 placeholder="Flow name…"
                 maxLength={80}
+                aria-invalid={flowNameError || undefined}
+                aria-describedby={flowNameError ? 'flow-name-error' : undefined}
               />
+              {flowNameError && (
+                <span id="flow-name-error" role="alert" className={styles.srOnly}>Flow name is required</span>
+              )}
               <button className={styles.primaryButton} type="submit">
                 + New Flow
               </button>
@@ -247,7 +256,7 @@ export default function ProjectDashboardStep({
 
           {flows.length === 0 ? (
             <div className={styles.emptyState}>
-              <p>No flows yet. Go back and create a new flow.</p>
+              <p>No flows yet. Enter a name above to create your first flow.</p>
             </div>
           ) : (
             <div className={styles.flowsGrid}>
@@ -273,28 +282,46 @@ export default function ProjectDashboardStep({
                       <span className={styles.metaLabel}>Created:</span>
                       <span className={styles.metaValue}>{new Date(flow.createdAt).toLocaleDateString()}</span>
                     </div>
-                    {flow.generations?.length > 0 && (
-                      <div className={styles.metaItem}>
-                        <span className={styles.metaLabel}>Generations:</span>
-                        <span className={styles.metaValue}>{flow.generations.length}</span>
-                      </div>
-                    )}
+                    <div className={styles.metaItem}>
+                      <span className={styles.metaLabel}>Generations:</span>
+                      <span className={styles.metaValue}>{flow.generations?.length || '—'}</span>
+                    </div>
                   </div>
 
                   <div className={styles.templateActions}>
                     <button
                       className={styles.flowOpenButton}
                       onClick={() => onFlowSelected(flow.flowId)}
+                      aria-label={`Open flow ${flow.name || flow.flowId}`}
                     >
                       Open Flow
                     </button>
-                    <button
-                      className={styles.actionButton}
-                      onClick={() => handleDeleteFlow(flow.flowId, flow.name || flow.flowId)}
-                      style={{ color: 'var(--color-danger, #e53e3e)' }}
-                    >
-                      Delete
-                    </button>
+                    {confirmDeleteId === flow.flowId ? (
+                      <>
+                        <button
+                          className={styles.confirmDeleteButton}
+                          onClick={() => handleDeleteFlow(flow.flowId)}
+                          aria-label={`Confirm delete flow ${flow.name || flow.flowId}`}
+                        >
+                          Delete
+                        </button>
+                        <button
+                          className={styles.actionButton}
+                          onClick={() => setConfirmDeleteId(null)}
+                          aria-label="Cancel delete"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        className={styles.deleteButton}
+                        onClick={() => setConfirmDeleteId(flow.flowId)}
+                        aria-label={`Delete flow ${flow.name || flow.flowId}`}
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
