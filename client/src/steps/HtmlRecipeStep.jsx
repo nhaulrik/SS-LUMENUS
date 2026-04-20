@@ -367,34 +367,35 @@ export default function HtmlRecipeStep({
 
   const phaseIndex = (id) => PHASES.findIndex(p => p.id === id)
 
-  // Agentic: Phase 1 — call /plan, pause for confirmation
-  const handleAgenticGenerate = useCallback(async () => {
-    if (isAgenticActive) return
+   // Agentic: Phase 1 — call /plan, pause for confirmation
+   const handleAgenticGenerate = useCallback(async () => {
+     if (isAgenticActive) return
 
-    setAgenticStatus('planning')
-    setAgenticPhaseLocal('analyzing')
-    setAgenticPlanLocal(null)
-    setAgenticLogsLocal([])
-    setAgenticAgentsLocal([])
-    setAgenticErrorMsgLocal('')
-    setAgenticElapsedLocal(0)
+     setAgenticStatus('planning')
+     setAgenticPhaseLocal('analyzing')
+     setAgenticPlanLocal(null)
+     setAgenticLogsLocal([])
+     setAgenticAgentsLocal([])
+     setAgenticErrorMsgLocal('')
+     setAgenticElapsedLocal(0)
 
-    try {
-      const response = await fetch('/api/opencode/agentic/plan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectName,
-          flowId,
-          recipe,
-          zones,
-          repeatableSlides,
-          summaryMode: agenticSummaryMode,
-          summaryPrompt: agenticSummaryPrompt,
-          contentPrompt: agenticContentPrompt,
-          selectedFiles,
-        }),
-      })
+     try {
+       const response = await fetch('/api/opencode/agentic/plan', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           projectName,
+           flowId,
+           recipe,
+           zones,
+           repeatableSlides,
+           summaryMode: agenticSummaryMode,
+           summaryPrompt: agenticSummaryPrompt,
+           contentPrompt: agenticContentPrompt,
+           customInput: agenticCustomInput,
+           selectedFiles,
+         }),
+       })
       if (!response.ok) throw new Error(`Server error ${response.status}`)
 
       for await (const { type, data } of readSSE(response)) {
@@ -446,6 +447,7 @@ export default function HtmlRecipeStep({
             instanceNames: agenticPlanLocal.instanceNames,
             contextSlices: agenticPlanLocal.contextSlices,
             contentPrompt: agenticContentPrompt,
+            customInput: agenticCustomInput,
           }),
         })
 

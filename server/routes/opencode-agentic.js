@@ -124,26 +124,30 @@ router.post('/agentic/plan', async (req, res) => {
   const phase = (p)   => emit(res, 'phase', p)
   const error = (msg) => { emit(res, 'error', msg); res.end() }
 
-  try {
-    const {
-      projectName,
-      flowId,
-      recipe           = '',
-      zones            = [],
-      repeatableSlides = [],
-      summaryMode      = 'use',
-      summaryPrompt    = '',
-      contentPrompt    = '',
-    } = req.body
+   try {
+     const {
+       projectName,
+       flowId,
+       recipe           = '',
+       zones            = [],
+       repeatableSlides = [],
+       summaryMode      = 'use',
+       summaryPrompt    = '',
+       contentPrompt    = '',
+       customInput      = '',
+     } = req.body
 
-    if (!projectName) return error('projectName is required')
+     if (!projectName) return error('projectName is required')
 
-    const projectDir = path.join(RESOLVED_PROJECTS_DIR, projectName)
+     console.log('[agentic/plan] Request body:', JSON.stringify({ projectName, customInput, contentPrompt }, null, 2))
 
-     // ── Context / summaries ──────────────────────────────────────────────────
-     phase('analyzing')
+     const projectDir = path.join(RESOLVED_PROJECTS_DIR, projectName)
 
-     log('Reading AI Context files (compact schema)...')
+      // ── Context / summaries ──────────────────────────────────────────────────
+      phase('analyzing')
+
+      log(`Custom input received: ${customInput ? `"${customInput.substring(0, 50)}..."` : '(empty)'}`)
+      log('Reading AI Context files (compact schema)...')
      const compactContext = await readContextFilesCompact(projectDir)
 
     if (compactContext.fileCount === 0) {
@@ -153,12 +157,14 @@ router.post('/agentic/plan', async (req, res) => {
       log(`Compact schema: ${(compactContext.totalChars / 1000).toFixed(1)}k chars`)
     }
 
-    // ── Orchestrator ─────────────────────────────────────────────────────────
-    phase('planning')
-    log('Orchestrator: identifying grouping from schema...')
+     // ── Orchestrator ─────────────────────────────────────────────────────────
+     phase('planning')
+     log('Orchestrator: identifying grouping from schema...')
 
-    const orchestratorPrompt = buildOrchestratorPrompt(recipe, compactContext.text, contentPrompt, repeatableSlides)
-    log(`Orchestrator prompt: ${orchestratorPrompt.length} chars`)
+     const promptToUse = customInput || contentPrompt
+     console.log('[agentic/plan] Building orchestrator prompt with:', { customInput: customInput?.substring(0, 50), contentPrompt: contentPrompt?.substring(0, 50), promptToUse: promptToUse?.substring(0, 50) })
+     const orchestratorPrompt = buildOrchestratorPrompt(recipe, compactContext.text, promptToUse, repeatableSlides)
+     log(`Orchestrator prompt: ${orchestratorPrompt.length} chars`)
 
      const orchRaw = await callAi(orchestratorPrompt, { maxTokens: 1000, temperature: 0.1 })
     log(`Orchestrator response received (${orchRaw.response.length} chars)`)
@@ -263,16 +269,17 @@ router.post('/agentic/run', async (req, res) => {
   const done  = (json) => emit(res, 'done',   json)
   const error = (msg)  => { emit(res, 'error', msg); res.end() }
 
-  try {
-      const {
-        projectName,
-        flowId,
-        zones            = [],
-        repeatableSlides = [],
-        instances        = {},
-        contextSlices    = {},
-        contentPrompt    = '',
-      } = req.body
+   try {
+       const {
+         projectName,
+         flowId,
+         zones            = [],
+         repeatableSlides = [],
+         instances        = {},
+         contextSlices    = {},
+         contentPrompt    = '',
+         customInput      = '',
+       } = req.body
 
     if (!projectName) return error('projectName is required')
 
@@ -311,9 +318,9 @@ router.post('/agentic/run', async (req, res) => {
           agentContext = contextSlices[agent.globalIndex.toString()] || ''
         }
 
-       const prompt = agent.type === 'blocks'
-         ? buildBlocksPrompt(zones, repeatableSlides, agentContext, repSet, contentPrompt)
-         : buildInstancePrompt(zones, repeatableSlides, agent.slideKey, agent.instanceIndex, agent.instanceCount, agentContext, contentPrompt)
+        const prompt = agent.type === 'blocks'
+          ? buildBlocksPrompt(zones, repeatableSlides, agentContext, repSet, customInput || contentPrompt)
+          : buildInstancePrompt(zones, repeatableSlides, agent.slideKey, agent.instanceIndex, agent.instanceCount, agentContext, customInput || contentPrompt)
 
       log(`[${agent.label}] Sending prompt (${prompt.length} chars)...`)
       const result = await callAi(prompt, { maxTokens: 3000, temperature: 0.4 })

@@ -29,7 +29,8 @@
       "Bash(netstat -ano)",
       "Bash(findstr \"5173\")",
       "Bash(wmic process *)",
-      "Bash(powershell -Command \"Stop-Process -Id 28720 -Force\")"
+      "Bash(powershell -Command \"Stop-Process -Id 28720 -Force\")",
+      "Bash(kill -9 679 120)"
     ]
   }
 }

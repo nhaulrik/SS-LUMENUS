@@ -45,11 +45,13 @@ ${fileText}`
 }
 
 export function buildOrchestratorPrompt(recipe, contextText, customPrompt, repeatableSlides = []) {
-  const contextBlock = contextText
-    ? `CONTEXT DATA SCHEMA:\n${contextText}`
-    : 'CONTEXT: (no context files provided)'
+   console.log('[buildOrchestratorPrompt] Received customPrompt:', customPrompt?.substring(0, 50))
+   const contextBlock = contextText
+     ? `CONTEXT DATA SCHEMA:\n${contextText}`
+     : 'CONTEXT: (no context files provided)'
 
-  const customBlock = customPrompt ? `\nUSER INSTRUCTIONS:\n${customPrompt}` : ''
+   const customBlock = customPrompt ? `\nUSER INSTRUCTIONS:\n${customPrompt}` : ''
+   console.log('[buildOrchestratorPrompt] customBlock created:', customBlock?.substring(0, 50))
 
   let slidesBlock = ''
   let instancesPlaceholder = '{}'
