@@ -24,7 +24,12 @@
       "Bash(ls -la /c/source/SOLON/server/__tests__/*.js)",
       "Bash(grep -l \"generation-manager\\\\|structure-manager\\\\|package-manager\\\\|relationship-manager\" /c/source/SOLON/server/__tests__/*.test.js)",
       "Bash(grep -n \"chainId\\\\|zones.json\\\\|templates/\" /c/source/SOLON/e2e/*.spec.js)",
-      "Bash(ls -la /c/source/SOLON/client/src/components/*.module.css)"
+      "Bash(ls -la /c/source/SOLON/client/src/components/*.module.css)",
+      "Bash(kill -9 28720)",
+      "Bash(netstat -ano)",
+      "Bash(findstr \"5173\")",
+      "Bash(wmic process *)",
+      "Bash(powershell -Command \"Stop-Process -Id 28720 -Force\")"
     ]
   }
 }

@@ -253,11 +253,11 @@ export default function HtmlUploadStep({
      setCreating(true)
      try {
        if (isExistingFlow && currentProjectName && currentFlowId) {
-         // Persist UI edits (selections with custom prompts, repeatableSlides) back to server.
+         // Persist UI edits (selections with custom prompts, repeatableSlides, fullSlideGeneration) back to server.
          await fetch(`/api/projects/${encodeURIComponent(currentProjectName)}/flows/${encodeURIComponent(currentFlowId)}`, {
            method: 'PATCH',
            headers: { 'Content-Type': 'application/json' },
-           body: JSON.stringify({ repeatableSlides, selections }),
+           body: JSON.stringify({ repeatableSlides, selections, fullSlideGeneration }),
          })
 
          // Load current zones from server (zone assignments live in flow.json)
@@ -419,32 +419,6 @@ ${highlightCss}
                   </div>
 
                 </div>
-
-                {/* Non-fatal violations (e.g. NO_ZONES warning) */}
-                {violations.length > 0 && (
-                  <div className="html-violations">
-                    <div className="html-violations-header">
-                      <div className="html-violations-title-row">
-                        <span className="html-violations-icon">⚠</span>
-                        <p className="html-violations-title">Template notice</p>
-                      </div>
-                      <p className="html-violations-subtitle">
-                        No zones were detected in your HTML. Use the tree below to assign zones.
-                      </p>
-                    </div>
-                    <ul className="html-violations-list">
-                      {violations.map((v, i) => (
-                        <li key={i} className="html-violation-item">
-                          <span className="html-violation-bullet">·</span>
-                          <div>
-                            <span className="html-violation-rule">{v.rule}</span>
-                            <span className="html-violation-message">{v.message}</span>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
 
                  {/* DOM Tree panel */}
                  <HtmlTreePanel
