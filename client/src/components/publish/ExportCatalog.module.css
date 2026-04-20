@@ -1,0 +1,273 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 50%;
+  min-height: 0;
+  border-bottom: 1px solid var(--border-default);
+  overflow: hidden;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px var(--space-md);
+  background: rgba(10, 31, 27, 0.6);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.panelTitle {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.exportCount {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.exportList {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.exportList::-webkit-scrollbar { width: 4px; }
+.exportList::-webkit-scrollbar-track { background: transparent; }
+.exportList::-webkit-scrollbar-thumb { background: rgba(76, 175, 128, 0.2); border-radius: 2px; }
+
+.exportGroup {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.exportHeader {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+}
+
+.exportCheckboxLabel {
+  display: flex;
+  align-items: center;
+  padding: 10px 8px 10px 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.exportToggle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 13px;
+  padding: 10px 12px 10px 4px;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s;
+  min-height: 44px;
+}
+
+.exportToggle:hover {
+  background: rgba(76, 175, 128, 0.05);
+}
+
+.exportToggle:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: -2px;
+}
+
+.expandIcon {
+  font-size: 10px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  width: 12px;
+}
+
+.exportName {
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exportMeta {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.selectedBadge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: rgba(76, 175, 128, 0.15);
+  color: var(--accent-primary);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.slideList {
+  padding: 0 0 var(--space-xs);
+  animation: expandIn 0.15s ease-out;
+}
+
+@keyframes expandIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.slideRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 7px 12px 7px 32px;
+  cursor: pointer;
+  transition: background-color 0.12s;
+  min-height: 36px;
+}
+
+.slideRow:hover {
+  background: rgba(76, 175, 128, 0.05);
+}
+
+.slideRowChecked {
+  background: rgba(76, 175, 128, 0.08);
+}
+
+.slideRowAdded {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.slideIndex {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  width: 20px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.slideTitle {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.addedBadge {
+  font-size: 10px;
+  color: var(--accent-secondary);
+  background: rgba(115, 170, 135, 0.12);
+  padding: 1px 6px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+
+.checkbox {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ── Action bar ── */
+.actionBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px var(--space-md);
+  background: rgba(20, 47, 41, 0.9);
+  border-top: 1px solid var(--border-default);
+  flex-shrink: 0;
+  gap: var(--space-sm);
+  animation: slideUp 0.15s ease-out;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.actionBarCount {
+  font-size: 12px;
+  color: var(--accent-secondary);
+  font-weight: 500;
+}
+
+.actionBarButtons {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.clearBtn {
+  background: none;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xs);
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  min-height: 32px;
+}
+
+.clearBtn:hover {
+  border-color: var(--border-default);
+  color: var(--text-secondary);
+}
+
+.clearBtn:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+.addToTreeBtn {
+  background: var(--accent-primary);
+  border: none;
+  border-radius: var(--radius-xs);
+  color: #061210;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: filter 0.15s;
+  min-height: 32px;
+}
+
+.addToTreeBtn:hover {
+  filter: brightness(1.1);
+}
+
+.addToTreeBtn:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* ── States ── */
+.loadingState,
+.emptyState {
+  padding: var(--space-md);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.emptyState p { margin: 0; }

@@ -20,12 +20,6 @@ Short description of the feature
 ## UI/UX
 High-level structure (layouts, flows, interactions)
 
-## Data Model
-Key entities and relationships
-
-## Components / Modules
-List of components or modules
-
 ## Tasks
 Numbered list of small executable tasks
 

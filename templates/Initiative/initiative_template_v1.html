@@ -275,60 +275,10 @@
     line-height: 1.2;
   }
 
-  .theme-chips {
-    display: flex;
-    gap: 4px;
-    flex-wrap: wrap;
-  }
-
-  .chip {
-    font-size: 8.5px;
-    font-weight: 700;
-    padding: 2px 6px;
-    border-radius: 8px;
-  }
-
-  .chip-p1  { background: #ffe8e7; color: #c43030; }
-  .chip-p2  { background: #fff4d6; color: #a06000; }
-  .chip-p3  { background: #e8eeee; color: #41605e; }
-  .chip-pso { background: #f0f0f0; color: #888; }
-  .chip-pi  { background: #e8f0ef; color: #1a3c3a; }
-  .chip-hrs { background: #1a3c3a; color: #fff; }
-
   .theme-description {
     font-size: 10.5px;
     color: #445f5d;
     line-height: 1.5;
-  }
-
-  .effort-bar-wrap {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .effort-bar-track {
-    flex: 1;
-    height: 5px;
-    background: #e4eceb;
-    border-radius: 3px;
-    overflow: hidden;
-  }
-
-  .effort-bar-fill {
-    height: 100%;
-    border-radius: 3px;
-    background: #41605e;
-  }
-
-  .theme-card.priority-high .effort-bar-fill { background: #FF6359; }
-  .theme-card.priority-mid  .effort-bar-fill { background: #f0a500; }
-
-  .effort-label {
-    font-size: 9px;
-    font-weight: 700;
-    color: #1a3c3a;
-    white-space: nowrap;
   }
 
   /* ── RIGHT PANEL ── */
@@ -398,33 +348,6 @@
 
   .leg-label { font-size: 10px; color: #41605e; flex: 1; }
   .leg-count { font-size: 10px; font-weight: 700; color: #1a3c3a; }
-
-  .pi-section { display: flex; flex-direction: column; gap: 9px; }
-
-  .pi-row { display: flex; flex-direction: column; gap: 3px; }
-
-  .pi-row-meta {
-    display: flex;
-    justify-content: space-between;
-  }
-
-  .pi-name { font-size: 10px; font-weight: 700; color: #1a3c3a; }
-  .pi-val  { font-size: 10px; color: #718886; }
-
-  .pi-track {
-    height: 8px;
-    background: #e4eceb;
-    border-radius: 4px;
-    overflow: hidden;
-  }
-
-  .pi-fill {
-    height: 100%;
-    border-radius: 4px;
-    background: #41605e;
-  }
-
-  .pi-fill.lead { background: #FF6359; }
 
   .prio-summary { display: flex; flex-direction: column; gap: 7px; }
 
@@ -519,10 +442,6 @@
         <span class="header-stat-value">3</span>
         <span class="header-stat-label">Unestimated</span>
       </div>
-      <div class="stat-spacer"></div>
-      <div class="header-subtitle-block">
-        <span class="header-subtitle">Solon Tax Product Roadmap 2026 · Executive Steering Committee</span>
-      </div>
     </div>
   </div>
 
@@ -570,21 +489,10 @@
               <div class="theme-icon">🪪</div>
               <div class="theme-meta">
                 <div class="theme-name">Party Identity &amp; Identifiers</div>
-                <div class="theme-chips">
-                  <span class="chip chip-p1">P1</span>
-                  <span class="chip chip-pi">PI 27</span>
-                  <span class="chip chip-hrs">800 h</span>
-                </div>
               </div>
             </div>
             <div class="theme-description">
               Establishes how taxpayers and organisations are uniquely identified across the system — supporting multiple identifier types, deduplication, and national registry alignment.
-            </div>
-            <div class="effort-bar-wrap">
-              <div class="effort-bar-track">
-                <div class="effort-bar-fill" style="width:67%"></div>
-              </div>
-              <span class="effort-label">67% of PI 27</span>
             </div>
           </div>
 
@@ -593,21 +501,10 @@
               <div class="theme-icon">🏢</div>
               <div class="theme-meta">
                 <div class="theme-name">Organisation Hierarchy &amp; History</div>
-                <div class="theme-chips">
-                  <span class="chip chip-p1">P1</span>
-                  <span class="chip chip-pi">PI 27–28</span>
-                  <span class="chip chip-hrs">960 h</span>
-                </div>
               </div>
             </div>
             <div class="theme-description">
               Enables multi-level party role structures and full backdate change history — critical for complex tax jurisdictions managing corporate groups and role transitions.
-            </div>
-            <div class="effort-bar-wrap">
-              <div class="effort-bar-track">
-                <div class="effort-bar-fill" style="width:81%"></div>
-              </div>
-              <span class="effort-label">81% of PI 27–28</span>
             </div>
           </div>
 
@@ -616,21 +513,10 @@
               <div class="theme-icon">🔍</div>
               <div class="theme-meta">
                 <div class="theme-name">Search &amp; Data Governance</div>
-                <div class="theme-chips">
-                  <span class="chip chip-p1">P1</span>
-                  <span class="chip chip-pi">PI 27</span>
-                  <span class="chip chip-hrs">320 h</span>
-                </div>
               </div>
             </div>
             <div class="theme-description">
               Enhances registry search with governance-controlled result limits, relevant filters, and improved UX — ensuring officers can locate the right party record efficiently.
-            </div>
-            <div class="effort-bar-wrap">
-              <div class="effort-bar-track">
-                <div class="effort-bar-fill" style="width:27%"></div>
-              </div>
-              <span class="effort-label">27% of PI 27</span>
             </div>
           </div>
 
@@ -639,21 +525,10 @@
               <div class="theme-icon">🌐</div>
               <div class="theme-meta">
                 <div class="theme-name">Self-Service &amp; Portal Registration</div>
-                <div class="theme-chips">
-                  <span class="chip chip-p1">P1</span>
-                  <span class="chip chip-pi">PI 28</span>
-                  <span class="chip chip-hrs">440 h</span>
-                </div>
               </div>
             </div>
             <div class="theme-description">
               Allows taxpayers to self-register and manage their profiles via the taxpayer portal, reducing administrative burden and enabling 3rd-party delegate access.
-            </div>
-            <div class="effort-bar-wrap">
-              <div class="effort-bar-track">
-                <div class="effort-bar-fill" style="width:37%"></div>
-              </div>
-              <span class="effort-label">37% of PI 28</span>
             </div>
           </div>
 
@@ -662,21 +537,10 @@
               <div class="theme-icon">🔗</div>
               <div class="theme-meta">
                 <div class="theme-name">API &amp; Integration Layer</div>
-                <div class="theme-chips">
-                  <span class="chip chip-p1">P1</span>
-                  <span class="chip chip-pi">PI 28</span>
-                  <span class="chip chip-pso">TBD</span>
-                </div>
               </div>
             </div>
             <div class="theme-description">
               Exposes registration capabilities via external API endpoints and a notification engine — enabling downstream systems and taxpayer confirmations to be triggered automatically.
-            </div>
-            <div class="effort-bar-wrap">
-              <div class="effort-bar-track">
-                <div class="effort-bar-fill" style="width:15%; background:#a0c8c4"></div>
-              </div>
-              <span class="effort-label">Pending estimate</span>
             </div>
           </div>
 
@@ -685,21 +549,10 @@
               <div class="theme-icon">📊</div>
               <div class="theme-meta">
                 <div class="theme-name">Reporting &amp; Audit</div>
-                <div class="theme-chips">
-                  <span class="chip chip-p3">P3</span>
-                  <span class="chip chip-pi">PI 29–30</span>
-                  <span class="chip chip-pso">PSO</span>
-                </div>
               </div>
             </div>
             <div class="theme-description">
               Provides full audit trail of registration events and KPI dashboards for officer workload — supporting compliance and operational oversight for tax administrators.
-            </div>
-            <div class="effort-bar-wrap">
-              <div class="effort-bar-track">
-                <div class="effort-bar-fill" style="width:8%; background:#a0c8c4"></div>
-              </div>
-              <span class="effort-label">Planning only</span>
             </div>
           </div>
 
@@ -759,49 +612,6 @@
           </div>
         </div>
       </div>
-
-      <div>
-        <div class="section-label">Effort by PI</div>
-        <div class="pi-section">
-          <div class="pi-row">
-            <div class="pi-row-meta">
-              <span class="pi-name">PI 27</span>
-              <span class="pi-val">4,800 h</span>
-            </div>
-            <div class="pi-track">
-              <div class="pi-fill lead" style="width:100%"></div>
-            </div>
-          </div>
-          <div class="pi-row">
-            <div class="pi-row-meta">
-              <span class="pi-name">PI 28</span>
-              <span class="pi-val">4,480 h</span>
-            </div>
-            <div class="pi-track">
-              <div class="pi-fill lead" style="width:93%"></div>
-            </div>
-          </div>
-          <div class="pi-row">
-            <div class="pi-row-meta">
-              <span class="pi-name">PI 29</span>
-              <span class="pi-val">1,866 h</span>
-            </div>
-            <div class="pi-track">
-              <div class="pi-fill" style="width:39%"></div>
-            </div>
-          </div>
-          <div class="pi-row">
-            <div class="pi-row-meta">
-              <span class="pi-name">PI 30</span>
-              <span class="pi-val">TBD</span>
-            </div>
-            <div class="pi-track">
-              <div class="pi-fill" style="width:5%; background:#d0dcdb"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div>
         <div class="section-label">Priority Split</div>
         <div class="prio-summary">
@@ -853,3 +663,4 @@
 
 </body>
 </html>
+

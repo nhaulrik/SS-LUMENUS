@@ -1,0 +1,359 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px var(--space-md);
+  background: rgba(10, 31, 27, 0.6);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.panelTitle {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.setParentBtn,
+.cancelBtn,
+.saveBtn {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+  min-height: 30px;
+}
+
+.setParentBtn {
+  background: rgba(212, 168, 83, 0.1);
+  border: 1px solid rgba(212, 168, 83, 0.3);
+  color: var(--warning, #d4a853);
+}
+
+.setParentBtn:hover {
+  background: rgba(212, 168, 83, 0.18);
+}
+
+.setParentBtn:focus-visible {
+  outline: 2px solid var(--warning, #d4a853);
+  outline-offset: 2px;
+}
+
+.cancelBtn {
+  background: none;
+  border: 1px solid var(--border-default);
+  color: var(--text-muted);
+}
+
+.cancelBtn:hover {
+  border-color: var(--border-default);
+  color: var(--text-secondary);
+}
+
+.cancelBtn:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+.saveBtn {
+  background: rgba(76, 175, 128, 0.1);
+  border: 1px solid rgba(76, 175, 128, 0.25);
+  color: var(--accent-primary);
+}
+
+.saveBtn:hover {
+  background: rgba(76, 175, 128, 0.18);
+}
+
+.saveBtn:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* ── Set parent hint ── */
+.setParentHint {
+  padding: 8px var(--space-md);
+  background: rgba(212, 168, 83, 0.08);
+  border-bottom: 1px solid rgba(212, 168, 83, 0.2);
+  font-size: 12px;
+  color: var(--warning, #d4a853);
+  flex-shrink: 0;
+  animation: slideDown 0.15s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Tree list ── */
+.treeList {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--space-xs) 0;
+}
+
+.treeList::-webkit-scrollbar { width: 4px; }
+.treeList::-webkit-scrollbar-track { background: transparent; }
+.treeList::-webkit-scrollbar-thumb { background: rgba(76, 175, 128, 0.2); border-radius: 2px; }
+
+/* ── Tree row ── */
+.treeRow {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  transition: background-color 0.1s;
+}
+
+.treeRow.selected > .nodeContent {
+  background: rgba(76, 175, 128, 0.08);
+}
+
+.treeRow.parentTarget > .nodeContent {
+  cursor: pointer;
+}
+
+.treeRow.parentTarget > .nodeContent:hover {
+  background: rgba(212, 168, 83, 0.1);
+  outline: 1px solid rgba(212, 168, 83, 0.4);
+}
+
+/* ── Drop zones ── */
+.dropZoneBefore {
+  height: 4px;
+  transition: height 0.1s, background-color 0.1s;
+  border-radius: 2px;
+  margin: 0 8px;
+}
+
+.dropZoneBefore.dropActive {
+  height: 8px;
+  background: var(--accent-primary);
+  opacity: 0.7;
+}
+
+.dropZoneInto {
+  height: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--accent-secondary);
+  background: rgba(76, 175, 128, 0.05);
+  border-radius: var(--radius-xs);
+  margin: 0 8px;
+  transition: height 0.1s, padding 0.1s;
+}
+
+.dropZoneInto.dropActive {
+  height: 28px;
+  padding: 4px 8px;
+}
+
+.dropZoneLabel {
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* ── Node content ── */
+.nodeContent {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 7px 12px;
+  cursor: grab;
+  transition: background-color 0.12s;
+  min-height: 36px;
+  user-select: none;
+}
+
+.nodeContent:hover {
+  background: rgba(76, 175, 128, 0.05);
+}
+
+.nodeContent:active {
+  cursor: grabbing;
+}
+
+.dragHandle {
+  color: var(--text-muted);
+  font-size: 14px;
+  flex-shrink: 0;
+  opacity: 0.5;
+  cursor: grab;
+}
+
+.nodeContent:hover .dragHandle {
+  opacity: 1;
+}
+
+.checkbox {
+  width: 13px;
+  height: 13px;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.depthIndicator {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  opacity: 0.4;
+  white-space: pre;
+  flex-shrink: 0;
+}
+
+.nodeTitle {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nodeMeta {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.removeBtn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--radius-xs);
+  transition: color 0.12s, background-color 0.12s;
+  opacity: 0;
+  flex-shrink: 0;
+  min-width: 24px;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nodeContent:hover .removeBtn {
+  opacity: 1;
+}
+
+.removeBtn:hover {
+  color: var(--error, #e8544a);
+  background: rgba(232, 84, 74, 0.1);
+}
+
+.removeBtn:focus-visible {
+  outline: 2px solid var(--error, #e8544a);
+  outline-offset: 2px;
+  opacity: 1;
+}
+
+/* ── Selection toolbar ── */
+.selectionToolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 8px var(--space-md);
+  background: rgba(20, 47, 41, 0.8);
+  border-top: 1px solid var(--border-default);
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  animation: slideUp 0.15s ease-out;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.setParentBtnInline {
+  background: rgba(212, 168, 83, 0.1);
+  border: 1px solid rgba(212, 168, 83, 0.3);
+  border-radius: var(--radius-xs);
+  color: var(--warning, #d4a853);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+  min-height: 28px;
+}
+
+.setParentBtnInline:hover {
+  background: rgba(212, 168, 83, 0.18);
+}
+
+.setParentBtnInline:focus-visible {
+  outline: 2px solid var(--warning, #d4a853);
+  outline-offset: 2px;
+}
+
+.deselectBtn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: var(--radius-xs);
+  transition: color 0.15s;
+  min-height: 28px;
+}
+
+.deselectBtn:hover {
+  color: var(--text-secondary);
+}
+
+.deselectBtn:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* ── Empty state ── */
+.emptyState {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+  text-align: center;
+}
+
+.emptyState p {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+  max-width: 220px;
+}
+
+.emptyState strong {
+  color: var(--accent-secondary);
+}

@@ -73,6 +73,13 @@
   gap: var(--space-xl);
 }
 
+.publishSectionFull {
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
 /* Sections */
 .section {
   display: flex;
