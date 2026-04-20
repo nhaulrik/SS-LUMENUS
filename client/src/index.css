@@ -1009,7 +1009,7 @@ select:focus-visible {
   display: grid;
   grid-template-columns: 2fr 3fr;
   gap: var(--space-xl);
-  align-items: stretch;
+  align-items: start;
 }
 
 @media (max-width: 1100px) {
@@ -1109,10 +1109,15 @@ select:focus-visible {
 /* ── Slide preview panel ─────────────────────────────────────────────────────── */
 
 .html-preview-panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  min-width: 0;
+   display: flex;
+   flex-direction: column;
+   gap: var(--space-sm);
+   min-width: 0;
+   position: sticky;
+   top: 20px;
+   z-index: 10;
+   background: var(--bg-primary);
+   padding-right: var(--space-md);
 }
 
 .html-preview-label {
@@ -2016,8 +2021,7 @@ select:focus-visible {
 .html-tree-panel {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-height: 540px;   /* ~3× the old implicit ~180px height */
+  min-height: 540px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   background: var(--bg-secondary);
@@ -2270,9 +2274,6 @@ select:focus-visible {
 }
 
 .html-tree-scroll {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
   padding: 4px 0;
 }
 
@@ -2936,16 +2937,18 @@ select:focus-visible {
 }
 
 .html-editor-preview-wrapper {
-  position: relative;
-  width: calc(100% - 24px);
-  margin: 12px;
-  aspect-ratio: 16 / 9;
-  align-self: flex-start;   /* prevent flex-stretch from overriding aspect-ratio */
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  border: 1px solid var(--border-subtle);
-  background: var(--bg-canvas);
-}
+   position: sticky;
+   top: 0;
+   z-index: 10;
+   width: calc(100% - 24px);
+   margin: 12px;
+   aspect-ratio: 16 / 9;
+   align-self: flex-start;   /* prevent flex-stretch from overriding aspect-ratio */
+   border-radius: var(--radius-md);
+   overflow: hidden;
+   border: 1px solid var(--border-subtle);
+   background: var(--bg-canvas);
+ }
 
 /* ── Resizable divider ───────────────────────────────────────────────────────── */
 

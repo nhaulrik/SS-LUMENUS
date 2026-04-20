@@ -1,5 +1,5 @@
 ---
-name: shape
+name: shape feature
 description: Decomposes features into structured, executable tasks.
 model: Cortex/claude-4-6-sonnet-vertex
 temperature: 0.0
