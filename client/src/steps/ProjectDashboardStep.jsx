@@ -55,6 +55,7 @@ export default function ProjectDashboardStep({
                 flowId:       flow.flowId,
                 flowName:     flow.name || flow.flowId,
                 exportId:     exp.exportId,
+                exportName:   exp.exportName || exp.exportId,
                 exportNumber: exp.exportNumber ?? idx + 1,
                 slideCount:   exp.slideCount ?? exp.slides?.length ?? 0,
                 createdAt:    exp.createdAt,

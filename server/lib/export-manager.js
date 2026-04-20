@@ -101,6 +101,22 @@ function extractSlideTitle(sectionHtml, slideNumber) {
   return `Slide ${slideNumber}`;
 }
 
+/**
+ * Generate a safe filename from a title (for slides or exports).
+ * Converts to lowercase, removes special chars, limits length.
+ */
+function sanitizeFilename(title, maxLen = 50) {
+  if (!title) return '';
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/--+/g, '-')
+    .slice(0, maxLen)
+    .replace(/^-+|-+$/, '');
+}
+
 // ── Core Export Functions ─────────────────────────────────────────────────────
 
 /**
@@ -111,9 +127,10 @@ function extractSlideTitle(sectionHtml, slideNumber) {
  * @param {string} roundId       - The round ID from apply-content
  * @param {string} outputFile    - The output HTML file name (e.g. "output-<uuid>.html")
  * @param {Array}  slideMetadata - Optional array of { slideId, name, type } per slide
+ * @param {string} exportName    - Optional custom export name
  * @returns {{ exportId, exportNumber, slideCount, exportDir } | null}
  */
-export function createExport(projectName, flowId, roundId, outputFile, slideMetadata = []) {
+export function createExport(projectName, flowId, roundId, outputFile, slideMetadata = [], exportName = '') {
   try {
     if (!projectName || !flowId || !roundId || !outputFile) {
       throw new Error('projectName, flowId, roundId, and outputFile are required');
@@ -144,10 +161,11 @@ export function createExport(projectName, flowId, roundId, outputFile, slideMeta
       throw new Error('No slides found in output HTML');
     }
 
-    // Determine export number
+    // Determine export number and ID
     const existingExports = flow.exports || [];
     const exportNumber = existingExports.length + 1;
-    const exportId = `export-${exportNumber}`;
+    const sanitizedName = sanitizeFilename(exportName);
+    const exportId = sanitizedName ? `${sanitizedName}-${exportNumber}` : `export-${exportNumber}`;
 
     // Create exports directory
     const exportsBaseDir = path.join(flowDir, 'exports');
@@ -156,19 +174,36 @@ export function createExport(projectName, flowId, roundId, outputFile, slideMeta
 
     // Write individual slide files
     const slideFiles = [];
+    const usedFileNames = new Set();
+
     for (let i = 0; i < sections.length; i++) {
       const slideNumber = i + 1;
-      const fileName = `slide-${slideNumber}.html`;
+      const userMeta = slideMetadata[i] || {};
+      const slideTitle = userMeta.name || extractSlideTitle(sections[i], slideNumber);
+
+      // Generate filename from slide title, with number suffix to ensure uniqueness
+      let baseFileName = sanitizeFilename(slideTitle);
+      let fileName = baseFileName ? `${baseFileName}.html` : `slide-${slideNumber}.html`;
+
+      // Ensure unique filename
+      let counter = 1;
+      let originalFileName = fileName;
+      while (usedFileNames.has(fileName)) {
+        const [name] = originalFileName.split('.');
+        fileName = `${name}-${counter}.html`;
+        counter++;
+      }
+      usedFileNames.add(fileName);
+
       const slideHtml = buildSlideHtml(slideNumber, sections[i], headContent);
       const slidePath = path.join(exportDir, fileName);
       fs.writeFileSync(slidePath, slideHtml, 'utf8');
 
-      const userMeta = slideMetadata[i] || {};
       slideFiles.push({
         index: slideNumber,
         file: fileName,
         size: Buffer.byteLength(slideHtml, 'utf8'),
-        title: userMeta.name || extractSlideTitle(sections[i], slideNumber),
+        title: slideTitle,
         slideId: userMeta.slideId || `slide-${slideNumber}`,
         type: userMeta.type || 'content',
       });
@@ -181,6 +216,7 @@ export function createExport(projectName, flowId, roundId, outputFile, slideMeta
     const exportJson = {
       exportId,
       exportNumber,
+      exportName: sanitizedName || undefined,
       createdAt,
       source: {
         roundId,
@@ -278,9 +314,46 @@ export function createExport(projectName, flowId, roundId, outputFile, slideMeta
  */
 export function listExports(projectName, flowId) {
   try {
-    const flow = loadFlow(projectName, flowId);
-    if (!flow) return [];
-    return (flow.exports || []).slice().reverse(); // newest first
+    const flowDir = resolveFlowDir(projectName, flowId);
+    if (!flowDir) return [];
+
+    const exportsDir = path.join(flowDir, 'exports');
+    if (!fs.existsSync(exportsDir)) return [];
+
+    // Discover exports from actual file system
+    const exportDirs = fs.readdirSync(exportsDir, { withFileTypes: true })
+      .filter(dirent => dirent.isDirectory())
+      .map(dirent => dirent.name);
+
+    // Build export entries from actual files on disk
+    const discoveredExports = [];
+    for (const exportId of exportDirs) {
+      const exportJsonPath = path.join(exportsDir, exportId, 'export.json');
+      if (fs.existsSync(exportJsonPath)) {
+        try {
+          const exportData = JSON.parse(fs.readFileSync(exportJsonPath, 'utf8'));
+          discoveredExports.push({
+            exportId,
+            exportName: exportData.exportName || exportId,
+            exportNumber: exportData.exportNumber,
+            createdAt: exportData.createdAt,
+            roundId: exportData.source?.roundId,
+            outputFile: exportData.source?.outputFile,
+            slideCount: exportData.content?.slideCount || 0,
+            totalSize: exportData.content?.totalSize || 0,
+            path: `exports/${exportId}/`,
+            files: {
+              metadata: `exports/${exportId}/export.json`,
+              projectIndex: `exports/${exportId}/project.json`,
+            },
+          });
+        } catch (e) {
+          console.warn(`[export-manager] Failed to parse ${exportId}/export.json:`, e.message);
+        }
+      }
+    }
+
+    return discoveredExports.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); // newest first
   } catch (err) {
     console.error('[export-manager] listExports error:', err.message);
     return [];
@@ -340,12 +413,12 @@ export function getExportProjectIndex(projectName, flowId, exportId) {
  * @param {string} projectName
  * @param {string} flowId
  * @param {string} exportId
- * @param {string} slideFile  e.g. "slide-1.html"
+ * @param {string} slideFile  e.g. "title-1.html" or "slide-1.html"
  * @returns {string | null}
  */
 export function resolveSlideFilePath(projectName, flowId, exportId, slideFile) {
   try {
-    if (!slideFile || !/^slide-\d+\.html$/.test(slideFile)) return null;
+    if (!slideFile || !/^[\w\-]+\.html$/.test(slideFile) || ['export.json', 'project.json'].includes(slideFile)) return null;
 
     const exportDir = resolveExportDir(projectName, flowId, exportId);
     if (!exportDir) return null;
@@ -597,14 +670,14 @@ export function forkExport(projectName, flowId, sourceExportId, slideFiles, over
  * @param {string} projectName
  * @param {string} flowId
  * @param {string} exportId
- * @param {string} slideFile - e.g. "slide-1.html"
+ * @param {string} slideFile - e.g. "title-1.html" or "slide-1.html"
  * @returns {{ ok: true } | { ok: false, error: string }}
  */
 export function deleteSlide(projectName, flowId, exportId, slideFile) {
   try {
     // Validate slideFile parameter
-    if (!slideFile || !/^slide-\d+\.html$/.test(slideFile)) {
-      return { ok: false, error: 'Invalid slideFile parameter. Must match pattern: slide-N.html' };
+    if (!slideFile || !/^[\w\-]+\.html$/.test(slideFile) || ['export.json', 'project.json'].includes(slideFile)) {
+      return { ok: false, error: 'Invalid slideFile parameter. Must be a .html file.' };
     }
 
     const exportDir = resolveExportDir(projectName, flowId, exportId);
@@ -924,23 +997,31 @@ function resolveSlideNodes(tree, slidesRegistry, projectDir) {
 
     // Try to resolve the slide content
     if (slideEntry && slideEntry.flowId && slideEntry.exportId && slideEntry.slideIndex) {
-      const slideFilePath = path.join(
+      const exportDir = path.join(
         projectDir,
         'flows',
         slideEntry.flowId,
         'exports',
-        slideEntry.exportId,
-        `slide-${slideEntry.slideIndex}.html`
+        slideEntry.exportId
       );
 
       try {
-        if (fs.existsSync(slideFilePath)) {
-          const htmlContent = fs.readFileSync(slideFilePath, 'utf8');
-          slideFiles[slideRefId] = htmlContent;
-          resolved.hasSlide = true;
+        // Read project.json to find the actual slide filename
+        const projectJsonPath = path.join(exportDir, 'project.json');
+        if (fs.existsSync(projectJsonPath)) {
+          const projectJson = JSON.parse(fs.readFileSync(projectJsonPath, 'utf8'));
+          const slideInfo = projectJson.slides?.find(s => s.index === slideEntry.slideIndex);
+          if (slideInfo && slideInfo.file) {
+            const slideFilePath = path.join(exportDir, slideInfo.file);
+            if (fs.existsSync(slideFilePath)) {
+              const htmlContent = fs.readFileSync(slideFilePath, 'utf8');
+              slideFiles[slideRefId] = htmlContent;
+              resolved.hasSlide = true;
+            }
+          }
         }
       } catch (err) {
-        console.warn(`[export-manager] Failed to read slide file: ${slideFilePath}`, err.message);
+        console.warn(`[export-manager] Failed to read slide file for ${slideEntry.slideIndex}:`, err.message);
       }
     }
 

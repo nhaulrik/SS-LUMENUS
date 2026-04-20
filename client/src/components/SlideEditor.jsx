@@ -106,6 +106,7 @@ function groupByFlow(exports) {
     }
     map[exp.flowId].exports.push({
       exportId:     exp.exportId,
+      exportName:   exp.exportName,
       exportNumber: exp.exportNumber,
       slideCount:   exp.slideCount,
       createdAt:    exp.createdAt,
@@ -451,7 +452,7 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
      if (!exp) return
 
      const confirmed = window.confirm(
-       `Delete Export #${exp.exportNumber}?\n\nThis will remove all ${exp.slideCount} slide(s). This action cannot be undone.`
+       `Delete ${exp.exportName || exp.exportId}?\n\nThis will remove all ${exp.slideCount} slide(s). This action cannot be undone.`
      )
      if (!confirmed) return
 
@@ -476,7 +477,7 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
          }
        ))
 
-       setToast?.({ type: 'success', message: `Export #${exp.exportNumber} deleted` })
+       setToast?.({ type: 'success', message: `${exp.exportName || exp.exportId} deleted` })
      } catch (err) {
        setToast?.({ type: 'error', message: err.message })
      }
@@ -625,8 +626,9 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
 
   const isDirty      = selectedKey ? !!dirtySlides[selectedKey] : false
   const selParts     = selectedKey?.split('::') ?? null
-  const selFlowName  = selParts ? (flows.find(f => f.flowId === selParts[0])?.flowName ?? selParts[0]) : null
-  const selExportNum = selParts?.[1]?.replace('export-', '') ?? null
+  const selFlow      = selParts ? flows.find(f => f.flowId === selParts[0]) : null
+  const selFlowName  = selFlow?.flowName ?? selParts?.[0] ?? null
+  const selExportName = selParts ? (selFlow?.exports?.find(e => e.exportId === selParts[1])?.exportName || selParts[1]) : null
   const selSlideFile = selParts?.[2] ?? null
 
   // ── Match highlighter ────────────────────────────────────────────────────────
@@ -655,7 +657,7 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
             <span className={styles.breadcrumb}>
               <span className={styles.bcFlow}>{selFlowName}</span>
               <span className={styles.bcSep}>/</span>
-              <span className={styles.bcExport}>Export #{selExportNum}</span>
+              <span className={styles.bcExport}>{selExportName}</span>
               <span className={styles.bcSep}>/</span>
               <span className={styles.bcSlide}>{selSlideFile}</span>
               {isDirty && <span className={styles.dirtyBadge}>● unsaved</span>}
@@ -764,10 +766,10 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
                            className={styles.exportToggle}
                            onClick={() => toggleExport(flow.flowId, exp.exportId)}
                            aria-expanded={expanded}
-                           aria-label={`${expanded ? 'Collapse' : 'Expand'} Export #${exp.exportNumber}, ${exp.slideCount} ${exp.slideCount === 1 ? 'slide' : 'slides'}`}
+                           aria-label={`${expanded ? 'Collapse' : 'Expand'} ${exp.exportName || exp.exportId}, ${exp.slideCount} ${exp.slideCount === 1 ? 'slide' : 'slides'}`}
                          >
                            <span className={styles.toggleIcon}>{expanded ? '▾' : '▸'}</span>
-                           <span className={styles.exportName}>Export #{exp.exportNumber}</span>
+                           <span className={styles.exportName}>{exp.exportName || exp.exportId}</span>
                            <span className={styles.exportMeta}>
                              {exp.slideCount} {exp.slideCount === 1 ? 'slide' : 'slides'}
                              {exp.createdAt ? ` · ${new Date(exp.createdAt).toLocaleDateString()}` : ''}

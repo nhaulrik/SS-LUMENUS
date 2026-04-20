@@ -120,7 +120,7 @@ export default function ExportCatalog({ exports, loading, activeSlides, onAddSli
                   <span className={styles.expandIcon}>{isExpanded ? '▾' : '▸'}</span>
                   <span className={styles.exportName}>{exp.flowName}</span>
                   <span className={styles.exportMeta}>
-                    #{exp.exportNumber} · {(exp.slides || []).length} slides
+                    {exp.exportName || exp.exportId} · {(exp.slides || []).length} slides
                     {selectedInExport > 0 && (
                       <span className={styles.selectedBadge}>{selectedInExport} selected</span>
                     )}

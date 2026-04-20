@@ -135,7 +135,7 @@ export default function ExportHistoryPanel({ projectName, flowId, refreshTrigger
                   aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${exp.exportId}`}
                 >
                   <span className={styles.expandIcon}>{isExpanded ? '▾' : '▸'}</span>
-                  <span className={styles.exportId}>{exp.exportId}</span>
+                  <span className={styles.exportId}>{exp.exportName || exp.exportId}</span>
                   <span className={styles.exportMeta}>
                     {exp.slideCount} slide{exp.slideCount !== 1 ? 's' : ''}
                     {exp.totalSize ? ` · ${formatBytes(exp.totalSize)}` : ''}

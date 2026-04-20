@@ -34,7 +34,7 @@ export default function HtmlMetadataStep({
 
   const [isExporting, setIsExporting] = useState(false)
 
-  // Pre-fill metadata from slideNames prop
+  // Pre-fill metadata from slideNames prop and auto-populate exportName
   useEffect(() => {
     if (slideNames?.length) {
       setMetadata(
@@ -45,6 +45,11 @@ export default function HtmlMetadataStep({
           }
         })
       )
+
+      // Auto-populate export name from first slide if not already set
+      if (!exportName.trim() && slideNames[0]?.name) {
+        setExportName(slideNames[0].name)
+      }
     }
   }, [slideNames, slideCount])
 

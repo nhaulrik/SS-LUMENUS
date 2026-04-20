@@ -853,7 +853,7 @@ router.patch('/html-flow/update-preview-html', (req, res) => {
 router.post('/projects/:projectName/flows/:flowId/exports', (req, res) => {
   try {
     const { projectName, flowId } = req.params;
-    const { roundId, outputFile, slideMetadata } = req.body;
+    const { roundId, outputFile, slideMetadata, exportName } = req.body;
 
     if (!roundId || !outputFile) {
       return res.status(400).json({ ok: false, error: 'roundId and outputFile are required.' });
@@ -863,7 +863,7 @@ router.post('/projects/:projectName/flows/:flowId/exports', (req, res) => {
       return res.status(400).json({ ok: false, error: 'slideMetadata must be an array.' });
     }
 
-    const result = createExport(projectName, flowId, roundId, outputFile, slideMetadata || []);
+    const result = createExport(projectName, flowId, roundId, outputFile, slideMetadata || [], exportName);
     if (!result) {
       return res.status(500).json({ ok: false, error: 'Failed to create export.' });
     }
