@@ -1884,13 +1884,12 @@ select:focus-visible {
 /* ── HtmlMetadataStep layout ───────────────────────────────────────────────── */
 
 .html-metadata-layout {
-  display: grid;
-  grid-template-columns: 1fr 380px;
+  display: flex;
   flex: 1;
   min-height: 0;
   overflow: hidden;
   padding: 0 24px 20px;
-  gap: 20px;
+  gap: 0;
 }
 
 .html-metadata-left {
@@ -1898,6 +1897,40 @@ select:focus-visible {
   flex-direction: column;
   min-height: 0;
   overflow-y: auto;
+  flex: 1;
+}
+
+.html-metadata-divider {
+  width: 6px;
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+  border-left:  1px solid var(--border-subtle);
+  border-right: 1px solid var(--border-subtle);
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast);
+  user-select: none;
+  pointer-events: auto;
+  z-index: 10;
+}
+
+.html-metadata-divider:hover,
+.html-metadata-divider:active {
+  background: rgba(76, 175, 128, 0.15);
+  border-color: rgba(76, 175, 128, 0.4);
+}
+
+.html-metadata-divider-handle {
+  width: 2px;
+  height: 32px;
+  background: var(--border-medium);
+  border-radius: 1px;
+}
+
+.html-metadata-divider:hover .html-metadata-divider-handle {
+  background: var(--accent-primary);
 }
 
 .html-metadata-right {
@@ -1905,8 +1938,8 @@ select:focus-visible {
   flex-direction: column;
   min-height: 0;
   overflow-y: auto;
-  border-left: 1px solid var(--border-subtle);
   padding-left: 20px;
+  flex-shrink: 0;
 }
 
 .html-metadata-panel {
@@ -2005,8 +2038,11 @@ select:focus-visible {
 
 @media (max-width: 900px) {
   .html-metadata-layout {
-    grid-template-columns: 1fr;
+    flex-direction: column;
     overflow-y: auto;
+  }
+  .html-metadata-divider {
+    display: none;
   }
   .html-metadata-right {
     border-left: none;
@@ -2963,6 +2999,9 @@ select:focus-visible {
   align-items: center;
   justify-content: center;
   transition: background var(--transition-fast);
+  user-select: none;
+  pointer-events: auto;
+  z-index: 10;
 }
 
 .html-editor-divider:hover,

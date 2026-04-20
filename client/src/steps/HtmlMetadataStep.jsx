@@ -5,7 +5,7 @@
  * and finish back to the project dashboard.
  */
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import AppHeader          from '../components/AppHeader.jsx'
 import Breadcrumbs        from '../components/Breadcrumbs.jsx'
 import ExportHistoryPanel from '../components/ExportHistoryPanel.jsx'
@@ -36,6 +36,44 @@ export default function HtmlMetadataStep({
 
   const [isExporting, setIsExporting] = useState(false)
   const [exportRefreshTrigger, setExportRefreshTrigger] = useState(0)
+
+  // Resizable divider
+  const [splitPct, setSplitPct] = useState(60)
+  const containerRef = useRef(null)
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!containerRef.current?.dataset.dragging) return
+      const rect = containerRef.current.getBoundingClientRect()
+      const pct  = Math.min(80, Math.max(40, ((e.clientX - rect.left) / rect.width) * 100))
+      setSplitPct(pct)
+    }
+
+    const handleMouseUp = () => {
+      if (containerRef.current) containerRef.current.dataset.dragging = ''
+      // Re-enable pointer events on iframes
+      document.querySelectorAll('iframe').forEach(iframe => {
+        iframe.style.pointerEvents = ''
+      })
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [])
+
+  const onDividerMouseDown = useCallback((e) => {
+    e.preventDefault()
+    // Disable pointer events on iframes to allow dragging over them
+    document.querySelectorAll('iframe').forEach(iframe => {
+      iframe.style.pointerEvents = 'none'
+    })
+    if (containerRef.current) containerRef.current.dataset.dragging = '1'
+  }, [])
 
   const handleMetadataChange = useCallback((index, field, value) => {
     setMetadata(prev => {
@@ -75,10 +113,10 @@ export default function HtmlMetadataStep({
       />
       <Breadcrumbs step={step} canNavigateTo={canNavigateTo} navigateTo={navigateTo} flow="html" />
 
-      <div className="html-metadata-layout">
+      <div className="html-metadata-layout" ref={containerRef}>
 
         {/* ── Left: metadata form ───────────────────────────────────── */}
-        <div className="html-metadata-left">
+        <div className="html-metadata-left" style={{ width: splitPct + '%' }}>
           <div className="html-metadata-panel">
             <h3 className="html-metadata-panel-title">Slide Metadata</h3>
             <p className="html-metadata-panel-desc">
@@ -159,8 +197,17 @@ export default function HtmlMetadataStep({
           </div>
         </div>
 
+        {/* Divider */}
+        <div
+          className="html-metadata-divider"
+          onMouseDown={onDividerMouseDown}
+          title="Drag to resize"
+        >
+          <div className="html-metadata-divider-handle" />
+        </div>
+
         {/* ── Right: export history ─────────────────────────────────── */}
-        <div className="html-metadata-right">
+        <div className="html-metadata-right" style={{ width: (100 - splitPct) + '%' }}>
           <ExportHistoryPanel
             projectName={projectName}
             flowId={flowId}

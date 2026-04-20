@@ -123,21 +123,40 @@ export default function HtmlEditorPanel({
 
   // ── Resizable divider ────────────────────────────────────────────────────────
   const [splitPct,   setSplitPct]   = useState(50)
-  const dragging     = useRef(false)
   const containerRef = useRef(null)
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!containerRef.current?.dataset.dragging) return
+      const rect = containerRef.current.getBoundingClientRect()
+      const pct  = Math.min(80, Math.max(20, ((e.clientX - rect.left) / rect.width) * 100))
+      setSplitPct(pct)
+    }
+
+    const handleMouseUp = () => {
+      if (containerRef.current) containerRef.current.dataset.dragging = ''
+      // Re-enable pointer events on iframes
+      document.querySelectorAll('iframe').forEach(iframe => {
+        iframe.style.pointerEvents = ''
+      })
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [])
 
   const onDividerMouseDown = useCallback((e) => {
     e.preventDefault()
-    dragging.current = true
-    const onMove = (ev) => {
-      if (!dragging.current || !containerRef.current) return
-      const rect = containerRef.current.getBoundingClientRect()
-      const pct  = Math.min(80, Math.max(20, ((ev.clientX - rect.left) / rect.width) * 100))
-      setSplitPct(pct)
-    }
-    const onUp = () => { dragging.current = false; window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup',  onUp)
+    // Disable pointer events on iframes to allow dragging over them
+    document.querySelectorAll('iframe').forEach(iframe => {
+      iframe.style.pointerEvents = 'none'
+    })
+    if (containerRef.current) containerRef.current.dataset.dragging = '1'
   }, [])
 
   // ── Preview debounce ─────────────────────────────────────────────────────────

@@ -88,7 +88,8 @@
 /* ── Tree panel ──────────────────────────────────────────────────────────── */
 
 .treePanel {
-  flex: 0 0 220px;
+  flex: 0 0 auto;
+  width: 25%;
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--border-subtle);
@@ -353,8 +354,10 @@
 }
 
 /* Drag divider */
-.divider {
-  flex: 0 0 4px;
+/* ── Tree divider ─────────────────────────────────────────────────────────── */
+
+.treeDivider {
+  flex: 0 0 6px;
   background: var(--border-subtle);
   cursor: col-resize;
   display: flex;
@@ -362,16 +365,57 @@
   justify-content: center;
   transition: background var(--transition-fast);
   user-select: none;
+  pointer-events: auto;
+  z-index: 10;
 }
 
-.divider:hover { background: color-mix(in oklch, var(--accent-primary) 40%, var(--border-subtle)); }
+.treeDivider:hover,
+.treeDivider:active {
+  background: color-mix(in oklch, var(--accent-primary) 50%, var(--border-subtle));
+}
+
+.treeDividerHandle {
+  width: 2px;
+  height: 32px;
+  border-radius: 1px;
+  background: var(--border-default);
+  pointer-events: none;
+}
+
+.treeDivider:hover .treeDividerHandle {
+  background: var(--accent-primary);
+}
+
+/* ── Editor/Preview divider ─────────────────────────────────────────────────── */
+
+.divider {
+  flex: 0 0 6px;
+  background: var(--border-subtle);
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast);
+  user-select: none;
+  pointer-events: auto;
+  z-index: 10;
+}
+
+.divider:hover,
+.divider:active {
+  background: color-mix(in oklch, var(--accent-primary) 50%, var(--border-subtle));
+}
 
 .dividerHandle {
   width: 2px;
-  height: 20px;
-  border-radius: 2px;
+  height: 32px;
+  border-radius: 1px;
   background: var(--border-default);
   pointer-events: none;
+}
+
+.divider:hover .dividerHandle {
+  background: var(--accent-primary);
 }
 
 /* ── Preview pane ─────────────────────────────────────────────────────────── */

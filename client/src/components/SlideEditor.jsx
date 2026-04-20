@@ -128,6 +128,9 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
   const [checkedSlides,   setCheckedSlides]   = useState(new Set())
   const [dirtySlides,     setDirtySlides]     = useState({})
 
+  // ── Split panels ──────────────────────────────────────────────────────────────
+  const [treePct, setTreePct] = useState(25)  // tree panel width %
+
   // ── Search ───────────────────────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -168,7 +171,6 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
 
   // ── Split pane ───────────────────────────────────────────────────────────────
   const [splitPct,        setSplitPct]        = useState(50)
-  const dragging          = useRef(false)
   const splitContainerRef = useRef(null)
 
   // ── Refs ─────────────────────────────────────────────────────────────────────
@@ -540,21 +542,75 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
 
    // ── Split divider drag ───────────────────────────────────────────────────────
 
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!splitContainerRef.current?.dataset.dragging) return
+      const rect = splitContainerRef.current.getBoundingClientRect()
+      setSplitPct(Math.min(75, Math.max(25, ((e.clientX - rect.left) / rect.width) * 100)))
+    }
+
+    const handleMouseUp = () => {
+      if (splitContainerRef.current) splitContainerRef.current.dataset.dragging = ''
+      // Re-enable pointer events on iframes
+      document.querySelectorAll('iframe').forEach(iframe => {
+        iframe.style.pointerEvents = ''
+      })
+    }
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [])
+
   const onDividerMouseDown = useCallback((e) => {
     e.preventDefault()
-    dragging.current = true
-    const onMove = (ev) => {
-      if (!dragging.current || !splitContainerRef.current) return
-      const rect = splitContainerRef.current.getBoundingClientRect()
-      setSplitPct(Math.min(75, Math.max(25, ((ev.clientX - rect.left) / rect.width) * 100)))
+    // Disable pointer events on iframes to allow dragging over them
+    document.querySelectorAll('iframe').forEach(iframe => {
+      iframe.style.pointerEvents = 'none'
+    })
+    if (splitContainerRef.current) splitContainerRef.current.dataset.dragging = '1'
+  }, [])
+
+  // ── Tree panel resize ────────────────────────────────────────────────────────
+
+  const bodyDivRef = useRef(null)
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!bodyDivRef.current?.dataset.dragging) return
+      const rect = bodyDivRef.current.getBoundingClientRect()
+      const pct = Math.min(80, Math.max(15, ((e.clientX - rect.left) / rect.width) * 100))
+      setTreePct(pct)
     }
-    const onUp = () => {
-      dragging.current = false
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup',  onUp)
+
+    const handleMouseUp = () => {
+      if (bodyDivRef.current) bodyDivRef.current.dataset.dragging = ''
+      // Re-enable pointer events on iframes
+      document.querySelectorAll('iframe').forEach(iframe => {
+        iframe.style.pointerEvents = ''
+      })
     }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup',  onUp)
+
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [])
+
+  const onTreeDividerMouseDown = useCallback((e) => {
+    e.preventDefault()
+    // Disable pointer events on iframes to allow dragging over them
+    document.querySelectorAll('iframe').forEach(iframe => {
+      iframe.style.pointerEvents = 'none'
+    })
+    if (bodyDivRef.current) bodyDivRef.current.dataset.dragging = '1'
   }, [])
 
   // ── Derived ──────────────────────────────────────────────────────────────────
@@ -612,10 +668,10 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
       </div>
 
       {/* Body */}
-      <div className={styles.body}>
+      <div className={styles.body} ref={bodyDivRef}>
 
         {/* Tree panel */}
-        <div className={styles.treePanel}>
+        <div className={styles.treePanel} style={{ width: `${treePct}%` }}>
 
           {/* Search bar */}
           <div className={styles.treeSearch}>
@@ -835,8 +891,13 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
           )}
         </div>
 
+        {/* Tree divider */}
+        <div className={styles.treeDivider} onMouseDown={onTreeDividerMouseDown} title="Drag to resize">
+          <div className={styles.treeDividerHandle} />
+        </div>
+
         {/* Editor + Preview */}
-        <div className={styles.splitArea} ref={splitContainerRef}>
+        <div className={styles.splitArea} ref={splitContainerRef} style={{ width: `${100 - treePct}%` }}>
 
           <div className={styles.editorPane} style={{ width: `${splitPct}%` }}>
             <div className={styles.paneLabel}>HTML source</div>
