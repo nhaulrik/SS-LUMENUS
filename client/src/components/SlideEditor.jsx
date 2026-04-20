@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { EditorView, lineNumbers, keymap, highlightActiveLine, drawSelection, dropCursor } from '@codemirror/view'
 import { EditorState } from '@codemirror/state'
 import { html as htmlLang } from '@codemirror/lang-html'
@@ -128,6 +128,37 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
   const [checkedSlides,   setCheckedSlides]   = useState(new Set())
   const [dirtySlides,     setDirtySlides]     = useState({})
 
+  // ── Search ───────────────────────────────────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const filteredFlows = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return flows
+    return flows
+      .map(flow => {
+        const flowMatches = flow.flowName.toLowerCase().includes(q)
+        const filteredExports = flow.exports
+          .map(exp => {
+            const expMatches = flowMatches || String(exp.exportNumber).includes(q)
+            if (!exp.slides) return expMatches ? exp : null
+            const filteredSlides = exp.slides.filter(slide =>
+              expMatches ||
+              (slide.title || slide.file).toLowerCase().includes(q)
+            )
+            if (expMatches || filteredSlides.length > 0) {
+              return { ...exp, slides: expMatches ? exp.slides : filteredSlides }
+            }
+            return null
+          })
+          .filter(Boolean)
+        if (flowMatches || filteredExports.length > 0) {
+          return { ...flow, exports: filteredExports }
+        }
+        return null
+      })
+      .filter(Boolean)
+  }, [flows, searchQuery])
+
   // ── Editor / preview state ───────────────────────────────────────────────────
   const [loadingSlide,  setLoadingSlide]  = useState(false)
   const [previewSrcDoc, setPreviewSrcDoc] = useState('')
@@ -149,6 +180,15 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
   const selectedKeyRef  = useRef(null)
   const previewScaleRef = useRef(1)
   const isLoadingRef    = useRef(false)
+
+  // ── Slide row refs (for scroll-to-active) ────────────────────────────────────
+  const slideRowRefs = useRef({})
+
+  const scrollToActive = useCallback(() => {
+    if (!selectedKey) return
+    const el = slideRowRefs.current[selectedKey]
+    el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [selectedKey])
 
   useEffect(() => { selectedKeyRef.current = selectedKey },   [selectedKey])
   useEffect(() => { previewScaleRef.current = previewScale }, [previewScale])
@@ -287,6 +327,19 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
     })
   }, [])
 
+  const selectAllVisible = useCallback(() => {
+    const keys = new Set()
+    for (const flow of filteredFlows) {
+      for (const exp of flow.exports) {
+        if (!exp.slides) continue
+        for (const slide of exp.slides) {
+          keys.add(`${flow.flowId}::${exp.exportId}::${slide.file}`)
+        }
+      }
+    }
+    setCheckedSlides(keys)
+  }, [filteredFlows])
+
   // ── Slide open ───────────────────────────────────────────────────────────────
 
   const loadIntoEditor = useCallback((html) => {
@@ -305,6 +358,9 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
     const key = `${flowId}::${exportId}::${slideFile}`
     setSelectedKey(key)
     selectedKeyRef.current = key
+    // Auto-expand the parent export when a slide is opened
+    const expKey = `${flowId}::${exportId}`
+    setExpandedExports(prev => prev.has(expKey) ? prev : new Set([...prev, expKey]))
 
     if (dirtySlides[key]) { loadIntoEditor(dirtySlides[key]); return }
 
@@ -412,6 +468,20 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
   const selExportNum = selParts?.[1]?.replace('export-', '') ?? null
   const selSlideFile = selParts?.[2] ?? null
 
+  // ── Match highlighter ────────────────────────────────────────────────────────
+  const highlightMatch = useCallback((text, query) => {
+    if (!query.trim()) return text
+    const idx = text.toLowerCase().indexOf(query.toLowerCase().trim())
+    if (idx === -1) return text
+    return (
+      <>
+        {text.slice(0, idx)}
+        <mark className={styles.matchHighlight}>{text.slice(idx, idx + query.trim().length)}</mark>
+        {text.slice(idx + query.trim().length)}
+      </>
+    )
+  }, [])
+
   // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
@@ -449,12 +519,78 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
 
         {/* Tree panel */}
         <div className={styles.treePanel}>
+
+          {/* Search bar */}
+          <div className={styles.treeSearch}>
+            <span className={styles.searchIcon}>⌕</span>
+            <input
+              className={styles.searchInput}
+              type="text"
+              placeholder="Search slides…"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              aria-label="Search slides"
+            />
+            {searchQuery && (
+              <button
+                className={styles.searchClear}
+                onClick={() => setSearchQuery('')}
+                aria-label="Clear search"
+              >✕</button>
+            )}
+          </div>
+
+          {/* Toolbar */}
+          <div className={styles.treeToolbar}>
+            <button
+              className={styles.toolbarBtn}
+              onClick={() => {
+                const keys = new Set()
+                flows.forEach(f => f.exports.forEach(e => {
+                  const k = `${f.flowId}::${e.exportId}`
+                  keys.add(k)
+                  if (!e.slides) loadExportSlides(f.flowId, e.exportId)
+                }))
+                setExpandedExports(keys)
+              }}
+              title="Expand all exports"
+            >⊞ All</button>
+            <button
+              className={styles.toolbarBtn}
+              onClick={() => setExpandedExports(new Set())}
+              title="Collapse all exports"
+            >⊟ None</button>
+            <button
+              className={styles.toolbarBtn}
+              onClick={selectAllVisible}
+              title="Select all visible slides"
+            >☑ Select</button>
+            {checkedSlides.size > 0 && (
+              <button
+                className={styles.toolbarBtn}
+                onClick={() => setCheckedSlides(new Set())}
+                title="Clear selection"
+              >☐ Clear</button>
+            )}
+            {selectedKey && (
+              <button
+                className={`${styles.toolbarBtn} ${styles.toolbarBtnJump}`}
+                onClick={scrollToActive}
+                title="Scroll to active slide"
+              >⊙ Jump</button>
+            )}
+          </div>
+
           <div className={styles.treeScroll}>
-            {flows.length === 0 ? (
-              <p className={styles.treeEmpty}>No exports available. Generate slides in a flow first.</p>
-            ) : flows.map(flow => (
+            {filteredFlows.length === 0 ? (
+              searchQuery ? (
+                <p className={styles.noResults}>No slides match "<strong>{searchQuery}</strong>"</p>
+              ) : (
+                <p className={styles.treeEmpty}>No exports available. Generate slides in a flow first.</p>
+              )
+            ) : filteredFlows.map(flow => (
               <div key={flow.flowId} className={styles.flowGroup}>
-                <div className={styles.flowLabel}>{flow.flowName}</div>
+                <div className={styles.flowLabel}>{highlightMatch(flow.flowName, searchQuery)}</div>
 
                 {flow.exports.map(exp => {
                   const expKey   = `${flow.flowId}::${exp.exportId}`
@@ -496,6 +632,7 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
                             return (
                               <div
                                 key={slide.file}
+                                ref={el => { if (el) slideRowRefs.current[slideKey] = el; else delete slideRowRefs.current[slideKey] }}
                                 className={`${styles.slideRow}${isActive ? ` ${styles.slideRowActive}` : ''}`}
                               >
                                 <label className={styles.checkWrap}>

@@ -437,3 +437,125 @@
 :global(.cm-lineNumbers) {
   color: var(--text-muted);
 }
+
+/* ── Tree search bar ─────────────────────────────────────────────────────── */
+
+.treeSearch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px 6px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.searchIcon {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.35);
+  flex-shrink: 0;
+  line-height: 1;
+  user-select: none;
+}
+
+.searchInput {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  color: #e2e8f0;
+  font-size: 12px;
+  padding: 4px 8px;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+  min-width: 0;
+}
+
+.searchInput::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.searchInput:focus {
+  border-color: rgba(99, 179, 237, 0.5);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.searchClear {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
+}
+
+.searchClear:hover {
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* ── Tree toolbar ─────────────────────────────────────────────────────────── */
+
+.treeToolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.toolbarBtn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 3px 7px;
+  border-radius: 4px;
+  line-height: 1.4;
+  white-space: nowrap;
+  transition: color 0.15s, background 0.15s;
+}
+
+.toolbarBtn:hover {
+  color: #e2e8f0;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.toolbarBtnJump {
+  margin-left: auto;
+  color: rgba(99, 179, 237, 0.6);
+}
+
+.toolbarBtnJump:hover {
+  color: #63b3ed;
+  background: rgba(99, 179, 237, 0.1);
+}
+
+/* ── Match highlight ──────────────────────────────────────────────────────── */
+
+.matchHighlight {
+  background: rgba(251, 191, 36, 0.25);
+  color: #fbbf24;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* ── No results ───────────────────────────────────────────────────────────── */
+
+.noResults {
+  padding: 24px 16px;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 12px;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.noResults strong {
+  color: rgba(255, 255, 255, 0.55);
+}
