@@ -120,7 +120,7 @@ function groupByFlow(exports) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function SlideEditor({ projectName, initialExports, setToast }) {
+export default function SlideEditor({ projectName, initialExports, setToast, onExportDeleted }) {
   // ── Tree state ───────────────────────────────────────────────────────────────
   const [flows,           setFlows]           = useState(() => groupByFlow(initialExports))
   const [expandedExports, setExpandedExports] = useState(new Set())
@@ -478,6 +478,7 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
        ))
 
        setToast?.({ type: 'success', message: `${exp.exportName || exp.exportId} deleted` })
+       onExportDeleted?.()
      } catch (err) {
        setToast?.({ type: 'error', message: err.message })
      }

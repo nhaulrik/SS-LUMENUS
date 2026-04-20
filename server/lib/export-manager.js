@@ -161,14 +161,27 @@ export function createExport(projectName, flowId, roundId, outputFile, slideMeta
       throw new Error('No slides found in output HTML');
     }
 
-    // Determine export number and ID
-    const existingExports = flow.exports || [];
-    const exportNumber = existingExports.length + 1;
+    // Determine export number and ID based on actual exports on disk
+    const exportsBaseDir = path.join(flowDir, 'exports');
+    let exportNumber = 1;
+    if (fs.existsSync(exportsBaseDir)) {
+      const existingDirs = fs.readdirSync(exportsBaseDir, { withFileTypes: true })
+        .filter(dirent => dirent.isDirectory())
+        .map(dirent => dirent.name);
+      if (existingDirs.length > 0) {
+        const numbers = existingDirs
+          .map(dir => {
+            const match = dir.match(/-(\d+)$/);
+            return match ? parseInt(match[1], 10) : 0;
+          })
+          .filter(n => n > 0);
+        exportNumber = (Math.max(...numbers, 0) || 0) + 1;
+      }
+    }
     const sanitizedName = sanitizeFilename(exportName);
     const exportId = sanitizedName ? `${sanitizedName}-${exportNumber}` : `export-${exportNumber}`;
 
     // Create exports directory
-    const exportsBaseDir = path.join(flowDir, 'exports');
     const exportDir = path.join(exportsBaseDir, exportId);
     fs.mkdirSync(exportDir, { recursive: true });
 
@@ -260,26 +273,7 @@ export function createExport(projectName, flowId, roundId, outputFile, slideMeta
         'utf8'
       );
 
-      // Update flow.json with export entry
-      const exportEntry = {
-        exportId,
-        exportNumber,
-        createdAt,
-        roundId,
-        outputFile,
-        slideCount: sections.length,
-        totalSize,
-        path: `exports/${exportId}/`,
-        files: {
-          metadata: `exports/${exportId}/export.json`,
-          projectIndex: `exports/${exportId}/project.json`,
-        },
-      };
-
-    if (!flow.exports) {
-      flow.exports = [];
-    }
-    flow.exports.push(exportEntry);
+    // Track last export in flow.json (for recent reference, but primary source is file system)
     flow.lastExport = {
       exportId,
       createdAt,
@@ -444,9 +438,13 @@ export function resolveSlideFilePath(projectName, flowId, exportId, slideFile) {
  */
 export function getExportCount(projectName, flowId) {
   try {
-    const flow = loadFlow(projectName, flowId);
-    if (!flow) return 0;
-    return (flow.exports || []).length;
+    const flowDir = resolveFlowDir(projectName, flowId);
+    if (!flowDir) return 0;
+    const exportsDir = path.join(flowDir, 'exports');
+    if (!fs.existsSync(exportsDir)) return 0;
+    const exportDirs = fs.readdirSync(exportsDir, { withFileTypes: true })
+      .filter(dirent => dirent.isDirectory());
+    return exportDirs.length;
   } catch (err) {
     console.error('[export-manager] getExportCount error:', err.message);
     return 0;
@@ -523,10 +521,25 @@ export function forkExport(projectName, flowId, sourceExportId, slideFiles, over
     const sourceExport = getExport(projectName, flowId, sourceExportId);
     if (!sourceExport) return null;
 
-    // Generate new export ID and number
-    const exportNumber = (flow.exports || []).length + 1;
+    // Generate new export ID and number based on actual exports on disk
+    const exportsBaseDir = path.dirname(sourceExportDir);
+    let exportNumber = 1;
+    if (fs.existsSync(exportsBaseDir)) {
+      const existingDirs = fs.readdirSync(exportsBaseDir, { withFileTypes: true })
+        .filter(dirent => dirent.isDirectory())
+        .map(dirent => dirent.name);
+      if (existingDirs.length > 0) {
+        const numbers = existingDirs
+          .map(dir => {
+            const match = dir.match(/-(\d+)$/);
+            return match ? parseInt(match[1], 10) : 0;
+          })
+          .filter(n => n > 0);
+        exportNumber = (Math.max(...numbers, 0) || 0) + 1;
+      }
+    }
     const exportId = `export-${exportNumber}`;
-    const exportDir = path.join(path.dirname(sourceExportDir), exportId);
+    const exportDir = path.join(exportsBaseDir, exportId);
 
     if (fs.existsSync(exportDir)) {
       throw new Error(`Export directory already exists: ${exportId}`);
@@ -620,26 +633,7 @@ export function forkExport(projectName, flowId, sourceExportId, slideFiles, over
       'utf8'
     );
 
-    // Update flow.json
-    const exportEntry = {
-      exportId,
-      exportNumber,
-      createdAt,
-      roundId: sourceExport.source?.roundId,
-      outputFile: sourceExport.source?.outputFile,
-      slideCount: copiedSlides.length,
-      totalSize,
-      path: `exports/${exportId}/`,
-      files: {
-        metadata: `exports/${exportId}/export.json`,
-        projectIndex: `exports/${exportId}/project.json`,
-      },
-    };
-
-    if (!flow.exports) {
-      flow.exports = [];
-    }
-    flow.exports.push(exportEntry);
+    // Track last export in flow.json (for recent reference, but primary source is file system)
     flow.lastExport = {
       exportId,
       createdAt,
@@ -765,33 +759,17 @@ export function deleteSlide(projectName, flowId, exportId, slideFile) {
 export function deleteExport(projectName, flowId, exportId) {
   try {
     const exportDir = resolveExportDir(projectName, flowId, exportId);
-    if (!exportDir) return false;
-
-    const flow = loadFlow(projectName, flowId);
-    if (!flow) return false;
-
-    const exports = flow.exports || [];
-    const index = exports.findIndex(e => e.exportId === exportId);
-    if (index === -1) return false;
-
-    // Remove from flow.json first
-    exports.splice(index, 1);
-    flow.exports = exports;
-
-    // Update lastExport if needed
-    if (flow.lastExport?.exportId === exportId) {
-      const remaining = exports;
-      flow.lastExport = remaining.length > 0
-        ? { exportId: remaining[remaining.length - 1].exportId, createdAt: remaining[remaining.length - 1].createdAt, roundId: remaining[remaining.length - 1].roundId, slideCount: remaining[remaining.length - 1].slideCount }
-        : null;
-    }
-
-    flow.updatedAt = new Date().toISOString();
-    if (!saveFlow(projectName, flowId, flow)) return false;
+    if (!exportDir || !fs.existsSync(exportDir)) return false;
 
     // Remove directory from disk
-    if (fs.existsSync(exportDir)) {
-      fs.rmSync(exportDir, { recursive: true, force: true });
+    fs.rmSync(exportDir, { recursive: true, force: true });
+
+    // Update flow.json if needed (update lastExport if it was deleted)
+    const flow = loadFlow(projectName, flowId);
+    if (flow && flow.lastExport?.exportId === exportId) {
+      flow.lastExport = null;
+      flow.updatedAt = new Date().toISOString();
+      saveFlow(projectName, flowId, flow);
     }
 
     return true;

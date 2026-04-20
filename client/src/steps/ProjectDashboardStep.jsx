@@ -33,47 +33,48 @@ export default function ProjectDashboardStep({
   const [exports,         setExports]         = useState([])
   const [exportsLoading,  setExportsLoading]  = useState(false)
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch(`/api/projects/${projectName}`)
-        if (!res.ok) throw new Error('Failed to load project')
-        const data = await res.json()
-        setProject(data.project)
+  const loadExports = async () => {
+    try {
+      const res = await fetch(`/api/projects/${projectName}`)
+      if (!res.ok) throw new Error('Failed to load project')
+      const data = await res.json()
+      setProject(data.project)
 
-        // Fetch exports for all flows in parallel
-        const flows = data.project?.flows || []
-        setExportsLoading(true)
-        const exportsResults = await Promise.all(
-          flows.map(async (flow) => {
-            try {
-              const r = await fetch(`/api/projects/${projectName}/flows/${flow.flowId}/exports`)
-              if (!r.ok) return []
-              const d = await r.json()
-              const list = d.exports || d || []
-              return list.map((exp, idx) => ({
-                flowId:       flow.flowId,
-                flowName:     flow.name || flow.flowId,
-                exportId:     exp.exportId,
-                exportName:   exp.exportName || exp.exportId,
-                exportNumber: exp.exportNumber ?? idx + 1,
-                slideCount:   exp.slideCount ?? exp.slides?.length ?? 0,
-                createdAt:    exp.createdAt,
-              }))
-            } catch {
-              return []
-            }
-          })
-        )
-        setExports(exportsResults.flat())
-        setExportsLoading(false)
-      } catch (err) {
-        setError(err.message)
-      } finally {
-        setLoading(false)
-      }
+      // Fetch exports for all flows in parallel
+      const flows = data.project?.flows || []
+      setExportsLoading(true)
+      const exportsResults = await Promise.all(
+        flows.map(async (flow) => {
+          try {
+            const r = await fetch(`/api/projects/${projectName}/flows/${flow.flowId}/exports`)
+            if (!r.ok) return []
+            const d = await r.json()
+            const list = d.exports || d || []
+            return list.map((exp, idx) => ({
+              flowId:       flow.flowId,
+              flowName:     flow.name || flow.flowId,
+              exportId:     exp.exportId,
+              exportName:   exp.exportName || exp.exportId,
+              exportNumber: exp.exportNumber ?? idx + 1,
+              slideCount:   exp.slideCount ?? exp.slides?.length ?? 0,
+              createdAt:    exp.createdAt,
+            }))
+          } catch {
+            return []
+          }
+        })
+      )
+      setExports(exportsResults.flat())
+      setExportsLoading(false)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
     }
-    load()
+  }
+
+  useEffect(() => {
+    loadExports()
   }, [projectName])
 
   const handleDeleteFlow = async (flowId) => {
@@ -286,6 +287,7 @@ export default function ProjectDashboardStep({
                 projectName={projectName}
                 initialExports={exports}
                 setToast={setToast}
+                onExportDeleted={loadExports}
               />
             )
         )}
