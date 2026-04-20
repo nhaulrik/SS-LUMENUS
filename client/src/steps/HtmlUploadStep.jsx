@@ -264,14 +264,16 @@ export default function HtmlUploadStep({
          if (!res.ok) throw new Error('Failed to load flow')
          const data = await res.json()
          const meta = data.flow?._metadata || {}
-         onProjectCreated({
-           projectName:         currentProjectName,
-           flowId:              currentFlowId,
-           selections:          meta.selections          || selections,
-           zones:               meta.zones               || [],
-           repeatableSlides,
-           fullSlideGeneration: meta.fullSlideGeneration || fullSlideGeneration,
-         })
+          onProjectCreated({
+            projectName:         currentProjectName,
+            flowId:              currentFlowId,
+            selections:          meta.selections          || selections,
+            zones:               meta.zones               || [],
+            repeatableSlides,
+            fullSlideGeneration: meta.fullSlideGeneration || fullSlideGeneration,
+            agenticCustomInput:  data.flow?.agenticCustomInput  || '',
+            agenticJsonResponse: data.flow?.agenticJsonResponse || null,
+          })
        } else {
          // New flow — create it inside the current project
          if (!templateId || !currentProjectName) return

@@ -23,6 +23,7 @@ import { applyHtmlContent }                  from '../lib/html-patcher.js';
 import { buildSectionTree, flattenTree }      from '../lib/build-tree.js';
 import { selectionsToZones, resolveConflicts } from '../lib/selections-to-zones.js';
 import { getSummaryStatus } from '../lib/context-reader.js';
+import { loadFlow, saveFlow } from '../lib/project-manager.js';
 import {
   createExport,
   listExports,
@@ -377,6 +378,8 @@ router.get('/html-flow/load-flow', (req, res) => {
       fullSlideGeneration: metadata.fullSlideGeneration || [],
       summaryPrompt:       flow.summaryPrompt           || '',
       contentPrompt:       flow.contentPrompt           || '',
+      agenticCustomInput:  flow.agenticCustomInput      || '',
+      agenticJsonResponse: flow.agenticJsonResponse     || null,
       previewHtml,
       violations: violations.length ? violations : undefined,
       isExistingFlow: true,
@@ -1023,6 +1026,50 @@ router.post('/projects/:projectName/flows/:flowId/exports/:exportId/fork', (req,
     return res.json({ ok: true, ...result });
   } catch (err) {
     console.error('[html-flow] fork-export error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ── PATCH /api/projects/:projectName/flows/:flowId/agentic ────────────────────
+// Save agentic fields: agenticCustomInput and agenticJsonResponse
+
+router.patch('/projects/:projectName/flows/:flowId/agentic', (req, res) => {
+  try {
+    const { projectName, flowId } = req.params;
+    const { agenticCustomInput, agenticJsonResponse } = req.body;
+
+    if (!projectName || !/^[\w-]{1,100}$/.test(projectName)) {
+      return res.status(400).json({ ok: false, error: 'Invalid projectName.' });
+    }
+    if (!flowId || !/^[\w-]{1,100}$/.test(flowId)) {
+      return res.status(400).json({ ok: false, error: 'Invalid flowId.' });
+    }
+
+    const flow = loadFlow(projectName, flowId);
+    if (!flow) {
+      return res.status(404).json({ ok: false, error: 'Flow not found.' });
+    }
+
+    if (agenticCustomInput !== undefined) {
+      flow.agenticCustomInput = agenticCustomInput;
+    }
+    if (agenticJsonResponse !== undefined) {
+      flow.agenticJsonResponse = agenticJsonResponse;
+    }
+    flow.updatedAt = new Date().toISOString();
+
+    const saved = saveFlow(projectName, flowId, flow);
+    if (!saved) {
+      return res.status(500).json({ ok: false, error: 'Failed to save flow.' });
+    }
+
+    return res.json({
+      ok: true,
+      agenticCustomInput: flow.agenticCustomInput || '',
+      agenticJsonResponse: flow.agenticJsonResponse || null,
+    });
+  } catch (err) {
+    console.error('[html-flow] patch-agentic error:', err);
     return res.status(500).json({ ok: false, error: err.message });
   }
 });

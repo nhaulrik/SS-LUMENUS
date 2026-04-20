@@ -87,6 +87,13 @@ export default function HtmlRecipeStep({
   const [agenticPlanLocal, setAgenticPlanLocal] = useState(null)
   const [agenticErrorMsgLocal, setAgenticErrorMsgLocal] = useState('')
 
+  // Agentic custom input & previous response toggle
+  const [agenticCustomInput, setAgenticCustomInput] = useState(project?.agenticCustomInput || '')
+  const [usePreviousResponse, setUsePreviousResponse] = useState(false)
+
+  // Ref for debouncing custom input save
+  const customInputSaveTimerRef = useRef(null)
+
   // Reset scroll position on component mount to ensure user starts at top of page
   // This fixes autoscroll issues when navigating between recipe steps
   useEffect(() => {
@@ -139,17 +146,43 @@ export default function HtmlRecipeStep({
    }, [projectName, flowId])
 
    const savePromptsToFlow = useCallback(async (summaryPrompt, contentPrompt) => {
-     if (!projectName || !flowId) return
-     try {
-       await fetch(`/api/projects/${projectName}/flows/${flowId}`, {
-         method: 'PATCH',
-         headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({ summaryPrompt, contentPrompt }),
-       })
-     } catch {
-       // silent — prompt persistence is non-critical
-     }
-   }, [projectName, flowId])
+      if (!projectName || !flowId) return
+      try {
+        await fetch(`/api/projects/${projectName}/flows/${flowId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ summaryPrompt, contentPrompt }),
+        })
+      } catch {
+        // silent — prompt persistence is non-critical
+      }
+    }, [projectName, flowId])
+
+    const saveAgenticCustomInputToFlow = useCallback(async (value) => {
+      if (!projectName || !flowId) return
+      try {
+        await fetch(`/api/projects/${projectName}/flows/${flowId}/agentic`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ agenticCustomInput: value }),
+        })
+      } catch {
+        // silent — custom input persistence is non-critical
+      }
+    }, [projectName, flowId])
+
+    const saveAgenticJsonResponseToFlow = useCallback(async (jsonResponse) => {
+      if (!projectName || !flowId) return
+      try {
+        await fetch(`/api/projects/${projectName}/flows/${flowId}/agentic`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ agenticJsonResponse: jsonResponse }),
+        })
+      } catch {
+        // silent — JSON response persistence is non-critical
+      }
+    }, [projectName, flowId])
 
    // Initialise agentic prompts from persisted flow data (runs once on mount)
   useEffect(() => {
@@ -162,10 +195,19 @@ export default function HtmlRecipeStep({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const validateTimerRef = useRef(null)
-  const promptSaveTimerRef = useRef(null)
+   const validateTimerRef = useRef(null)
+   const promptSaveTimerRef = useRef(null)
 
-    // ── Generate recipe ───────────────────────────────────────────────────────
+   // Handle custom input change with debouncing
+   const handleAgenticCustomInputChange = useCallback((value) => {
+     setAgenticCustomInput(value)
+     clearTimeout(customInputSaveTimerRef.current)
+     customInputSaveTimerRef.current = setTimeout(() => {
+       saveAgenticCustomInputToFlow(value)
+     }, 500)
+   }, [saveAgenticCustomInputToFlow])
+
+     // ── Generate recipe ───────────────────────────────────────────────────────
   const handleGenerateRecipe = useCallback(async () => {
     setLoadingRecipe(true)
     try {
@@ -425,6 +467,7 @@ export default function HtmlRecipeStep({
           case 'done':
             setAgenticStatus('done')
             handleJsonChange(data)
+            saveAgenticJsonResponseToFlow(data)
             setToast({ message: 'JSON generated — review and apply when ready', type: 'success' })
             break
           case 'error':
@@ -435,11 +478,11 @@ export default function HtmlRecipeStep({
       }
     } catch (err) {
       if (err.name !== 'AbortError') {
-        setAgenticStatus('error')
-        setAgenticErrorMsgLocal(err.message)
-      }
-    }
-  }, [agenticPlanLocal, projectName, recipe, zones, repeatableSlides, agenticContentPrompt, selectedFiles, handleJsonChange, setToast, setAgenticStatus])
+         setAgenticStatus('error')
+         setAgenticErrorMsgLocal(err.message)
+       }
+     }
+   }, [agenticPlanLocal, projectName, recipe, zones, repeatableSlides, agenticContentPrompt, selectedFiles, handleJsonChange, saveAgenticJsonResponseToFlow, setToast, setAgenticStatus])
 
   // Agentic: Cancel/reset
   const handleAgenticCancel = () => {
@@ -693,43 +736,44 @@ export default function HtmlRecipeStep({
               )}
             </div>
 
-            {/* B. Custom Prompt Textarea */}
-            <div className="agentic-prompt-section">
-              <label htmlFor="agenticContentPrompt" className="agentic-prompt-label">
-                What should the AI generate?
-              </label>
-              <textarea
-                id="agenticContentPrompt"
-                className="agentic-prompt-textarea"
-                value={agenticContentPrompt}
-                onChange={(e) => {
-                  setAgenticContentPrompt(e.target.value)
-                  savePromptsToFlow(agenticSummaryPrompt, e.target.value)
-                }}
-                disabled={isAgenticActive || agenticStatus === 'confirming'}
-                placeholder="Describe the slides you want — tone, focus, number of instances, anything specific…"
-              />
-            </div>
+            {/* B. Custom Prompt Textarea (hidden if using previous response) */}
+            {!usePreviousResponse && (
+              <div className="agentic-prompt-section">
+                <label htmlFor="agenticCustomInput" className="agentic-prompt-label">
+                  What should the AI generate?
+                </label>
+                <textarea
+                  id="agenticCustomInput"
+                  className="agentic-prompt-textarea"
+                  value={agenticCustomInput}
+                  onChange={(e) => handleAgenticCustomInputChange(e.target.value)}
+                  disabled={isAgenticActive || agenticStatus === 'confirming'}
+                  placeholder="Describe the slides you want — tone, focus, number of instances, anything specific…"
+                />
+              </div>
+            )}
 
-            {/* C. Generate with AI button + inline agentic UI */}
-            <div className="agentic-generate-section">
-               <button
-                 className={`agentic-generate-btn ${isAgenticActive ? 'running' : ''}`}
-                 onClick={isAgenticActive ? undefined : handleAgenticGenerate}
-                 disabled={isAgenticActive || agenticStatus === 'confirming'}
-               >
-                {agenticStatus === 'planning' ? 'Analysing…' :
-                 agenticStatus === 'running' ? 'Generating…' :
-                 '✦ Generate with AI'}
-              </button>
+            {/* C. Generate with AI button + inline agentic UI (hidden if using previous response) */}
+            {!usePreviousResponse && (
+              <div className="agentic-generate-section">
+                 <button
+                   className={`agentic-generate-btn ${isAgenticActive ? 'running' : ''}`}
+                   onClick={isAgenticActive ? undefined : handleAgenticGenerate}
+                   disabled={isAgenticActive || agenticStatus === 'confirming'}
+                 >
+                  {agenticStatus === 'planning' ? 'Analysing…' :
+                   agenticStatus === 'running' ? 'Generating…' :
+                   '✦ Generate with AI'}
+                </button>
 
-              {agenticStatus === 'running' && (
-                <span className={agenticCss.timer}>{agenticElapsedLocal}s</span>
-              )}
-            </div>
+                {agenticStatus === 'running' && (
+                  <span className={agenticCss.timer}>{agenticElapsedLocal}s</span>
+                )}
+              </div>
+            )}
 
-            {/* Phase stepper */}
-            {(agenticStatus === 'planning' || agenticStatus === 'confirming' || agenticStatus === 'running' || agenticStatus === 'done') && (
+            {/* Phase stepper (hidden if using previous response) */}
+            {!usePreviousResponse && (agenticStatus === 'planning' || agenticStatus === 'confirming' || agenticStatus === 'running' || agenticStatus === 'done') && (
               <div className={agenticCss.stepper}>
                 {PHASES.map((p, i) => {
                   const isDone = (agenticStatus === 'confirming' && i <= 1)
@@ -753,8 +797,8 @@ export default function HtmlRecipeStep({
               </div>
             )}
 
-            {/* Confirmation card */}
-            {agenticStatus === 'confirming' && agenticPlanLocal && (
+            {/* Confirmation card (hidden if using previous response) */}
+            {!usePreviousResponse && agenticStatus === 'confirming' && agenticPlanLocal && (
               <div className={agenticCss.confirmCard}>
                 <div className={agenticCss.confirmHeader}>
                   <span className={agenticCss.confirmIcon}>◎</span>
@@ -789,8 +833,8 @@ export default function HtmlRecipeStep({
               </div>
             )}
 
-            {/* Agent chips */}
-            {agenticAgentsLocal.length > 0 && (
+            {/* Agent chips (hidden if using previous response) */}
+            {!usePreviousResponse && agenticAgentsLocal.length > 0 && (
               <div className={agenticCss.chipsSection}>
                 <div className={agenticCss.chipsLabel}>Agents</div>
                 <div className={agenticCss.chips}>
@@ -806,8 +850,8 @@ export default function HtmlRecipeStep({
               </div>
             )}
 
-            {/* Activity log — shown as soon as planning starts */}
-            {(agenticStatus === 'planning' || agenticStatus === 'running' || agenticStatus === 'done') && (
+            {/* Activity log — shown as soon as planning starts (hidden if using previous response) */}
+            {!usePreviousResponse && (agenticStatus === 'planning' || agenticStatus === 'running' || agenticStatus === 'done') && (
               <div className={agenticCss.logSection}>
                 <div className={agenticCss.logLabel}>Activity</div>
                 <div className={agenticCss.log}>
@@ -825,16 +869,16 @@ export default function HtmlRecipeStep({
               </div>
             )}
 
-            {/* Success banner */}
-            {agenticStatus === 'done' && (
+            {/* Success banner (hidden if using previous response) */}
+            {!usePreviousResponse && agenticStatus === 'done' && (
               <div className={agenticCss.successBanner}>
                 <span>✓</span>
                 <span>JSON generated and pasted into the Response field. Review and apply when ready.</span>
               </div>
             )}
 
-            {/* Error banner */}
-            {agenticStatus === 'error' && (
+            {/* Error banner (hidden if using previous response) */}
+            {!usePreviousResponse && agenticStatus === 'error' && (
               <div className={agenticCss.errorBanner}>
                 <strong>Generation failed</strong>
                 <pre className={agenticCss.errorDetail}>{agenticErrorMsgLocal}</pre>
@@ -845,8 +889,61 @@ export default function HtmlRecipeStep({
               </div>
             )}
 
-            {/* D. JSON output + Apply (shared with Manual tab) */}
-            {jsonInput && (
+            {/* Use previous AI response toggle (when response exists) */}
+            {project?.agenticJsonResponse && (
+              <div className="agentic-previous-response-toggle">
+                <label className="toggle-label">
+                  <input
+                    type="checkbox"
+                    checked={usePreviousResponse}
+                    onChange={(e) => setUsePreviousResponse(e.target.checked)}
+                    className="toggle-checkbox"
+                  />
+                  <span className="toggle-text">Use previous AI response</span>
+                </label>
+              </div>
+            )}
+
+             {/* Previous response panel (when toggle is ON) */}
+             {usePreviousResponse && project?.agenticJsonResponse && (
+               <div className="agentic-previous-response-panel">
+                 <h4>Previous AI Response</h4>
+                 <div className="json-code-block">
+                   <pre><code>{JSON.stringify(project.agenticJsonResponse, null, 2)}</code></pre>
+                 </div>
+                 <div className="agentic-previous-response-actions">
+                   <button className="btn btn-link" onClick={onBack}>
+                     <span aria-hidden="true">←</span> Back to template
+                   </button>
+                   <button
+                     className="btn btn-primary"
+                     onClick={async () => {
+                       setApplying(true)
+                        try {
+                          const res = await fetch('/api/html-flow/apply-content', {
+                            method:  'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body:    JSON.stringify({ projectName, flowId, jsonString: typeof project.agenticJsonResponse === 'string' ? project.agenticJsonResponse : JSON.stringify(project.agenticJsonResponse) }),
+                          })
+                         if (!res.ok) throw new Error(`Server error ${res.status}`)
+                         const data = await res.json()
+                         if (!data.ok) throw new Error(data.error || 'Apply failed')
+                         onApplied({ outputFile: data.outputFile, previewHtml: data.previewHtml, roundId: data.roundId, slideCount: data.slideCount ?? 1 })
+                       } catch (err) {
+                         setToast({ message: 'Apply failed: ' + err.message, type: 'error' })
+                         setApplying(false)
+                       }
+                     }}
+                     disabled={applying}
+                   >
+                     {applying ? 'Applying…' : <><span aria-hidden="true">→</span> Proceed to Preview</>}
+                   </button>
+                 </div>
+               </div>
+             )}
+
+            {/* D. JSON output + Apply (shared with Manual tab, hidden if using previous response) */}
+            {jsonInput && !usePreviousResponse && (
               <div className="agentic-json-section">
                 <h4>JSON Response</h4>
                 <div className="html-recipe-json-wrapper">
