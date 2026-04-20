@@ -366,7 +366,7 @@ export default function HtmlRecipeStep({
            }
           case 'error':
             setAgenticStatus('error')
-            setAgenticErrorMsgLocal(data)
+            setAgenticErrorMsgLocal(JSON.parse(data))
             break
         }
       }
@@ -429,7 +429,7 @@ export default function HtmlRecipeStep({
             break
           case 'error':
             setAgenticStatus('error')
-            setAgenticErrorMsgLocal(data)
+            setAgenticErrorMsgLocal(JSON.parse(data))
             break
         }
       }
@@ -837,9 +837,10 @@ export default function HtmlRecipeStep({
             {agenticStatus === 'error' && (
               <div className={agenticCss.errorBanner}>
                 <strong>Generation failed</strong>
-                {agenticErrorMsgLocal}
-                <div>
+                <pre className={agenticCss.errorDetail}>{agenticErrorMsgLocal}</pre>
+                <div className={agenticCss.errorActions}>
                   <button className={agenticCss.resetBtn} onClick={handleAgenticCancel}>Try again</button>
+                  <button className={agenticCss.copyBtn} onClick={() => navigator.clipboard.writeText(agenticErrorMsgLocal)}>Copy error</button>
                 </div>
               </div>
             )}

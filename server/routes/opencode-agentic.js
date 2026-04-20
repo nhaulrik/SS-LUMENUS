@@ -324,7 +324,7 @@ router.post('/agentic/run', async (req, res) => {
         parsed = parseJson(result.response)
       } catch {
         emit(res, 'agent_update', { id: agent.id, state: 'error' })
-        throw new Error(`Agent "${agent.label}" returned invalid JSON: ${result.response.slice(0, 120)}`)
+        throw new Error(`Agent "${agent.label}" returned invalid JSON:\n\n${result.response}`)
       }
 
       log(`[${agent.label}] Parsed OK — ${Object.keys(parsed).length} top-level keys`)

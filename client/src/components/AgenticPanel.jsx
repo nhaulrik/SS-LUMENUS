@@ -143,7 +143,7 @@ export default function AgenticPanel({
             break
           case 'error':
             setStatus('error')
-            setErrorMsg(data)
+            setErrorMsg(JSON.parse(data))
             break
         }
       }
@@ -193,7 +193,7 @@ export default function AgenticPanel({
           case 'agents':       setAgents(JSON.parse(data)); break
           case 'agent_update': { const u = JSON.parse(data); updateAgent(u.id, u.state); break }
           case 'done':         setStatus('done'); onJsonReady?.(data); break
-          case 'error':        setStatus('error'); setErrorMsg(data); break
+          case 'error':        setStatus('error'); setErrorMsg(JSON.parse(data)); break
         }
       }
     } catch (err) {
@@ -374,9 +374,10 @@ export default function AgenticPanel({
       {status === 'error' && (
         <div className={css.errorBanner}>
           <strong>Generation failed</strong>
-          {errorMsg}
-          <div>
+          <pre className={css.errorDetail}>{errorMsg}</pre>
+          <div className={css.errorActions}>
             <button className={css.resetBtn} onClick={handleCancel}>Try again</button>
+            <button className={css.copyBtn} onClick={() => navigator.clipboard.writeText(errorMsg)}>Copy error</button>
           </div>
         </div>
       )}
