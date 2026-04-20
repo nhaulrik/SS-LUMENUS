@@ -33,6 +33,7 @@ import {
   deleteExport,
   buildExportZip,
   forkExport,
+  updateSlideTitle,
 } from '../lib/export-manager.js';
 
 const router = express.Router();
@@ -907,6 +908,23 @@ router.get('/projects/:projectName/flows/:flowId/exports/:exportId/slides/:slide
     return res.sendFile(path.resolve(filePath));
   } catch (err) {
     console.error('[html-flow] download-slide error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+router.patch('/projects/:projectName/flows/:flowId/exports/:exportId/slides/:slideFile/title', (req, res) => {
+  try {
+    const { projectName, flowId, exportId, slideFile } = req.params;
+    const { title } = req.body;
+
+    if (!title || typeof title !== 'string' || !title.trim()) {
+      return res.status(400).json({ ok: false, error: 'title is required and must be a non-empty string' });
+    }
+
+    const result = updateSlideTitle(projectName, flowId, exportId, slideFile, title);
+    return res.json({ ok: result.ok, title: result.title });
+  } catch (err) {
+    console.error('[html-flow] update-slide-title error:', err);
     return res.status(500).json({ ok: false, error: err.message });
   }
 });

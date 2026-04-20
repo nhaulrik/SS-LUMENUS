@@ -117,31 +117,47 @@
   accent-color: var(--accent-primary);
 }
 
-.slideButton {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.slideOpen {
+  flex: 0 0 auto;
   border: none;
   background: transparent;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: var(--radius-md);
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 2px 4px;
+  line-height: 1;
+  transition: color var(--transition-fast);
+}
+
+.slideOpen:hover {
+  color: var(--accent-primary);
+}
+
+.titleInput {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid transparent;
+  background: transparent;
   font-size: 13px;
   color: var(--text-primary);
-  text-align: left;
-  transition: all var(--transition-fast);
-  min-width: 0;
+  padding: 2px 4px;
+  border-radius: 3px;
+  outline: none;
+  font-family: inherit;
+  cursor: text;
 }
 
-.slideButton:hover {
-  background: var(--bg-tertiary);
+.titleInput:hover {
+  border-color: var(--border-default);
 }
 
-.slideTitle {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.titleInput:focus {
+  border-color: var(--accent-primary);
+  background: var(--bg-elevated);
+}
+
+.titleInputActive {
+  font-weight: 500;
 }
 
 .dirtyIndicator {

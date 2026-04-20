@@ -148,6 +148,7 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
   const currentHtmlRef  = useRef('')
   const selectedKeyRef  = useRef(null)
   const previewScaleRef = useRef(1)
+  const isLoadingRef    = useRef(false)
 
   useEffect(() => { selectedKeyRef.current = selectedKey },   [selectedKey])
   useEffect(() => { previewScaleRef.current = previewScale }, [previewScale])
@@ -185,7 +186,7 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
             const html = update.state.doc.toString()
             currentHtmlRef.current = html
             const key = selectedKeyRef.current
-            if (key) setDirtySlides(prev => ({ ...prev, [key]: html }))
+            if (key && !isLoadingRef.current) setDirtySlides(prev => ({ ...prev, [key]: html }))
             clearTimeout(previewTimerRef.current)
             previewTimerRef.current = setTimeout(() => {
               setPreviewSrcDoc(buildPreviewSrcDoc(html, previewScaleRef.current))
@@ -291,9 +292,11 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
   const loadIntoEditor = useCallback((html) => {
     currentHtmlRef.current = html
     if (editorViewRef.current) {
+      isLoadingRef.current = true
       editorViewRef.current.dispatch({
         changes: { from: 0, to: editorViewRef.current.state.doc.length, insert: html },
       })
+      isLoadingRef.current = false
     }
     setPreviewSrcDoc(buildPreviewSrcDoc(html, previewScaleRef.current))
   }, [])
@@ -505,19 +508,55 @@ export default function SlideEditor({ projectName, initialExports, setToast }) {
                                   />
                                 </label>
                                 <button
-                                  className={styles.slideBtn}
+                                  className={styles.slideOpenBtn}
                                   onClick={() => openSlide(flow.flowId, exp.exportId, slide.file)}
-                                >
-                                  <span className={styles.slideTitle}>{slide.title || slide.file}</span>
-                                  {isDirtyS && (
-                                    <span
-                                      className={styles.slideDot}
-                                      role="img"
-                                      aria-label="Unsaved changes"
-                                      title="Unsaved changes"
-                                    >●</span>
-                                  )}
-                                </button>
+                                  title="Open slide"
+                                >▷</button>
+                                <input
+                                  key={slide.title || slide.file}
+                                  type="text"
+                                  className={`${styles.slideTitleInput}${isActive ? ` ${styles.slideTitleInputActive}` : ''}`}
+                                  defaultValue={slide.title || slide.file}
+                                  onBlur={async (e) => {
+                                    const newTitle = e.target.value.trim()
+                                    const original = slide.title || slide.file
+                                    if (!newTitle || newTitle === original) return
+                                    setFlows(prev => prev.map(f =>
+                                      f.flowId !== flow.flowId ? f : {
+                                        ...f,
+                                        exports: f.exports.map(ex =>
+                                          ex.exportId !== exp.exportId ? ex : {
+                                            ...ex,
+                                            slides: ex.slides.map(s =>
+                                              s.file === slide.file ? { ...s, title: newTitle } : s
+                                            ),
+                                          }
+                                        ),
+                                      }
+                                    ))
+                                    try {
+                                      await fetch(
+                                        `/api/projects/${projectName}/flows/${flow.flowId}/exports/${exp.exportId}/slides/${encodeURIComponent(slide.file)}/title`,
+                                        { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: newTitle }) }
+                                      )
+                                    } catch {}
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') e.target.blur()
+                                    if (e.key === 'Escape') {
+                                      e.target.value = slide.title || slide.file
+                                      e.target.blur()
+                                    }
+                                  }}
+                                />
+                                {isDirtyS && (
+                                  <span
+                                    className={styles.slideDot}
+                                    role="img"
+                                    aria-label="Unsaved changes"
+                                    title="Unsaved changes"
+                                  >●</span>
+                                )}
                               </div>
                             )
                           })}

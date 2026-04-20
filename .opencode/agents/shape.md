@@ -29,11 +29,21 @@ List of components or modules
 ## Tasks
 Numbered list of small executable tasks
 
-Rules:
+## Rules:
+- DO NOT use tools
+- DO NOT read or explore files
+- Base your plan only on the prompt
+- Assume a typical React + API structure if needed
+
 - Each task must map to EXACTLY ONE:
   - @haiku-ui
   - @haiku-logic
   - @haiku-html
-- Prefer grouping related work into a single task when possible
+
+- Maximum 6 tasks total
+- Prefer grouping related work into a single task
+- Each task must be one line and implementation-focused
+
 - Be concise and structured
+- Avoid unnecessary detail or explanations
 - No code unless absolutely necessary

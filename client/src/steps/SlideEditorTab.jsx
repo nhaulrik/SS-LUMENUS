@@ -316,6 +316,47 @@ export default function SlideEditorTab({ projectName, setToast }) {
     }
   }
 
+  const handleRenameSlide = async (flowId, exportId, slideFile, newTitle) => {
+    const originalTitle = exports
+      .find(exp => exp.flowId === flowId && exp.exportId === exportId)
+      ?.slides.find(s => s.file === slideFile)?.title
+
+    // Optimistic update: update local exports state immediately
+    setExports(prev => prev.map(exp => {
+      if (exp.flowId !== flowId || exp.exportId !== exportId) return exp
+      return {
+        ...exp,
+        slides: exp.slides.map(s =>
+          s.file === slideFile ? { ...s, title: newTitle } : s
+        )
+      }
+    }))
+
+    try {
+      const res = await fetch(
+        `/api/projects/${encodeURIComponent(projectName)}/flows/${encodeURIComponent(flowId)}/exports/${encodeURIComponent(exportId)}/slides/${encodeURIComponent(slideFile)}/title`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: newTitle })
+        }
+      )
+      if (!res.ok) throw new Error(`Server error ${res.status}`)
+    } catch (err) {
+      console.error('Failed to rename slide:', err)
+      // Rollback optimistic update on failure
+      setExports(prev => prev.map(exp => {
+        if (exp.flowId !== flowId || exp.exportId !== exportId) return exp
+        return {
+          ...exp,
+          slides: exp.slides.map(s =>
+            s.file === slideFile ? { ...s, title: originalTitle } : s
+          )
+        }
+      }))
+    }
+  }
+
   const handleUnsavedWarningConfirm = (save) => {
     if (save) {
       setShowSaveDialog(true)
@@ -354,16 +395,17 @@ export default function SlideEditorTab({ projectName, setToast }) {
 
   return (
     <div className={styles.editorContainer}>
-      {/* Navigation Tree */}
-      <div className={styles.navPanel}>
-        <SlideEditorTree
-          exports={exports}
-          openSlide={openSlide}
-          selectedSlides={selectedSlides}
-          onSelectSlide={handleSelectSlide}
-          onToggleSlideSelection={handleToggleSlideSelection}
-          isDirty={isDirty}
-        />
+       {/* Navigation Tree */}
+       <div className={styles.navPanel}>
+         <SlideEditorTree
+           exports={exports}
+           openSlide={openSlide}
+           selectedSlides={selectedSlides}
+           onSelectSlide={handleSelectSlide}
+           onToggleSlideSelection={handleToggleSlideSelection}
+           onRenameSlide={handleRenameSlide}
+           isDirty={isDirty}
+         />
 
         {/* Save & Export buttons */}
         <div className={styles.navFooter}>

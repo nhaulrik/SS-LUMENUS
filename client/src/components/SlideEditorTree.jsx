@@ -1,12 +1,6 @@
 import { useState } from 'react'
 import styles from './SlideEditorTree.module.css'
 
-/**
- * SlideEditorTree
- *
- * Navigation tree showing all exports and their slides.
- * Supports expand/collapse, slide selection, and batch checkboxes.
- */
 export default function SlideEditorTree({
   exports,
   openSlide,
@@ -14,6 +8,7 @@ export default function SlideEditorTree({
   onSelectSlide,
   onToggleSlideSelection,
   isDirty,
+  onRenameSlide = () => {},
 }) {
   const [expandedExports, setExpandedExports] = useState(new Set())
 
@@ -54,9 +49,7 @@ export default function SlideEditorTree({
                 {isExpanded ? '▼' : '▶'}
               </button>
               <div className={styles.exportInfo}>
-                <div className={styles.exportTitle}>
-                  Export #{exp.exportNumber}
-                </div>
+                <div className={styles.exportTitle}>Export #{exp.exportNumber}</div>
                 <div className={styles.exportMeta}>
                   {exp.flowName} • {slides.length} slide{slides.length !== 1 ? 's' : ''}
                 </div>
@@ -74,6 +67,7 @@ export default function SlideEditorTree({
                     openSlide.exportId === exp.exportId &&
                     openSlide.slideFile === slideFile
                   const isSelected = selectedSlides.has(slideKey)
+                  const originalTitle = slide.title || `Slide ${idx + 1}`
 
                   return (
                     <div
@@ -87,23 +81,42 @@ export default function SlideEditorTree({
                         onChange={() =>
                           onToggleSlideSelection(exp.flowId, exp.exportId, slideFile)
                         }
-                        aria-label={`Select ${slide.title || slideFile}`}
+                        aria-label={`Select ${originalTitle}`}
                       />
+
                       <button
-                        className={styles.slideButton}
-                        onClick={() =>
-                          onSelectSlide(exp.flowId, exp.exportId, slideFile, idx)
-                        }
+                        className={styles.slideOpen}
+                        onClick={() => onSelectSlide(exp.flowId, exp.exportId, slideFile, idx)}
+                        title="Open slide"
                       >
-                        <span className={styles.slideTitle}>
-                          {slide.title || `Slide ${idx + 1}`}
-                        </span>
-                        {isDirty && isOpen && (
-                          <span className={styles.dirtyIndicator} title="Unsaved changes">
-                            ●
-                          </span>
-                        )}
+                        ▷
                       </button>
+
+                      <input
+                        key={originalTitle}
+                        type="text"
+                        className={`${styles.titleInput}${isOpen ? ` ${styles.titleInputActive}` : ''}`}
+                        defaultValue={originalTitle}
+                        onBlur={(e) => {
+                          const newTitle = e.target.value.trim()
+                          if (newTitle && newTitle !== originalTitle) {
+                            onRenameSlide(exp.flowId, exp.exportId, slideFile, newTitle)
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') e.target.blur()
+                          if (e.key === 'Escape') {
+                            e.target.value = originalTitle
+                            e.target.blur()
+                          }
+                        }}
+                      />
+
+                      {isDirty && isOpen && (
+                        <span className={styles.dirtyIndicator} title="Unsaved changes">
+                          ●
+                        </span>
+                      )}
                     </div>
                   )
                 })}

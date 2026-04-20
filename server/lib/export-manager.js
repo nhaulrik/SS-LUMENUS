@@ -381,6 +381,53 @@ export function getExportCount(projectName, flowId) {
 }
 
 /**
+ * Update a slide's title in an export's export.json.
+ *
+ * @param {string} projectName
+ * @param {string} flowId
+ * @param {string} exportId
+ * @param {string} slideFile - e.g. "slide-1.html"
+ * @param {string} title - The new title (trimmed, max 200 chars)
+ * @returns {{ ok: true, title } | throws error}
+ */
+export function updateSlideTitle(projectName, flowId, exportId, slideFile, title) {
+  try {
+    const exportDir = resolveExportDir(projectName, flowId, exportId);
+    if (!exportDir) {
+      throw new Error('Export not found');
+    }
+
+    const exportJsonPath = path.join(exportDir, 'export.json');
+    if (!fs.existsSync(exportJsonPath)) {
+      throw new Error('export.json not found');
+    }
+
+    const exportJson = JSON.parse(fs.readFileSync(exportJsonPath, 'utf8'));
+    const slides = exportJson.content?.slides || [];
+
+    const slideIndex = slides.findIndex(s => s.file === slideFile);
+    if (slideIndex === -1) {
+      throw new Error(`Slide ${slideFile} not found in export`);
+    }
+
+    const trimmedTitle = String(title).trim().slice(0, 200);
+    if (!trimmedTitle) {
+      throw new Error('Title cannot be empty');
+    }
+
+    slides[slideIndex].title = trimmedTitle;
+    exportJson.content.slides = slides;
+
+    fs.writeFileSync(exportJsonPath, JSON.stringify(exportJson, null, 2), 'utf8');
+
+    return { ok: true, title: trimmedTitle };
+  } catch (err) {
+    console.error('[export-manager] updateSlideTitle error:', err.message);
+    throw err;
+  }
+}
+
+/**
  * Fork an export: create a new export by copying selected slides from an existing export.
  * Optionally apply overrides (edited HTML) to specific slides.
  *
