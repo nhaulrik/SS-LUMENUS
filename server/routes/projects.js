@@ -116,7 +116,6 @@ router.patch('/:projectName/flows/:flowId', (req, res) => {
          slideIndex: rs.slideIndex,
          key: rs.key,
          prompt: rs.prompt,
-         ...(rs.keySelector !== undefined && { keySelector: rs.keySelector }),
        }));
      }
     if (Array.isArray(selections)) {

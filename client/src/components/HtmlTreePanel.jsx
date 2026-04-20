@@ -63,15 +63,14 @@ function isAncestorIgnored(nodeId, selections) {
 
 // ── Slide control bar ─────────────────────────────────────────────────────────
 
-function SlideControlBar({ slideIndex, repeatableSlides, onRepeatableSlides, fullSlideGeneration = [], onFullSlideGeneration, hasZones, onKeySelectionModeChange, keySelectionMode, keySelectionSlide }) {
+function SlideControlBar({ slideIndex, repeatableSlides, onRepeatableSlides, fullSlideGeneration = [], onFullSlideGeneration, hasZones }) {
    const existing = repeatableSlides.find(rs => rs.slideIndex === slideIndex)
    const isRep    = !!existing
    const isFullSlide = fullSlideGeneration.includes(slideIndex)
-   const isKeySelecting = keySelectionMode && keySelectionSlide === slideIndex
 
    const handleToggle = (e) => {
      if (e.target.checked) {
-       onRepeatableSlides([...repeatableSlides, { slideIndex, key: `slide_${slideIndex}`, prompt: '', keySelector: null }])
+       onRepeatableSlides([...repeatableSlides, { slideIndex, key: `slide_${slideIndex}`, prompt: '' }])
      } else {
        onRepeatableSlides(repeatableSlides.filter(rs => rs.slideIndex !== slideIndex))
      }
@@ -93,17 +92,6 @@ function SlideControlBar({ slideIndex, repeatableSlides, onRepeatableSlides, ful
      ))
    }
 
-   const handleSetKeyClick = () => {
-     if (onKeySelectionModeChange) {
-       onKeySelectionModeChange(true, slideIndex)
-     }
-   }
-
-   const handleCancelKeySelection = () => {
-     if (onKeySelectionModeChange) {
-       onKeySelectionModeChange(false, null)
-     }
-   }
 
   return (
     <div className={`html-tree-slide-bar${isRep ? ' html-tree-slide-bar--repeatable' : ''}`}
@@ -137,32 +125,6 @@ function SlideControlBar({ slideIndex, repeatableSlides, onRepeatableSlides, ful
 
        {isRep && (
          <div className="html-tree-slide-bar-fields">
-           <div className="html-tree-slide-bar-field">
-             <label>Slide key element</label>
-             <div className="html-tree-slide-bar-key-controls">
-               {isKeySelecting ? (
-                 <button
-                   className="btn btn-secondary html-tree-slide-bar-key-btn html-tree-slide-bar-key-btn--cancel"
-                   onClick={handleCancelKeySelection}
-                   data-testid={`slide-key-cancel-${slideIndex}`}
-                 >
-                   Cancel selection
-                 </button>
-               ) : (
-                 <button
-                   className="btn btn-secondary html-tree-slide-bar-key-btn"
-                   onClick={handleSetKeyClick}
-                   data-testid={`slide-key-button-${slideIndex}`}
-                   title="Click to select a key element from the preview"
-                 >
-                   {existing.keySelector ? `Key: ${existing.keySelector.split('>').pop().slice(0, 30)}` : 'Set Slide Key'}
-                 </button>
-               )}
-             </div>
-             {!existing.keySelector && (
-               <p className="html-tree-slide-bar-note">No slide key — names will fall back to index</p>
-             )}
-           </div>
            <div className="html-tree-slide-bar-field">
              <label>Generation prompt</label>
              <textarea
@@ -496,9 +458,6 @@ export default function HtmlTreePanel({
    slideCount,
    highlightNodeId,
    onHighlight,
-   keySelectionMode = false,
-   onKeySelectionModeChange,
-   keySelectionSlide = null,
  }) {
   const [slideIdx,      setSlideIdx]      = useState(0)   // 0-based
   const [expandedIds,   setExpandedIds]   = useState(() => new Set())
@@ -687,9 +646,6 @@ export default function HtmlTreePanel({
            hasZones={selections.some(s => s.slideIndex === slideIndex)}
            fullSlideGeneration={fullSlideGeneration}
            onFullSlideGeneration={onFullSlideGeneration}
-           onKeySelectionModeChange={onKeySelectionModeChange}
-           keySelectionMode={keySelectionMode}
-           keySelectionSlide={keySelectionSlide}
          />
        )}
 

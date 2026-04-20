@@ -47,9 +47,6 @@ export default function HtmlUploadStep({
    const [highlightNodeId, setHighlightNodeId] = useState(null)
 
    // ── Key selection mode ─────────────────────────────────────────────────────
-   const [keySelectionMode, setKeySelectionMode] = useState(false)
-   const [keySelectionSlide, setKeySelectionSlide] = useState(null)
-
   // ── Stage A: file selection ───────────────────────────────────────────────
   const [fileName,  setFileName]  = useState(initialSession?.fileName  ?? '')
   const [uploading, setUploading] = useState(false)
@@ -320,43 +317,6 @@ export default function HtmlUploadStep({
      }).catch(() => {})
    }, [violations])
 
-   // ── Handle key selection mode changes ──────────────────────────────────────
-   const handleKeySelectionModeChange = useCallback((enabled, slideIdx) => {
-     setKeySelectionMode(enabled)
-     setKeySelectionSlide(enabled ? slideIdx : null)
-   }, [])
-
-   // ── Handle key element selection from iframe ───────────────────────────────
-   useEffect(() => {
-     // When key selection mode is active, ensure all iframes can receive clicks
-     if (keySelectionMode) {
-       document.querySelectorAll('iframe').forEach(iframe => {
-         iframe.style.pointerEvents = ''
-       })
-     }
-   }, [keySelectionMode])
-
-   useEffect(() => {
-     const handleMessage = (event) => {
-       if (event.data.type === 'solon-key-select' && keySelectionMode && keySelectionSlide) {
-         const nodeId = event.data.nodeId
-         const updated = repeatableSlides.map(rs =>
-           rs.slideIndex === keySelectionSlide
-             ? { ...rs, keySelector: nodeId, key: sanitizeKey(nodeId) }
-             : rs
-         )
-         setRepeatableSlides(updated)
-         syncSession({ repeatableSlides: updated })
-         setKeySelectionMode(false)
-         setKeySelectionSlide(null)
-       }
-     }
-     window.addEventListener('message', handleMessage)
-     return () => window.removeEventListener('message', handleMessage)
-   }, [keySelectionMode, keySelectionSlide, repeatableSlides, syncSession])
-
-
-
    // ── Preview HTML with highlight injection ─────────────────────────────────
    // Inject a <style> that highlights the hovered tree node by data-solon-id,
    // and a <script> that posts back when the user hovers elements in the iframe.
@@ -372,26 +332,6 @@ export default function HtmlUploadStep({
    z-index: 9999 !important;
 }` : ''
 
-     const keySelectionCss = keySelectionMode ? `
-[data-solon-id] { cursor: crosshair !important; }
-[data-solon-id]:hover { outline: 2px solid #f59e0b !important; outline-offset: 2px !important; background: rgba(245,158,11,0.12) !important; }
-` : ''
-
-     const keySelectionScript = keySelectionMode ? `
-<script>
-(function() {
-  document.addEventListener('click', function(e) {
-    var el = e.target.closest('[data-solon-id]');
-    if (el) {
-      e.preventDefault();
-      e.stopPropagation();
-      window.parent.postMessage({ type: 'solon-key-select', nodeId: el.getAttribute('data-solon-id') }, '*');
-    }
-  }, true);
-})();
-</script>
-` : ''
-
      // Bake the scale into the srcDoc as a <style> block.
      // previewScale = wrapperWidth / 1280 — computed by ResizeObserver.
      // This avoids any iframe scripts or sandbox permissions.
@@ -400,13 +340,12 @@ export default function HtmlUploadStep({
 [data-solon-id] { cursor: pointer; }
 [data-solon-id]:hover { outline: 1px dashed rgba(76,175,128,0.5); }
 ${highlightCss}
-${keySelectionCss}
-</style>${keySelectionScript}`
+</style>`
 
      return previewHtml.includes('</head>')
        ? previewHtml.replace('</head>', injection + '</head>')
        : injection + previewHtml
-   }, [previewHtml, highlightNodeId, previewScale, keySelectionMode])
+   }, [previewHtml, highlightNodeId, previewScale])
 
   // ── Can proceed ───────────────────────────────────────────────────────────
   // Allow proceeding if:
@@ -520,9 +459,6 @@ ${keySelectionCss}
                    slideCount={slideCount}
                    highlightNodeId={highlightNodeId}
                    onHighlight={setHighlightNodeId}
-                   keySelectionMode={keySelectionMode}
-                   onKeySelectionModeChange={handleKeySelectionModeChange}
-                   keySelectionSlide={keySelectionSlide}
                  />
 
                 {/* Proceed footer */}

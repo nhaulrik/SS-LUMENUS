@@ -39,26 +39,6 @@ export default function HtmlPreviewStep({
      }
    }, [roundId, previewHtml])
 
-   // ── Inject key element indicators into srcDoc ──────────────────────────────
-   const srcDocWithKeyIndicators = useMemo(() => {
-     if (!srcDoc) return srcDoc
-     
-     const keySelectors = repeatableSlides
-       .filter(rs => rs.keySelector)
-       .map(rs => rs.keySelector)
-     
-     if (keySelectors.length === 0) return srcDoc
-     
-     const keyIndicatorCss = keySelectors.map(ks => 
-       `${ks} { outline: 2px solid rgba(245,158,11,0.4) !important; }`
-     ).join('\n')
-     
-     const injection = `<style>\n${keyIndicatorCss}\n</style>`
-     
-     return srcDoc.includes('</head>')
-       ? srcDoc.replace('</head>', injection + '</head>')
-       : injection + srcDoc
-   }, [srcDoc, repeatableSlides])
 
   // ── Scale: identical to HtmlUploadStep ────────────────────────────────────
   const [previewScale,  setPreviewScale]  = useState(1)
@@ -287,7 +267,7 @@ export default function HtmlPreviewStep({
                  <iframe
                     ref={iframeRef}
                     className="html-preview-step-frame"
-                    srcDoc={srcDocWithKeyIndicators}
+                    srcDoc={srcDoc}
                     title="Output preview"
                     sandbox="allow-same-origin allow-scripts"
                     onLoad={handleIframeLoad}

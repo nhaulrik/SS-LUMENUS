@@ -13,7 +13,7 @@ export default function HtmlMetadataStep({
   projectName,
   flowId,
   applied,        // { outputFile, previewHtml, roundId, slideCount }
-  slideNames,     // [{ index, name, keyMissing }, ...]
+  slideNames,     // [{ index, name }, ...]
   step,
   canNavigateTo,
   navigateTo,
@@ -29,7 +29,6 @@ export default function HtmlMetadataStep({
   const [metadata, setMetadata] = useState(
     Array.from({ length: slideCount }, (_, i) => ({
       name: `Slide ${i + 1}`,
-      keyMissing: false,
     }))
   )
 
@@ -43,7 +42,6 @@ export default function HtmlMetadataStep({
           const found = slideNames.find(s => s.index === i + 1)
           return {
             name: found?.name ?? `Slide ${i + 1}`,
-            keyMissing: found?.keyMissing ?? false,
           }
         })
       )
@@ -124,14 +122,6 @@ export default function HtmlMetadataStep({
                 placeholder={`Slide ${i + 1}`}
                 disabled={isExporting}
               />
-              {slide.keyMissing && (
-                <span
-                  className="html-metadata-warning"
-                  title="Key element not found — name was auto-generated"
-                >
-                  ⚠
-                </span>
-              )}
             </div>
           ))}
         </div>

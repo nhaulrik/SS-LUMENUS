@@ -47,32 +47,15 @@ const pendingTemplates = new Map();
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /**
- * Extract slide names from patched HTML using keySelector from repeatableSlides.
- * Returns an array of { index, name, keyMissing }.
+ * Generate generic slide names for sections in HTML.
+ * Returns an array of { index, name }.
  */
-function extractSlideNamesFromHtml(html, repeatableSlides) {
+function extractSlideNamesFromHtml(html) {
   try {
     const root = parse(html);
     const sections = root.querySelectorAll('section');
-    const names = [];
-    
-    sections.forEach((section, idx) => {
-      const repSlide = repeatableSlides[0];
-      
-      if (repSlide?.keySelector) {
-        const el = section.querySelector(repSlide.keySelector);
-        const text = el?.text?.trim() || el?.innerText?.trim();
-        if (text) {
-          names.push({ index: idx + 1, name: text, keyMissing: false });
-        } else {
-          names.push({ index: idx + 1, name: `Slide ${idx + 1}`, keyMissing: true });
-        }
-      } else {
-        names.push({ index: idx + 1, name: `Slide ${idx + 1}`, keyMissing: false });
-      }
-    });
-    
-    return names;
+
+    return sections.map((_, idx) => ({ index: idx + 1, name: `Slide ${idx + 1}` }));
   } catch {
     return [];
   }
@@ -773,7 +756,7 @@ router.post('/html-flow/apply-content', (req, res) => {
      if (Array.isArray(instanceNames) && instanceNames.length > 0) {
        slideNames = instanceNames.map((name, i) => ({ index: i + 1, name, keyMissing: false }));
      } else {
-       slideNames = extractSlideNamesFromHtml(patchedHtml, repeatableSlides);
+       slideNames = extractSlideNamesFromHtml(patchedHtml);
      }
 
      const roundId    = randomUUID();
