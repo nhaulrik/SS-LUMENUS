@@ -238,28 +238,26 @@ function buildViewerHtml(projectName, publishId, createdAt, slides, manifest) {
     /* ── Main canvas area ── */
     #main {
       flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: var(--bg);
       overflow: hidden;
       position: relative;
+      background: var(--bg);
     }
 
+    /* Wrapper is positioned absolutely so it never contributes to scroll */
     #slide-wrapper {
-      position: relative;
-      /* scaled via JS to fit available space */
+      position: absolute;
+      top: 0; left: 0;
+      transform-origin: 0 0;
+      /* JS sets width, height, and transform: translate(tx,ty) scale(s) */
     }
 
     #slide-frame {
-      width: 1280px;
-      height: 720px;
       border: none;
       display: block;
       background: #fff;
       border-radius: 4px;
       box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+      /* width & height set by JS to match detected slide dimensions */
     }
 
     /* ── Nav controls ── */
@@ -296,6 +294,22 @@ function buildViewerHtml(projectName, publishId, createdAt, slides, manifest) {
 
     .nav-btn:hover { background: var(--teal-light); border-color: var(--teal-light); }
     .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .nav-divider {
+      width: 1px;
+      height: 20px;
+      background: rgba(255,255,255,0.15);
+      flex-shrink: 0;
+    }
+
+    #zoom-level {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      min-width: 38px;
+      text-align: center;
+      user-select: none;
+    }
 
     #slide-counter {
       font-size: 12px;
@@ -408,12 +422,58 @@ function buildViewerHtml(projectName, publishId, createdAt, slides, manifest) {
   const btnNext   = document.getElementById('btn-next');
   const tbSlides  = document.getElementById('tb-slides');
 
+  // ── Slide size detection (must run before boot so scaleSlide works in goTo) ──
+  function detectSlideSize(html) {
+    // 1. <section style="width:Npx;height:Mpx">
+    const secStyle = html.match(/<section[^>]+style="([^"]+)"/i);
+    if (secStyle) {
+      const w = secStyle[1].match(/width\s*:\s*([\d.]+)px/i);
+      const h = secStyle[1].match(/height\s*:\s*([\d.]+)px/i);
+      if (w && h) return { w: parseFloat(w[1]), h: parseFloat(h[1]) };
+    }
+    // 2. Explicit width/height attributes on <section>
+    const secAttr = html.match(/<section[^>]+>/i);
+    if (secAttr) {
+      const wa = secAttr[0].match(/\bwidth="([\d.]+)"/i);
+      const ha = secAttr[0].match(/\bheight="([\d.]+)"/i);
+      if (wa && ha) return { w: parseFloat(wa[1]), h: parseFloat(ha[1]) };
+    }
+    // 3. <meta name="slide-size" content="WxH">
+    const meta = html.match(/<meta[^>]+name="slide-size"[^>]+content="([\d.]+)x([\d.]+)"/i);
+    if (meta) return { w: parseFloat(meta[1]), h: parseFloat(meta[2]) };
+    // 4. <body style="width:Npx;height:Mpx">
+    const bodyStyle = html.match(/<body[^>]+style="([^"]+)"/i);
+    if (bodyStyle) {
+      const w = bodyStyle[1].match(/width\s*:\s*([\d.]+)px/i);
+      const h = bodyStyle[1].match(/height\s*:\s*([\d.]+)px/i);
+      if (w && h) return { w: parseFloat(w[1]), h: parseFloat(h[1]) };
+    }
+    // 5. Fallback
+    return { w: 1280, h: 720 };
+  }
+
+  const SLIDE_SIZES = SLIDES.map(s => detectSlideSize(s.srcdoc));
+
+  function scaleSlide() {
+    const size   = SLIDE_SIZES[current] || { w: 1280, h: 720 };
+    const main   = document.getElementById('main');
+    const availW = main.clientWidth  - 48;
+    const availH = main.clientHeight - 80;
+    const scale  = Math.min(availW / size.w, availH / size.h, 1);
+
+    wrapper.style.width           = size.w + 'px';
+    wrapper.style.height          = size.h + 'px';
+    wrapper.style.transformOrigin = 'top left';
+    wrapper.style.transform       = 'translate(-50%, -50%) scale(' + scale + ')';
+  }
+
+  window.addEventListener('resize', scaleSlide);
+
   // ── Boot (synchronous — no fetch required) ───────────────────────────────────
   tbSlides.textContent = MANIFEST.totalSlides;
   buildSidebar();
   goTo(0);
   loading.style.display = 'none';
-  scaleSlide();
 
   // ── Sidebar ──────────────────────────────────────────────────────────────────
   function buildSidebar() {
@@ -463,6 +523,7 @@ function buildViewerHtml(projectName, publishId, createdAt, slides, manifest) {
     // Use srcdoc — fully self-contained, works on file:// without CORS issues
     frame.srcdoc = SLIDES[idx].srcdoc;
 
+    scaleSlide();
     counter.textContent = (idx + 1) + ' / ' + SLIDES.length;
     btnPrev.disabled = idx === 0;
     btnNext.disabled = idx === SLIDES.length - 1;
@@ -484,23 +545,7 @@ function buildViewerHtml(projectName, publishId, createdAt, slides, manifest) {
     if (e.key === 'ArrowRight') goTo(current + 1);
   });
 
-  // ── Scale slide to fit ───────────────────────────────────────────────────────
-  const SLIDE_W = 1280;
-  const SLIDE_H = 720;
 
-  function scaleSlide() {
-    const main = document.getElementById('main');
-    const availW = main.clientWidth  - 48;
-    const availH = main.clientHeight - 80;
-    const scale  = Math.min(availW / SLIDE_W, availH / SLIDE_H, 1);
-
-    wrapper.style.width          = SLIDE_W + 'px';
-    wrapper.style.height         = SLIDE_H + 'px';
-    wrapper.style.transform      = 'scale(' + scale + ')';
-    wrapper.style.transformOrigin = 'center center';
-  }
-
-  window.addEventListener('resize', scaleSlide);
 })();
 </script>
 </body>
