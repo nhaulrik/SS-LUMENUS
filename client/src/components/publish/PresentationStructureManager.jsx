@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import styles from './PresentationStructureManager.module.css'
 import ExportCatalog from './ExportCatalog'
-import TreeBuilder from './TreeBuilder'
-import StructurePreview from './StructurePreview'
+import PublishTreeWorkspace from './PublishTreeWorkspace'
 
 export default function PresentationStructureManager({ projectName, setToast }) {
   const [structures, setStructures] = useState([])
@@ -21,7 +20,6 @@ export default function PresentationStructureManager({ projectName, setToast }) 
 
   const activeStructure = structures.find(s => s.id === activeStructureId) || null
 
-  // Load structures + catalog on mount
   useEffect(() => {
     loadStructures()
     loadCatalog()
@@ -132,7 +130,6 @@ export default function PresentationStructureManager({ projectName, setToast }) 
     setNameEditing(false)
   }
 
-  // Update slides in active structure (called from TreeBuilder)
   const handleUpdateTree = useCallback((slides, tree) => {
     setStructures(prev => prev.map(s =>
       s.id === activeStructureId ? { ...s, slides, tree } : s
@@ -205,7 +202,7 @@ export default function PresentationStructureManager({ projectName, setToast }) 
 
   return (
     <div className={styles.root}>
-      {/* ── Structure selector bar ── */}
+      {/* Selector bar */}
       <div className={styles.selectorBar}>
         <div className={styles.selectorLeft}>
           <span className={styles.selectorLabel}>Structure</span>
@@ -223,7 +220,6 @@ export default function PresentationStructureManager({ projectName, setToast }) 
               ))}
             </select>
           )}
-
           {nameEditing ? (
             <div className={styles.renameRow}>
               <input
@@ -240,47 +236,21 @@ export default function PresentationStructureManager({ projectName, setToast }) 
             </div>
           ) : (
             activeStructure && (
-              <button
-                className={styles.renameBtn}
-                onClick={() => setNameEditing(true)}
-                aria-label="Rename structure"
-                title="Rename"
-              >
+              <button className={styles.renameBtn} onClick={() => setNameEditing(true)} title="Rename">
                 Rename
               </button>
             )
           )}
         </div>
-
         <div className={styles.selectorRight}>
-          <button className={styles.newBtn} onClick={handleCreateStructure}>
-            + New
-          </button>
+          <button className={styles.newBtn} onClick={handleCreateStructure}>+ New</button>
           {activeStructure && (
             <>
-              <button
-                className={styles.deleteBtn}
-                onClick={handleDeleteStructure}
-                aria-label="Delete structure"
-                title="Delete structure"
-              >
-                Delete
-              </button>
-              <button
-                className={styles.saveBtn}
-                onClick={() => handleSave({ slides: activeStructure.slides, tree: activeStructure.tree, levelNames: activeStructure.levelNames || [] })}
-                disabled={saving}
-                aria-label="Save structure"
-              >
+              <button className={styles.deleteBtn} onClick={handleDeleteStructure} title="Delete structure">Delete</button>
+              <button className={styles.saveBtn} onClick={() => handleSave({ slides: activeStructure.slides, tree: activeStructure.tree, levelNames: activeStructure.levelNames || [] })} disabled={saving}>
                 {saving ? 'Saving…' : 'Save'}
               </button>
-              <button
-                className={styles.publishBtn}
-                onClick={handlePublishClick}
-                disabled={isPublishing}
-                aria-label="Publish presentation"
-                title="Publish presentation"
-              >
+              <button className={styles.publishBtn} onClick={handlePublishClick} disabled={isPublishing} title="Publish presentation">
                 {isPublishing ? 'Publishing…' : '🚀 Publish'}
               </button>
             </>
@@ -288,18 +258,15 @@ export default function PresentationStructureManager({ projectName, setToast }) 
         </div>
       </div>
 
-      {/* ── Two-panel layout ── */}
+      {/* Layout */}
       {structures.length === 0 ? (
         <div className={styles.emptyState}>
           <p className={styles.emptyTitle}>No presentation structures yet</p>
           <p className={styles.emptySubtitle}>Create a structure to start arranging your exported slides into a hierarchy.</p>
-          <button className={styles.emptyCreateBtn} onClick={handleCreateStructure}>
-            Create your first structure
-          </button>
+          <button className={styles.emptyCreateBtn} onClick={handleCreateStructure}>Create your first structure</button>
         </div>
       ) : activeStructure ? (
         <div className={styles.panels}>
-          {/* Left panel */}
           <div className={styles.leftPanel}>
             <ExportCatalog
               exports={exportCatalog}
@@ -307,82 +274,49 @@ export default function PresentationStructureManager({ projectName, setToast }) 
               activeSlides={activeStructure.slides || []}
               onAddSlides={(newSlides) => {
                 const merged = mergeSlides(activeStructure.slides || [], newSlides)
-                const tree = appendToTree(activeStructure.tree || [], newSlides.map(s => s.id))
-                handleUpdateTree(merged, tree)
+                const newTree = appendToTree(activeStructure.tree || [], newSlides.map(s => s.id))
+                handleUpdateTree(merged, newTree)
               }}
             />
-            <TreeBuilder
+          </div>
+          <div className={styles.mainPanel}>
+            <PublishTreeWorkspace
               slides={activeStructure.slides || []}
               tree={activeStructure.tree || []}
               levelNames={activeStructure.levelNames || []}
               onChange={handleUpdateTree}
               onLevelNamesChange={handleUpdateLevelNames}
               onSave={handleSaveTree}
-            />
-          </div>
-
-          {/* Right panel */}
-          <div className={styles.rightPanel}>
-            <StructurePreview
-              slides={activeStructure.slides || []}
-              tree={activeStructure.tree || []}
-              levelNames={activeStructure.levelNames || []}
-              projectName={projectName}
+              onExternalDrop={(droppedSlides) => {
+                const merged = mergeSlides(activeStructure.slides || [], droppedSlides)
+                const newTree = appendToTree(activeStructure.tree || [], droppedSlides.map(s => s.id))
+                handleUpdateTree(merged, newTree)
+              }}
             />
           </div>
         </div>
       ) : null}
 
-      {/* ── Publish Presentation Dialog ────────────────────────────────── */}
+      {/* Publish Dialog */}
       {showPublishDialog && (
         <div className={styles.dialogOverlay}>
           <div className={styles.dialog}>
-            <div className={styles.dialogHeader}>
-              <h2>Publish Presentation</h2>
-            </div>
+            <div className={styles.dialogHeader}><h2>Publish Presentation</h2></div>
             <div className={styles.dialogBody}>
               {publishSuccess ? (
-                <p style={{ color: 'var(--success)', textAlign: 'center', margin: 0 }}>
-                  ✓ Published! View in the Presentations tab.
-                </p>
+                <p style={{ color: 'var(--success)', textAlign: 'center', margin: 0 }}>✓ Published! View in the Presentations tab.</p>
               ) : (
                 <>
                   <label htmlFor="publish-name-input">Presentation name</label>
-                  <input
-                    id="publish-name-input"
-                    type="text"
-                    value={publishName}
-                    onChange={e => {
-                      setPublishName(e.target.value)
-                      setPublishError('')
-                    }}
-                    placeholder="my-presentation"
-                    disabled={isPublishing}
-                    autoFocus
-                  />
+                  <input id="publish-name-input" type="text" value={publishName} onChange={e => { setPublishName(e.target.value); setPublishError('') }} placeholder="my-presentation" disabled={isPublishing} autoFocus />
                   {publishError && <div className={styles.dialogError}>{publishError}</div>}
                 </>
               )}
             </div>
             <div className={styles.dialogActions}>
-              <button
-                className={styles.dialogCancel}
-                onClick={() => {
-                  setShowPublishDialog(false)
-                  setPublishName('')
-                  setPublishError('')
-                  setPublishSuccess(false)
-                }}
-                disabled={isPublishing}
-              >
-                Cancel
-              </button>
+              <button className={styles.dialogCancel} onClick={() => { setShowPublishDialog(false); setPublishName(''); setPublishError(''); setPublishSuccess(false) }} disabled={isPublishing}>Cancel</button>
               {!publishSuccess && (
-                <button
-                  className={styles.dialogPublish}
-                  onClick={handlePublish}
-                  disabled={isPublishing || !isValidPresentationName(publishName)}
-                >
+                <button className={styles.dialogPublish} onClick={handlePublish} disabled={isPublishing || !isValidPresentationName(publishName)}>
                   {isPublishing ? 'Publishing…' : 'Publish'}
                 </button>
               )}
@@ -393,8 +327,6 @@ export default function PresentationStructureManager({ projectName, setToast }) 
     </div>
   )
 }
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
 
 function mergeSlides(existing, newSlides) {
   const existingIds = new Set(existing.map(s => s.id))

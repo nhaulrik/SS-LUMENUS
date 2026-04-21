@@ -1,9 +1,19 @@
 import { useState, useMemo } from 'react'
 import styles from './ExportCatalog.module.css'
 
+function buildSlideForDrop(exp, slide) {
+  return {
+    id: `sr-${globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)}`,
+    flowId: exp.flowId,
+    exportId: exp.exportId,
+    slideIndex: slide.slideIndex,
+    title: slide.title,
+  }
+}
+
 export default function ExportCatalog({ exports, loading, activeSlides, onAddSlides }) {
   const [expandedExports, setExpandedExports] = useState(new Set())
-  const [selectedKeys, setSelectedKeys] = useState(new Set()) // "flowId::exportId::slideIndex"
+  const [selectedKeys, setSelectedKeys] = useState(new Set())
 
   const activeSlideKeys = useMemo(() => {
     return new Set(activeSlides.map(s => `${s.flowId}::${s.exportId}::${s.slideIndex}`))
@@ -47,17 +57,39 @@ export default function ExportCatalog({ exports, loading, activeSlides, onAddSli
       const exp = exports.find(e => e.flowId === flowId && e.exportId === exportId)
       const slide = exp?.slides.find(s => s.slideIndex === slideIndex)
       if (slide && exp) {
-        slidesToAdd.push({
-          id: `sr-${globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)}`,
-          flowId,
-          exportId,
-          slideIndex,
-          title: slide.title,
-        })
+        slidesToAdd.push(buildSlideForDrop(exp, slide))
       }
     }
     onAddSlides(slidesToAdd)
     setSelectedKeys(new Set())
+  }
+
+  const handleDragStart = (e, exp, slide) => {
+    const key = `${exp.flowId}::${exp.exportId}::${slide.slideIndex}`
+    const isAlreadyAdded = activeSlideKeys.has(key)
+
+    if (isAlreadyAdded) {
+      e.preventDefault()
+      return
+    }
+
+    let slidesToDrag = []
+    if (selectedKeys.has(key)) {
+      for (const selectedKey of selectedKeys) {
+        const [flowId, exportId, slideIndexStr] = selectedKey.split('::')
+        const slideIndex = parseInt(slideIndexStr, 10)
+        const selectedExp = exports.find(e => e.flowId === flowId && e.exportId === exportId)
+        const selectedSlide = selectedExp?.slides.find(s => s.slideIndex === slideIndex)
+        if (selectedSlide && selectedExp && !activeSlideKeys.has(selectedKey)) {
+          slidesToDrag.push(buildSlideForDrop(selectedExp, selectedSlide))
+        }
+      }
+    } else {
+      slidesToDrag.push(buildSlideForDrop(exp, slide))
+    }
+
+    e.dataTransfer.effectAllowed = 'copy'
+    e.dataTransfer.setData('application/json', JSON.stringify(slidesToDrag))
   }
 
   if (loading) {
@@ -90,6 +122,7 @@ export default function ExportCatalog({ exports, loading, activeSlides, onAddSli
         <span className={styles.panelTitle}>Export Catalog</span>
         <span className={styles.exportCount}>{exports.length} export{exports.length !== 1 ? 's' : ''}</span>
       </div>
+      <div className={styles.dragHint}>Drag slides into the workspace or select + Add</div>
 
       <div className={styles.exportList}>
         {exports.map(exp => {
@@ -100,7 +133,6 @@ export default function ExportCatalog({ exports, loading, activeSlides, onAddSli
 
           return (
             <div key={`${exp.flowId}::${exp.exportId}`} className={styles.exportGroup}>
-              {/* Export header row */}
               <div className={styles.exportHeader}>
                 <label className={styles.exportCheckboxLabel}>
                   <input
@@ -128,7 +160,6 @@ export default function ExportCatalog({ exports, loading, activeSlides, onAddSli
                 </button>
               </div>
 
-              {/* Slide rows */}
               {isExpanded && (
                 <div className={styles.slideList}>
                   {(exp.slides || []).map(slide => {
@@ -136,22 +167,27 @@ export default function ExportCatalog({ exports, loading, activeSlides, onAddSli
                     const isChecked = selectedKeys.has(key)
                     const isAlreadyAdded = activeSlideKeys.has(key)
                     return (
-                      <label
+                      <div
                         key={key}
                         className={`${styles.slideRow} ${isChecked ? styles.slideRowChecked : ''} ${isAlreadyAdded ? styles.slideRowAdded : ''}`}
+                        draggable={!isAlreadyAdded}
+                        onDragStart={(e) => handleDragStart(e, exp, slide)}
                       >
-                        <input
-                          type="checkbox"
-                          className={styles.checkbox}
-                          checked={isChecked}
-                          onChange={() => toggleSlide(key)}
-                          disabled={isAlreadyAdded}
-                          aria-label={`Select ${slide.title}`}
-                        />
+                        {!isAlreadyAdded && <span className={styles.dragHandle}>⠿</span>}
+                        <label className={styles.checkboxLabel}>
+                          <input
+                            type="checkbox"
+                            className={styles.checkbox}
+                            checked={isChecked}
+                            onChange={() => toggleSlide(key)}
+                            disabled={isAlreadyAdded}
+                            aria-label={`Select ${slide.title}`}
+                          />
+                        </label>
                         <span className={styles.slideIndex}>{slide.slideIndex}</span>
                         <span className={styles.slideTitle}>{slide.title}</span>
                         {isAlreadyAdded && <span className={styles.addedBadge}>Added</span>}
-                      </label>
+                      </div>
                     )
                   })}
                 </div>
@@ -161,7 +197,6 @@ export default function ExportCatalog({ exports, loading, activeSlides, onAddSli
         })}
       </div>
 
-      {/* Sticky action bar */}
       {selectedKeys.size > 0 && (
         <div className={styles.actionBar}>
           <span className={styles.actionBarCount}>{selectedKeys.size} slide{selectedKeys.size !== 1 ? 's' : ''} selected</span>

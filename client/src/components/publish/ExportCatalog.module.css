@@ -1,7 +1,7 @@
 .panel {
   display: flex;
   flex-direction: column;
-  height: 50%;
+  height: 100%;
   min-height: 0;
   border-bottom: 1px solid var(--border-default);
   overflow: hidden;
@@ -32,7 +32,7 @@
 
 .exportList {
   flex: 1;
-  overflow-y: auto;
+  overflow-y: visible;
   overflow-x: hidden;
 }
 
@@ -271,3 +271,26 @@
 }
 
 .emptyState p { margin: 0; }
+
+.dragHint {
+  padding: 6px 12px 8px;
+  font-size: 11px;
+  color: var(--text-2, #aaa);
+  font-style: italic;
+  border-bottom: 1px solid var(--border, #eee);
+}
+
+.dragHandle {
+  flex-shrink: 0;
+  color: var(--text-2, #bbb);
+  cursor: grab;
+  font-size: 12px;
+  padding: 0 4px;
+  user-select: none;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}

@@ -246,23 +246,27 @@
 .panels {
   display: flex;
   flex: 1;
-  min-height: 0;
   overflow: hidden;
+  gap: 0;
 }
 
 .leftPanel {
-  width: 40%;
-  min-width: 300px;
+  width: 300px;
+  min-width: 260px;
+  max-width: 340px;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--border-default);
+  border-right: 1px solid var(--border, #e0e0e0);
   overflow: hidden;
 }
 
-.rightPanel {
+.mainPanel {
   flex: 1;
-  min-width: 0;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
+  padding: 16px;
+  background: var(--surface-1, #fff);
 }
 
 /* ── Empty state ── */
