@@ -1157,12 +1157,13 @@ function buildPresentationHtml(resolvedTree, presentationName, publishedAt) {
   </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { width: 100%; height: 100%; font-family: system-ui, sans-serif; background: #13131f; color: #cdd6f4; }
+    html { width: 100%; height: 100%; overflow: hidden; }
+    body { width: 100%; height: 100%; font-family: system-ui, sans-serif; background: #13131f; color: #cdd6f4; overflow: hidden; }
     #pres-header { height: 48px; background: #1e1e2e; border-bottom: 1px solid #313244; display: flex; align-items: center; padding: 0 20px; font-size: 15px; font-weight: 600; color: #cdd6f4; flex-shrink: 0; }
     #pres-body { display: flex; height: calc(100vh - 48px); }
     #sidebar { width: 260px; background: #1e1e2e; border-right: 1px solid #313244; overflow-y: auto; padding: 12px 8px; flex-shrink: 0; }
-    #content { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #13131f; position: relative; padding: 24px; }
-    #slide-frame { width: 1280px; height: 720px; border: none; transform-origin: top left; background: #fff; }
+    #content { flex: 1; overflow: hidden; background: #13131f; position: relative; }
+    #slide-frame { width: 100%; height: 100%; border: none; background: #13131f; }
     .tree-node { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 6px; cursor: pointer; font-size: 13px; color: #a6adc8; user-select: none; }
     .tree-node:hover { background: rgba(205,214,244,0.07); color: #cdd6f4; }
     .tree-node.active { background: rgba(137,180,250,0.15); color: #89b4fa; }
@@ -1188,16 +1189,34 @@ function buildPresentationHtml(resolvedTree, presentationName, publishedAt) {
   const content = document.getElementById('content');
 
   function scaleFrame() {
-    const w = content.clientWidth - 48;
-    const h = content.clientHeight - 48;
-    const scaleW = w / 1280;
-    const scaleH = h / 720;
-    const scale = Math.min(scaleW, scaleH, 1);
-    frame.style.transform = 'scale(' + scale + ')';
-    const scaledW = 1280 * scale;
-    const scaledH = 720 * scale;
-    frame.style.marginLeft = Math.max(0, (content.clientWidth - scaledW) / 2 - 24) + 'px';
-    frame.style.marginTop = Math.max(0, (content.clientHeight - scaledH) / 2 - 24) + 'px';
+    try {
+      const slideContent = frame.contentDocument || frame.contentWindow.document;
+      if (!slideContent) return;
+
+      // Reset slide body to prevent overflow and scrollbars
+      const bodyEl = slideContent.body;
+      if (bodyEl) {
+        bodyEl.style.minHeight = 'auto';
+        bodyEl.style.padding = '0';
+        bodyEl.style.margin = '0';
+        bodyEl.style.overflow = 'hidden';
+        bodyEl.style.background = 'transparent';
+      }
+
+      // Reset html too
+      const htmlEl = slideContent.documentElement;
+      if (htmlEl) {
+        htmlEl.style.overflow = 'hidden';
+      }
+
+      // Override slide element background
+      const slideEl = slideContent.querySelector('.slide');
+      if (slideEl) {
+        slideEl.style.background = '#ffffff';
+      }
+    } catch (e) {
+      // On error, just let it be
+    }
   }
   window.addEventListener('resize', scaleFrame);
 
@@ -1274,6 +1293,9 @@ function buildPresentationHtml(resolvedTree, presentationName, publishedAt) {
   const root = document.getElementById('tree-root');
   buildTree(data.tree, root);
 
+  // Add listener before navigating
+  frame.addEventListener('load', scaleFrame);
+
   const first = firstSlide(data.tree);
   if (first) {
     navigate(first.id);
@@ -1285,9 +1307,6 @@ function buildPresentationHtml(resolvedTree, presentationName, publishedAt) {
     });
     navigate(first.id);
   }
-
-  frame.addEventListener('load', scaleFrame);
-  scaleFrame();
 })();
   </script>
 </body>
