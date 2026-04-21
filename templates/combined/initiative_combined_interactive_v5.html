@@ -252,7 +252,7 @@
       animation: fadeInRight 0.7s var(--ease-out-expo) 0.5s both;
     }
     .header-logo {
-      font-size: 0.62rem;
+      font-size: 0.8rem;
       font-weight: 800;
       letter-spacing: 0.35em;
       color: var(--green-light);
@@ -262,8 +262,8 @@
 
     /* ── Tier 2: stats bar ── */
     .header-stats-bar {
-      background: rgba(0,0,0,0.22);
-      border-top: 1px solid rgba(255,255,255,0.07);
+      background: rgba(0,0,0,0.12);
+      border-top: 1px solid rgba(255,255,255,0.04);
     }
     .header-stats-inner {
       max-width: 1440px;
@@ -278,24 +278,24 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 20px 0;
+      padding: 12px 0;
       position: relative;
-      gap: 5px;
+      gap: 3px;
       cursor: default;
       transition: background 0.25s var(--ease-out-quart);
     }
     .hstat:hover {
-      background: rgba(255,255,255,0.04);
+      background: rgba(255,255,255,0.02);
     }
     .hstat + .hstat::before {
       content: '';
       position: absolute;
-      left: 0; top: 20%; bottom: 20%;
+      left: 0; top: 25%; bottom: 25%;
       width: 1px;
-      background: rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.05);
     }
     .hstat-value {
-      font-size: 2.2rem;
+      font-size: 1.4rem;
       font-weight: 900;
       color: #fff;
       line-height: 1;
@@ -311,11 +311,11 @@
 
     .hstat-value span { color: var(--red); }
     .hstat-label {
-      font-size: 0.58rem;
+      font-size: 0.8rem;
       font-weight: 600;
-      color: rgba(255,255,255,0.38);
+      color: rgba(255,255,255,0.28);
       text-transform: uppercase;
-      letter-spacing: 0.2em;
+      letter-spacing: 0.15em;
     }
     .hstat.hstat-accent .hstat-value { color: var(--red); }
 
@@ -919,9 +919,9 @@
         <div class="header-slash"></div>
         <div class="header-pi">PI 28</div>
         <div class="header-identity">
-          <div class="header-eyebrow">Feature Catalog &nbsp;·&nbsp; Roadmap Initiative</div>
-          <div class="header-title">Maintainability Enhancements</div>
-          <div class="header-subtitle">Technology Upgrades &amp; Technical Debt Reduction &nbsp;·&nbsp; Solon Tax 2026</div>
+          <div class="header-eyebrow">Feature Catalog &nbsp;·&nbsp; Roadmap Initiative Group</div>
+          <div class="header-title">Non-Functional Requirement Coverage</div>
+          <div class="header-subtitle">Technology Upgrades &amp; Technical Debt Reduction</div>
         </div>
         <div class="header-logo-wrap">
           <div class="header-logo">Netcompany</div>
@@ -953,8 +953,7 @@
           <span class="hstat-label">Requester</span>
         </div>
         <div class="hstat">
-          <span class="hstat-value" style="font-size:1.3rem; color: #F0A500;">PI 28</span>
-          <span class="hstat-label">Program Increment</span>
+          <span class="hstat-value" style="font-size:2rem; color: #F0A500;">PI 28</span>
         </div>
       </div>
     </div>
@@ -990,6 +989,37 @@
         </div>
       </div>
     </div>
+
+    <!-- ══════════════════════════════════════
+         ZONE C — BUSINESS VALUE
+    ══════════════════════════════════════ -->
+    <div>
+      <div class="sec-head">
+        <span class="sec-head-label">Business Value &amp; Market Relevance</span>
+        <span class="sec-head-line"></span>
+      </div>
+      <div class="value-grid">
+        <div class="value-card accent-red">
+          <div class="value-card-title">Business Value</div>
+          <ul class="value-list">
+            <li>Enables long-term platform health — reducing the cost of change and onboarding for all delivery teams</li>
+            <li>Critical runtime upgrades reduce security exposure ahead of upcoming Greek project go-live</li>
+            <li>Config Items Management eliminates high-risk manual configuration steps across all environments</li>
+            <li>Hexagonal refactor directly improves testability — reducing regression risk and release cycle time</li>
+          </ul>
+        </div>
+        <div class="value-card accent-teal">
+          <div class="value-card-title">Market &amp; Strategic Relevance</div>
+          <ul class="value-list">
+            <li>Platform currency (Java 25, Spring Boot 4.x, Oracle 26ai) is a prerequisite for future project bids</li>
+            <li>Strengthens Netcompany's position as a maintainable, enterprise-grade tax platform</li>
+            <li>Directly supports pipeline projects contingent on platform stability and compliance posture</li>
+            <li>Reduces total cost of ownership — a key differentiator in competitive procurement processes</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
 
     <!-- ══════════════════════════════════════
          ZONE B — EPICS + SIDEBAR
@@ -1151,43 +1181,13 @@
     </div>
 
     <!-- ══════════════════════════════════════
-         ZONE C — BUSINESS VALUE
-    ══════════════════════════════════════ -->
-    <div>
-      <div class="sec-head">
-        <span class="sec-head-label">Business Value &amp; Market Relevance</span>
-        <span class="sec-head-line"></span>
-      </div>
-      <div class="value-grid">
-        <div class="value-card accent-red">
-          <div class="value-card-title">Business Value</div>
-          <ul class="value-list">
-            <li>Enables long-term platform health — reducing the cost of change and onboarding for all delivery teams</li>
-            <li>Critical runtime upgrades reduce security exposure ahead of upcoming Greek project go-live</li>
-            <li>Config Items Management eliminates high-risk manual configuration steps across all environments</li>
-            <li>Hexagonal refactor directly improves testability — reducing regression risk and release cycle time</li>
-          </ul>
-        </div>
-        <div class="value-card accent-teal">
-          <div class="value-card-title">Market &amp; Strategic Relevance</div>
-          <ul class="value-list">
-            <li>Platform currency (Java 25, Spring Boot 4.x, Oracle 26ai) is a prerequisite for future project bids</li>
-            <li>Strengthens Netcompany's position as a maintainable, enterprise-grade tax platform</li>
-            <li>Directly supports pipeline projects contingent on platform stability and compliance posture</li>
-            <li>Reduces total cost of ownership — a key differentiator in competitive procurement processes</li>
-          </ul>
-        </div>
-      </div>
-    </div>
-
-    <!-- ══════════════════════════════════════
          ZONE D — INITIATIVES TABLE
     ══════════════════════════════════════ -->
     <div>
       <div class="sec-head">
         <span class="sec-head-label">Initiatives Breakdown</span>
         <span class="sec-head-line"></span>
-        <span class="sec-head-tag">5 Initiatives · PI 27–30</span>
+        <span class="sec-head-tag">5 Initiatives</span>
       </div>
       <div class="table-shell">
         <table>
@@ -1275,7 +1275,7 @@
   ══════════════════════════════════════ -->
   <footer class="page-footer">
     <div class="footer-inner">
-      <span class="footer-text">Solon Tax Product Roadmap 2026 &nbsp;·&nbsp; Confidential</span>
+      <span class="footer-text">Solon Tax Product Roadmap 2026</span>
       <span class="footer-text">Executive Steering Committee &nbsp;·&nbsp; 29 April 2026</span>
     </div>
   </footer>
