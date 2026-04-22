@@ -8,12 +8,6 @@ argument-hint: "[target]"
 
 Remove unnecessary complexity from designs, revealing the essential elements and creating clarity through ruthless simplification.
 
-## MANDATORY PREPARATION
-
-Invoke /impeccable — it contains design principles, anti-patterns, and the **Context Gathering Protocol**. Follow the protocol before proceeding — if no design context exists yet, you MUST run /impeccable teach first.
-
----
-
 ## Assess Current State
 
 Analyze what makes the design feel complex or cluttered:

@@ -8,12 +8,6 @@ argument-hint: "[target]"
 
 Analyze a feature and strategically add animations and micro-interactions that enhance understanding, provide feedback, and create delight.
 
-## MANDATORY PREPARATION
-
-Invoke /impeccable — it contains design principles, anti-patterns, and the **Context Gathering Protocol**. Follow the protocol before proceeding — if no design context exists yet, you MUST run /impeccable teach first. Additionally gather: performance constraints.
-
----
-
 ## Assess Animation Opportunities
 
 Analyze where motion would improve the experience:

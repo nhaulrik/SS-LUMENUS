@@ -8,12 +8,6 @@ argument-hint: "[target]"
 
 Assess and improve typography that feels generic, inconsistent, or poorly structured — turning default-looking text into intentional, well-crafted type.
 
-## MANDATORY PREPARATION
-
-Invoke /impeccable — it contains design principles, anti-patterns, and the **Context Gathering Protocol**. Follow the protocol before proceeding — if no design context exists yet, you MUST run /impeccable teach first.
-
----
-
 ## Assess Current Typography
 
 Analyze what's weak or generic about the current type:
@@ -46,8 +40,6 @@ Analyze what's weak or generic about the current type:
 **CRITICAL**: The goal isn't to make text "fancier" — it's to make it clearer, more readable, and more intentional. Good typography is invisible; bad typography is distracting.
 
 ## Plan Typography Improvements
-
-Consult the [typography reference](reference/typography.md) from the impeccable skill for detailed guidance on scales, pairing, and loading strategies.
 
 Create a systematic plan:
 
