@@ -135,6 +135,7 @@ router.post('/agentic/plan', async (req, res) => {
        summaryPrompt    = '',
        contentPrompt    = '',
        customInput      = '',
+       selectedFiles    = [],
      } = req.body
 
      if (!projectName) return error('projectName is required')
@@ -147,8 +148,8 @@ router.post('/agentic/plan', async (req, res) => {
       phase('analyzing')
 
       log(`Custom input received: ${customInput ? `"${customInput.substring(0, 50)}..."` : '(empty)'}`)
-      log('Reading AI Context files (compact schema)...')
-     const compactContext = await readContextFilesCompact(projectDir)
+       log('Reading AI Context files (compact schema)...')
+     const compactContext = await readContextFilesCompact(projectDir, { selectedFiles })
 
     if (compactContext.fileCount === 0) {
       log('No context files found — proceeding without context')
@@ -202,7 +203,7 @@ router.post('/agentic/plan', async (req, res) => {
     } else if (grouping === null && repeatableSlides.length === 0) {
       // No repeatable slides — read full context for the blocks agent
       log('No repeatable slides — reading full context for blocks agent...')
-      const fullContext = await readContextFiles(projectDir)
+      const fullContext = await readContextFiles(projectDir, { selectedFiles })
       if (fullContext.text) contextSlices['blocks'] = fullContext.text
     } else {
       log('Warning: orchestrator did not return a grouping spec — slices will be empty')

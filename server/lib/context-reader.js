@@ -229,7 +229,7 @@ export async function getSummaryStatus(projectDir) {
  * @returns {{ fileCount, files, text, totalChars, summaryUsed }}
  *   summaryUsed: Map<filename, 'summary'|'original'>
  */
-export async function readContextFiles(projectDir, { useSummaries = false } = {}) {
+export async function readContextFiles(projectDir, { useSummaries = false, selectedFiles = [] } = {}) {
   const contextDir = path.join(projectDir, 'AI Context')
 
   let filenames
@@ -241,12 +241,20 @@ export async function readContextFiles(projectDir, { useSummaries = false } = {}
 
   // Exclude Office temp/lock files (~$), hidden files, and summary files
   // (summaries are only read explicitly via useSummaries logic below)
-  const supported = filenames.filter(f =>
+  let supported = filenames.filter(f =>
     SUPPORTED_EXT.has(path.extname(f).toLowerCase()) &&
     !f.startsWith('~$') &&
     !f.startsWith('.') &&
     !f.endsWith(SUMMARY_SUFFIX)
   )
+
+  // Apply checkbox selection filter — if the caller provided a non-empty list,
+  // restrict to only those filenames.
+  if (selectedFiles.length > 0) {
+    const selSet = new Set(selectedFiles)
+    supported = supported.filter(f => selSet.has(f))
+  }
+
   if (supported.length === 0) {
     return { fileCount: 0, files: [], text: '', totalChars: 0, summaryUsed: new Map() }
   }
@@ -325,7 +333,7 @@ export async function readContextFiles(projectDir, { useSummaries = false } = {}
  * Produces a much smaller output suitable for the orchestrator's schema-identification step.
  * Text files are read in full; Excel/CSV files are summarised (unique values + 50 sample rows).
  */
-export async function readContextFilesCompact(projectDir) {
+export async function readContextFilesCompact(projectDir, { selectedFiles = [] } = {}) {
   const contextDir = path.join(projectDir, 'AI Context')
 
   let filenames
@@ -335,12 +343,20 @@ export async function readContextFilesCompact(projectDir) {
     return { fileCount: 0, files: [], text: '', totalChars: 0 }
   }
 
-  const supported = filenames.filter(f =>
+  let supported = filenames.filter(f =>
     SUPPORTED_EXT.has(path.extname(f).toLowerCase()) &&
     !f.startsWith('~$') &&
     !f.startsWith('.') &&
     !f.endsWith(SUMMARY_SUFFIX)
   )
+
+  // Apply checkbox selection filter — if the caller provided a non-empty list,
+  // restrict to only those filenames.
+  if (selectedFiles.length > 0) {
+    const selSet = new Set(selectedFiles)
+    supported = supported.filter(f => selSet.has(f))
+  }
+
   if (supported.length === 0) return { fileCount: 0, files: [], text: '', totalChars: 0 }
 
   const MAX_COMPACT_CHARS = 40_000
