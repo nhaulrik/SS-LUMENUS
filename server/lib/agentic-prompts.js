@@ -83,7 +83,19 @@ YOUR TASKS:
 2. List the exact group value for each instance in order.
 3. Provide a human-readable name for each instance.
 
-Return ONLY valid JSON (no markdown, no explanation):
+RULES:
+- instanceNames must have the same length as the total instance count
+- grouping.values must have the same length as instanceNames
+- grouping.column must be the exact column header from the data (case-sensitive)
+- grouping.values must be exact cell values from the data (case-sensitive)
+- If there are no repeatable slides, return grouping as null${slideKeyWarning}
+
+⚠️ OUTPUT FORMAT — CRITICAL:
+Your entire response MUST be a single valid JSON object.
+Do NOT write any explanation, reasoning, preamble, or commentary — before or after the JSON.
+Do NOT wrap the JSON in markdown fences (\`\`\`json ... \`\`\`).
+Start your response with { and end it with }.
+
 {
   "instances": ${instancesPlaceholder},
   "instanceNames": ["<name0>", "<name1>", ...],
@@ -92,14 +104,7 @@ Return ONLY valid JSON (no markdown, no explanation):
     "column": "<exact column name used to group rows>",
     "values": ["<exact group value 0>", "<exact group value 1>", ...]
   }
-}${slideKeyWarning}
-
-RULES:
-- instanceNames must have the same length as the total instance count
-- grouping.values must have the same length as instanceNames
-- grouping.column must be the exact column header from the data (case-sensitive)
-- grouping.values must be exact cell values from the data (case-sensitive)
-- If there are no repeatable slides, return grouping as null`
+}`
 }
 
 export function buildBlocksPrompt(zones, repeatableSlides, contextSummary, repSet, contentPrompt = '') {
@@ -133,7 +138,12 @@ YOUR ROLE:
 - ZONE INSTRUCTIONS per key are authoritative directives — follow them precisely and completely. They may specify expectation, tone, formatting, style or anything the user specifies in addition to data queries. These always take priority over defaults.
 ${instructionsBlock}
 
-Return ONLY valid JSON (no markdown):
+⚠️ OUTPUT FORMAT — CRITICAL:
+Your entire response MUST be a single valid JSON object.
+Do NOT write any explanation, reasoning, preamble, or commentary — before or after the JSON.
+Do NOT wrap the JSON in markdown fences (\`\`\`json ... \`\`\`).
+Start your response with { and end it with }.
+
 {
   "blocks": { "<key>": { "value": "<innerHTML matching template structure>" } },
   "slides": { "<slideKey>": { "shared": { "<key>": "<innerHTML matching template structure>" } } }
@@ -202,7 +212,13 @@ YOUR ROLE:
 
   Task: generate HTML content for slide instance ${instanceIndex + 1} of ${instanceCount} using the SOURCE DATA above.${rsConfig?.prompt ? `\nSlide guidance: ${rsConfig.prompt}` : ''}${contentPrompt ? `\nUser instructions: ${contentPrompt}` : ''}
 
-Return ONLY a valid JSON object with EXACTLY these keys:
+⚠️ OUTPUT FORMAT — CRITICAL:
+Your entire response MUST be a single valid JSON object.
+Do NOT write any explanation, reasoning, preamble, or commentary — before or after the JSON.
+Do NOT wrap the JSON in markdown fences (\`\`\`json ... \`\`\`).
+Start your response with { and end it with }.
+
+The object MUST have EXACTLY these keys:
 {
 `
   uniqueZones.forEach(z => { prompt += `  "${z.key}": "<innerHTML matching template structure>",\n` })

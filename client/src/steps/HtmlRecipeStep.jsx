@@ -413,16 +413,16 @@ export default function HtmlRecipeStep({
              break
            }
           case 'error':
-            setAgenticStatus('error')
-            setAgenticErrorMsgLocal(JSON.parse(data))
-            break
-        }
-      }
-    } catch (err) {
-      setAgenticStatus('error')
-      setAgenticErrorMsgLocal(err.message)
-    }
-  }, [isAgenticActive, projectName, recipe, zones, repeatableSlides, agenticSummaryMode, agenticSummaryPrompt, agenticContentPrompt, selectedFiles, setAgenticStatus])
+             setAgenticStatus('error')
+             setAgenticErrorMsgLocal(data)
+             break
+         }
+       }
+     } catch (err) {
+       setAgenticStatus('error')
+       setAgenticErrorMsgLocal(err.message)
+     }
+   }, [isAgenticActive, projectName, recipe, zones, repeatableSlides, agenticSummaryMode, agenticSummaryPrompt, agenticContentPrompt, selectedFiles, setAgenticStatus])
 
   // Agentic: Phase 2 — user accepted, call /run SSE stream
   const handleAgenticAccept = useCallback(async () => {
@@ -479,7 +479,7 @@ export default function HtmlRecipeStep({
             break
           case 'error':
             setAgenticStatus('error')
-            setAgenticErrorMsgLocal(JSON.parse(data))
+            setAgenticErrorMsgLocal(data)
             break
         }
       }
@@ -824,9 +824,12 @@ export default function HtmlRecipeStep({
                       />
                    </div>
                  ) : (
-                   <p className={agenticCss.confirmRationale} style={{fontStyle:'italic'}}>
-                     No context slices were returned. Generation will proceed without data preview.
-                   </p>
+                   <div className={agenticCss.confirmRationale} style={{fontStyle:'italic', color: 'var(--color-warning, #b45309)'}}>
+                     <strong style={{fontStyle:'normal'}}>No data preview available.</strong>
+                     {' '}The orchestrator could not extract context slices
+                     {agenticPlanLocal.rationale ? ` (reason: ${agenticPlanLocal.rationale})` : ''}.
+                     {' '}Generation will still proceed using the full context files — check the Activity log for details.
+                   </div>
                  )}
 
                 <div className={agenticCss.confirmActions}>
@@ -858,7 +861,7 @@ export default function HtmlRecipeStep({
             )}
 
             {/* Activity log — shown as soon as planning starts (hidden if using previous response) */}
-            {!usePreviousResponse && (agenticStatus === 'planning' || agenticStatus === 'running' || agenticStatus === 'done') && (
+            {!usePreviousResponse && (agenticStatus === 'planning' || agenticStatus === 'running' || agenticStatus === 'done' || agenticStatus === 'error') && (
               <div className={agenticCss.logSection}>
                 <div className={agenticCss.logLabel}>Activity</div>
                 <div className={agenticCss.log}>

@@ -47,8 +47,50 @@ function emit(res, type, data) {
 }
 
 function parseJson(text) {
-  const cleaned = text.replace(/^```(?:json)?\s*/m, '').replace(/\s*```\s*$/m, '').trim()
-  return JSON.parse(cleaned)
+  // 1. Try to extract JSON from a fenced code block (```json ... ```)
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (fenceMatch) {
+    return JSON.parse(fenceMatch[1].trim())
+  }
+  // 2. Try to extract the first {...} or [...] object from anywhere in the text
+  //    (handles models that prepend reasoning prose before bare JSON)
+  const objMatch = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/)
+  if (objMatch) {
+    return JSON.parse(objMatch[1])
+  }
+  // 3. Last resort: parse the whole trimmed text
+  return JSON.parse(text.trim())
+}
+
+/**
+ * Call the AI and parse the response as JSON.
+ * If parsing fails, retry once with a repair prompt asking the model to
+ * return only the JSON it already produced — no prose, no fences.
+ */
+async function callAiJson(prompt, options = {}) {
+  const result = await callAi(prompt, options)
+  try {
+    return { parsed: parseJson(result.response), raw: result.response }
+  } catch (firstErr) {
+    // Retry: send the bad response back and ask for JSON only
+    console.warn('[callAiJson] First parse failed, retrying with repair prompt:', firstErr.message)
+    const repairPrompt =
+      `The following text contains a JSON object but also includes extra prose or markdown that makes it unparseable.\n` +
+      `Extract and return ONLY the raw JSON object — no explanation, no markdown fences, no commentary.\n` +
+      `Start your response with { and end it with }.\n\n` +
+      `TEXT TO REPAIR:\n${result.response}`
+    const retry = await callAi(repairPrompt, { maxTokens: options.maxTokens ?? 3000, temperature: 0 })
+    try {
+      return { parsed: parseJson(retry.response), raw: retry.response, wasRepaired: true }
+    } catch (secondErr) {
+      throw new Error(
+        `JSON parse failed after repair attempt.\n` +
+        `Original error: ${firstErr.message}\n` +
+        `Repair error: ${secondErr.message}\n\n` +
+        `Original response:\n${result.response}`
+      )
+    }
+  }
 }
 
 function initSse(res) {
@@ -167,14 +209,16 @@ router.post('/agentic/plan', async (req, res) => {
      const orchestratorPrompt = buildOrchestratorPrompt(recipe, compactContext.text, promptToUse, repeatableSlides)
      log(`Orchestrator prompt: ${orchestratorPrompt.length} chars`)
 
-     const orchRaw = await callAi(orchestratorPrompt, { maxTokens: 1000, temperature: 0.1 })
-    log(`Orchestrator response received (${orchRaw.response.length} chars)`)
-
-    let orchResult
+     let orchResult
     try {
-      orchResult = parseJson(orchRaw.response)
-    } catch {
-      return error(`Orchestrator returned invalid JSON: ${orchRaw.response.slice(0, 200)}`)
+      const orchAi = await callAiJson(orchestratorPrompt, { maxTokens: 1000, temperature: 0.1 })
+      log(`Orchestrator response received (${orchAi.raw.length} chars)${orchAi.wasRepaired ? ' [repaired]' : ''}`)
+      console.log(`[agentic/plan] Orchestrator raw response:\n${orchAi.raw}`)
+      orchResult = orchAi.parsed
+      console.log('[agentic/plan] Orchestrator parsed OK:', JSON.stringify(orchResult, null, 2))
+    } catch (parseErr) {
+      console.error(`[agentic/plan] Orchestrator JSON parse FAILED: ${parseErr.message}`)
+      return error(`Orchestrator returned invalid JSON.\n${parseErr.message}`)
     }
 
       const { instances: rawInstances = {}, instanceNames = [], rationale = '', grouping = null } = orchResult
@@ -198,15 +242,23 @@ router.post('/agentic/plan', async (req, res) => {
         if (blocksText) contextSlices['blocks'] = blocksText
         log(`Slices built: ${Object.keys(slices).length} instance slice(s)${blocksText ? ' + blocks' : ''}`)
       } else {
-        log(`Warning: column "${grouping.column}" not found in any file — slices will be empty`)
+        log(`Warning: column "${grouping.column}" not found in any file — falling back to full context`)
+        const fullContext = await readContextFiles(projectDir, { selectedFiles })
+        if (fullContext.text) contextSlices['blocks'] = fullContext.text
+        log(`Fallback: loaded full context (${fullContext.text?.length ?? 0} chars) into blocks slice`)
       }
-    } else if (grouping === null && repeatableSlides.length === 0) {
-      // No repeatable slides — read full context for the blocks agent
-      log('No repeatable slides — reading full context for blocks agent...')
+    } else if (grouping === null || repeatableSlides.length === 0) {
+      // No repeatable slides, or orchestrator explicitly returned null grouping
+      // — read full context for the blocks agent
+      log('No grouping or no repeatable slides — reading full context for blocks agent...')
       const fullContext = await readContextFiles(projectDir, { selectedFiles })
       if (fullContext.text) contextSlices['blocks'] = fullContext.text
+      log(`Full context loaded: ${fullContext.text?.length ?? 0} chars`)
     } else {
-      log('Warning: orchestrator did not return a grouping spec — slices will be empty')
+      log('Warning: orchestrator did not return a usable grouping spec — falling back to full context')
+      const fullContext = await readContextFiles(projectDir, { selectedFiles })
+      if (fullContext.text) contextSlices['blocks'] = fullContext.text
+      log(`Fallback: loaded full context (${fullContext.text?.length ?? 0} chars) into blocks slice`)
     }
 
     // Save orchestrator prompt and context slices for debugging
@@ -256,6 +308,7 @@ router.post('/agentic/plan', async (req, res) => {
     res.end()
 
   } catch (err) {
+    console.error('[agentic/plan] FATAL:', err.stack || err.message)
     error(err.message)
   }
 })
@@ -305,6 +358,9 @@ router.post('/agentic/run', async (req, res) => {
     emit(res, 'agents', agents.map(a => ({ id: a.id, label: a.label, state: 'pending' })))
     phase('generating')
     log(`Starting ${agents.length} parallel agent${agents.length !== 1 ? 's' : ''}...`)
+    console.log(`[agentic/run] Agents: ${agents.map(a => a.label).join(', ')}`)
+    console.log(`[agentic/run] Context slice keys: ${Object.keys(contextSlices).join(', ') || '(none)'}`)
+    console.log(`[agentic/run] Zones: ${zones.length}, RepeatableSlides: ${repeatableSlides.length}`)
 
       // ── Parallel generation ───────────────────────────────────────────────────
       const agentResults = await Promise.all(agents.map(async (agent) => {
@@ -319,23 +375,32 @@ router.post('/agentic/run', async (req, res) => {
           agentContext = contextSlices[agent.globalIndex.toString()] || ''
         }
 
+        console.log(`[agentic/run][${agent.label}] Context slice length: ${agentContext.length} chars`)
+        console.log(`[agentic/run][${agent.label}] Context preview: ${agentContext.slice(0, 200)}`)
+
         const prompt = agent.type === 'blocks'
           ? buildBlocksPrompt(zones, repeatableSlides, agentContext, repSet, customInput || contentPrompt)
           : buildInstancePrompt(zones, repeatableSlides, agent.slideKey, agent.instanceIndex, agent.instanceCount, agentContext, customInput || contentPrompt)
 
-      log(`[${agent.label}] Sending prompt (${prompt.length} chars)...`)
-      const result = await callAi(prompt, { maxTokens: 3000, temperature: 0.4 })
-      log(`[${agent.label}] Response received (${result.response.length} chars)`)
+        console.log(`[agentic/run][${agent.label}] Prompt length: ${prompt.length} chars`)
+        console.log(`[agentic/run][${agent.label}] Prompt preview (first 500):\n${prompt.slice(0, 500)}`)
 
+       log(`[${agent.label}] Sending prompt (${prompt.length} chars)...`)
       let parsed
       try {
-        parsed = parseJson(result.response)
-      } catch {
+        const agentAi = await callAiJson(prompt, { maxTokens: 3000, temperature: 0.4 })
+        log(`[${agent.label}] Response received (${agentAi.raw.length} chars)${agentAi.wasRepaired ? ' [repaired]' : ''}`)
+        console.log(`[agentic/run][${agent.label}] Raw response (${agentAi.raw.length} chars):\n${agentAi.raw}`)
+        parsed = agentAi.parsed
+      } catch (parseErr) {
         emit(res, 'agent_update', { id: agent.id, state: 'error' })
-        throw new Error(`Agent "${agent.label}" returned invalid JSON:\n\n${result.response}`)
+        console.error(`[agentic/run][${agent.label}] JSON parse FAILED after repair: ${parseErr.message}`)
+        log(`[${agent.label}] PARSE ERROR (after repair attempt): ${parseErr.message}`)
+        throw new Error(`Agent "${agent.label}" returned invalid JSON.\n${parseErr.message}`)
       }
 
       log(`[${agent.label}] Parsed OK — ${Object.keys(parsed).length} top-level keys`)
+      console.log(`[agentic/run][${agent.label}] Parsed top-level keys: ${Object.keys(parsed).join(', ')}`)
       emit(res, 'agent_update', { id: agent.id, state: 'done' })
       log(`${agent.label} done (${((Date.now() - t0) / 1000).toFixed(1)}s)`)
 
@@ -372,6 +437,7 @@ router.post('/agentic/run', async (req, res) => {
     res.end()
 
   } catch (err) {
+    log(`FATAL ERROR: ${err.stack || err.message}`)
     error(err.message)
   }
 })

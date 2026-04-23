@@ -29,10 +29,11 @@ app.use('/api', aiProxyRoutes);
 app.use('/api/opencode', agenticRoutes);
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
-app.use('/published/:projectName', (req, res, next) => {
-  const { projectName } = req.params;
+app.use('/published/:projectName/presentations/:presentationName', (req, res, next) => {
+  const { projectName, presentationName } = req.params;
   if (!/^[\w-]{1,100}$/.test(projectName)) return res.status(400).end();
-  const publishedDir = path.join(PROJECTS_DIR, projectName, 'presentations');
+  if (!/^[\w-]{1,100}$/.test(presentationName)) return res.status(400).end();
+  const publishedDir = path.join(PROJECTS_DIR, projectName, 'presentations', presentationName);
   express.static(publishedDir, { index: 'index.html' })(req, res, next);
 });
 
