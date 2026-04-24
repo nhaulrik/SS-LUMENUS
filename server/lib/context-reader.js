@@ -51,8 +51,7 @@ function summariseSheet(sheet, XLSX, sheetName, fullMode = false) {
   const allBody    = dataRows.slice(1)
 
   // Keep only columns that have a non-empty header AND at least one data value
-  const activeColIdxs = allHeaders
-    .map((h, i) => i)
+  const activeColIdxs = [...allHeaders.keys()]
     .filter(i => {
       if (!allHeaders[i]) return false
       return allBody.some(row => String(row[i] ?? '').trim() !== '')
@@ -113,10 +112,18 @@ async function readDocx(filePath) {
   return result.value ?? ''
 }
 
-async function readXlsx(filePath, compact = false) {
+async function readXlsx(filePath, compact = false, sheetFilter = null) {
   const { default: XLSX } = await import('xlsx')
   const workbook = XLSX.readFile(filePath)
-  return workbook.SheetNames
+  // sheetFilter: Set of lowercase sheet names to include; null = all sheets
+  const names = sheetFilter
+    ? workbook.SheetNames.filter(n => sheetFilter.has(n.trim().toLowerCase()))
+    : workbook.SheetNames
+  if (names.length === 0) {
+    const available = workbook.SheetNames.join(', ')
+    return `[No matching sheets found. Available sheets: ${available}]`
+  }
+  return names
     .map(name => summariseSheet(workbook.Sheets[name], XLSX, name, !compact))
     .join('\n\n')
 }
@@ -131,24 +138,19 @@ async function readTextFile(filePath) {
   return fs.readFile(filePath, 'utf-8')
 }
 
-async function extractText(filePath, compact = false) {
+async function extractText(filePath, compact = false, sheetFilter = null) {
   const ext = path.extname(filePath).toLowerCase()
   switch (ext) {
     case '.pdf':  return readPdf(filePath)
     case '.docx': return readDocx(filePath)
     case '.xlsx':
-    case '.xls':  return readXlsx(filePath, compact)
+    case '.xls':  return readXlsx(filePath, compact, sheetFilter)
     case '.csv':  return readCsv(filePath, compact)
     default:      return readTextFile(filePath)
   }
 }
 
 // ── Single-file reader (for summarisation) ────────────────────────────────────
-
-// When generating AI summaries we want each file read in full, not competing
-// against others for the combined 100k cap. 400k chars ≈ 100k tokens — large
-// enough for any realistic context file while staying within model limits.
-const MAX_SINGLE_FILE_CHARS = 400_000
 
 /**
  * Extract the text content of one context file, with a generous per-file cap.
@@ -162,8 +164,8 @@ export async function readSingleContextFile(contextDir, filename) {
   const filePath = path.join(contextDir, filename)
   const raw = await extractText(filePath)
   const text = raw.trim()
-  if (text.length > MAX_SINGLE_FILE_CHARS) {
-    return { text: text.slice(0, MAX_SINGLE_FILE_CHARS) + '\n[...truncated at 400k chars]', truncated: true }
+  if (text.length > MAX_TEXT_FILE_CHARS) {
+    return { text: text.slice(0, MAX_TEXT_FILE_CHARS) + '\n[...truncated at 400k chars]', truncated: true }
   }
   return { text, truncated: false }
 }
@@ -229,7 +231,7 @@ export async function getSummaryStatus(projectDir) {
  * @returns {{ fileCount, files, text, totalChars, summaryUsed }}
  *   summaryUsed: Map<filename, 'summary'|'original'>
  */
-export async function readContextFiles(projectDir, { useSummaries = false, selectedFiles = [] } = {}) {
+export async function readContextFiles(projectDir, { useSummaries = false, selectedFiles = [], sheetFilter = null } = {}) {
   const contextDir = path.join(projectDir, 'AI Context')
 
   let filenames
@@ -280,7 +282,7 @@ export async function readContextFiles(projectDir, { useSummaries = false, selec
 
         if (!text) {
           const ext     = path.extname(filename).toLowerCase()
-          const raw     = await extractText(path.join(contextDir, filename), false)
+          const raw     = await extractText(path.join(contextDir, filename), false, sheetFilter)
           const isTabular = ext === '.xlsx' || ext === '.xls' || ext === '.csv'
           const limit   = isTabular ? MAX_TOTAL_CHARS : MAX_TEXT_FILE_CHARS
           const clipped = raw.trim()
@@ -333,7 +335,7 @@ export async function readContextFiles(projectDir, { useSummaries = false, selec
  * Produces a much smaller output suitable for the orchestrator's schema-identification step.
  * Text files are read in full; Excel/CSV files are summarised (unique values + 50 sample rows).
  */
-export async function readContextFilesCompact(projectDir, { selectedFiles = [] } = {}) {
+export async function readContextFilesCompact(projectDir, { selectedFiles = [], sheetFilter = null } = {}) {
   const contextDir = path.join(projectDir, 'AI Context')
 
   let filenames
@@ -364,7 +366,7 @@ export async function readContextFilesCompact(projectDir, { selectedFiles = [] }
   const fileContents = await Promise.all(
     supported.map(async (filename) => {
       try {
-        const raw     = await extractText(path.join(contextDir, filename), true) // compact=true
+        const raw     = await extractText(path.join(contextDir, filename), true, sheetFilter) // compact=true
         const clipped = raw.trim()
         const text    = clipped.length > MAX_COMPACT_CHARS
           ? clipped.slice(0, MAX_COMPACT_CHARS) + '\n[...truncated]'

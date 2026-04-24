@@ -5,6 +5,13 @@
  * No Express, no I/O — only string construction.
  */
 
+function capContext(text, maxChars) {
+  const content = text || 'No source data provided.'
+  return content.length > maxChars
+    ? content.slice(0, maxChars) + `\n[...context truncated at ${Math.round(maxChars / 1000)}k chars]`
+    : content
+}
+
 export function buildSummaryPrompt(filename, fileText, summaryPrompt, zones) {
   let fieldHint = ''
   if (zones?.length > 0) {
@@ -45,13 +52,11 @@ ${fileText}`
 }
 
 export function buildOrchestratorPrompt(recipe, contextText, customPrompt, repeatableSlides = []) {
-   console.log('[buildOrchestratorPrompt] Received customPrompt:', customPrompt?.substring(0, 50))
-   const contextBlock = contextText
-     ? `CONTEXT DATA SCHEMA:\n${contextText}`
-     : 'CONTEXT: (no context files provided)'
+  const contextBlock = contextText
+    ? `CONTEXT DATA SCHEMA:\n${contextText}`
+    : 'CONTEXT: (no context files provided)'
 
-   const customBlock = customPrompt ? `\nUSER INSTRUCTIONS:\n${customPrompt}` : ''
-   console.log('[buildOrchestratorPrompt] customBlock created:', customBlock?.substring(0, 50))
+  const customBlock = customPrompt ? `\nUSER INSTRUCTIONS:\n${customPrompt}` : ''
 
   let slidesBlock = ''
   let instancesPlaceholder = '{}'
@@ -114,8 +119,10 @@ export function buildBlocksPrompt(zones, repeatableSlides, contextSummary, repSe
   const sharedZones = zones.filter(z => repSet.has(z.slideIndex) && z.unique === false && z.autoGenerate !== false && !z.ignored)
 
   const instructionsBlock = contentPrompt ? `\nUSER INSTRUCTIONS:\n${contentPrompt}\n` : ''
+  // Cap context to prevent oversized prompts
+  const contextBlock = capContext(contextSummary, 1_000_000)
 
-   let prompt = `You populate an HTML slide template with real content.
+  let prompt = `You populate an HTML slide template with real content.
 
 STRUCTURAL CONTRACT (read before anything else):
 Every innerHTML value you return MUST mirror the TEMPLATE shown for each key:
@@ -128,7 +135,7 @@ Every innerHTML value you return MUST mirror the TEMPLATE shown for each key:
 Violating this breaks the slide layout irreparably.
 
 SOURCE DATA (verbatim rows from context files — your content must be based on these):
-${contextSummary || 'No source data provided.'}
+${contextBlock}
 
 YOUR ROLE:
 - You are a content generator. Transform the SOURCE DATA above into polished HTML presentation content.
@@ -155,10 +162,10 @@ ZONES TO FILL:\n`
   if (blockZones.length > 0) {
     prompt += '\n[BLOCK ZONES]\n'
     blockZones.forEach(z => {
-       prompt += `\nKEY "${z.key}"\n`
-       if (z.prompt) prompt += `ZONE INSTRUCTIONS:\n${z.prompt}\n`
-       if (z.exampleHtml) prompt += `TEMPLATE (study the pattern — replicate the same structure, sections, and element count using SOURCE DATA only):\n${z.exampleHtml}\n↑ Match this pattern: same number of list items, sections, metric blocks, and headings — populated with SOURCE DATA values only.\n`
-     })
+      prompt += `\nKEY "${z.key}"\n`
+      if (z.prompt) prompt += `ZONE INSTRUCTIONS:\n${z.prompt}\n`
+      if (z.exampleHtml) prompt += `TEMPLATE (study the pattern — replicate the same structure, sections, and element count using SOURCE DATA only):\n${z.exampleHtml}\n↑ Match this pattern: same number of list items, sections, metric blocks, and headings — populated with SOURCE DATA values only.\n`
+    })
   }
 
   if (sharedZones.length > 0) {
@@ -171,10 +178,10 @@ ZONES TO FILL:\n`
     for (const [slideKey, slideZones] of Object.entries(bySlide)) {
       prompt += `\nSlide "${slideKey}":\n`
       slideZones.forEach(z => {
-         prompt += `\nKEY "${z.key}"\n`
-         if (z.prompt) prompt += `ZONE INSTRUCTIONS:\n${z.prompt}\n`
-         if (z.exampleHtml) prompt += `TEMPLATE (study the pattern — replicate the same structure, sections, and element count using SOURCE DATA only):\n${z.exampleHtml}\n↑ Match this pattern: same number of list items, sections, metric blocks, and headings — populated with SOURCE DATA values only.\n`
-       })
+        prompt += `\nKEY "${z.key}"\n`
+        if (z.prompt) prompt += `ZONE INSTRUCTIONS:\n${z.prompt}\n`
+        if (z.exampleHtml) prompt += `TEMPLATE (study the pattern — replicate the same structure, sections, and element count using SOURCE DATA only):\n${z.exampleHtml}\n↑ Match this pattern: same number of list items, sections, metric blocks, and headings — populated with SOURCE DATA values only.\n`
+      })
     }
   }
 
@@ -182,13 +189,15 @@ ZONES TO FILL:\n`
 }
 
 export function buildInstancePrompt(zones, repeatableSlides, slideKey, instanceIndex, instanceCount, contextSummary, contentPrompt = '') {
-  const rsConfig   = repeatableSlides.find(rs => rs.key === slideKey)
-  const slideIdx   = rsConfig?.slideIndex
+  const rsConfig    = repeatableSlides.find(rs => rs.key === slideKey)
+  const slideIdx    = rsConfig?.slideIndex
   const uniqueZones = zones.filter(
     z => z.slideIndex === slideIdx && z.unique !== false && z.autoGenerate !== false && !z.ignored
   )
+  // Cap context to prevent oversized prompts per instance
+  const contextBlock = capContext(contextSummary, 500_000)
 
-   let prompt = `You populate one slide instance in a presentation template with real content.
+  let prompt = `You populate one slide instance in a presentation template with real content.
 
 STRUCTURAL CONTRACT (read before anything else):
 Every innerHTML value you return MUST mirror the TEMPLATE shown for each key:
@@ -201,7 +210,7 @@ Every innerHTML value you return MUST mirror the TEMPLATE shown for each key:
 Violating this breaks the slide layout irreparably.
 
 SOURCE DATA FOR THIS SLIDE INSTANCE (verbatim rows from context files):
-${contextSummary || 'No source data provided.'}
+${contextBlock}
 
 YOUR ROLE:
 - You are a content generator. Transform the SOURCE DATA above into polished HTML presentation content for this specific slide instance.
@@ -225,11 +234,11 @@ The object MUST have EXACTLY these keys:
   prompt += `}
 
 TEMPLATES PER KEY (structure is a contract — fill with data, do not alter structure):\n`
-    uniqueZones.forEach(z => {
-      prompt += `\nKEY "${z.key}":\n`
-      if (z.prompt) prompt += `ZONE INSTRUCTIONS:\n${z.prompt}\n`
-      prompt += z.exampleHtml ? `TEMPLATE (study the pattern — replicate the same structure, sections, and element count using SOURCE DATA only):\n${z.exampleHtml}\n↑ Match this pattern: same number of list items, sections, metric blocks, and headings — populated with SOURCE DATA values only.\n` : `(no template — generate appropriate innerHTML)\n`
-    })
+  uniqueZones.forEach(z => {
+    prompt += `\nKEY "${z.key}":\n`
+    if (z.prompt) prompt += `ZONE INSTRUCTIONS:\n${z.prompt}\n`
+    prompt += z.exampleHtml ? `TEMPLATE (study the pattern — replicate the same structure, sections, and element count using SOURCE DATA only):\n${z.exampleHtml}\n↑ Match this pattern: same number of list items, sections, metric blocks, and headings — populated with SOURCE DATA values only.\n` : `(no template — generate appropriate innerHTML)\n`
+  })
 
   return prompt
 }

@@ -20,7 +20,7 @@
  */
 
 import express from 'express'
-import fs      from 'fs'
+import fsp     from 'fs/promises'
 import path    from 'path'
 import { callAi }              from '../lib/ai-client.js'
 import { readContextFiles, readContextFilesCompact, extractGroupedSlices, getSummaryStatus } from '../lib/context-reader.js'
@@ -46,51 +46,164 @@ function emit(res, type, data) {
   res.write(`event: ${type}\ndata: ${payload}\n\n`)
 }
 
+// Walk text from `start` and return the index after the matching closeChar.
+// Respects string literals and escape sequences. Returns -1 if unbalanced.
+function findBalancedEnd(text, start, openChar, closeChar) {
+  let depth = 0, inString = false, escaped = false
+  for (let i = start; i < text.length; i++) {
+    const c = text[i]
+    if (escaped)                               { escaped = false; continue }
+    if (c === '\\')                            { escaped = true;  continue }
+    if (c === '"')                             { inString = !inString; continue }
+    if (inString)                              continue
+    if (c === openChar)                        depth++
+    else if (c === closeChar && --depth === 0) return i + 1
+  }
+  return -1
+}
+
+/**
+ * Enhanced JSON extraction with multiple strategies.
+ * Returns { parsed, strategy } on success, throws with diagnostics on failure.
+ */
 function parseJson(text) {
-  // 1. Try to extract JSON from a fenced code block (```json ... ```)
-  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
-  if (fenceMatch) {
-    return JSON.parse(fenceMatch[1].trim())
+  // Strategy 1: fenced code blocks (json, js, or bare)
+  for (const pattern of [
+    /```\s*(?:json|JSON)\s*([\s\S]*?)```/,
+    /```\s*(?:javascript|js)\s*([\s\S]*?)```/,
+    /```\s*([\s\S]*?)```/,
+  ]) {
+    const match = text.match(pattern)
+    if (match) {
+      try { return { parsed: JSON.parse(match[1].trim()), strategy: 'fenced-block' } } catch {}
+    }
   }
-  // 2. Try to extract the first {...} or [...] object from anywhere in the text
-  //    (handles models that prepend reasoning prose before bare JSON)
-  const objMatch = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/)
-  if (objMatch) {
-    return JSON.parse(objMatch[1])
+
+  // Strategy 2: balanced JSON object
+  const objectStart = text.indexOf('{')
+  if (objectStart !== -1) {
+    const endIdx = findBalancedEnd(text, objectStart, '{', '}')
+    if (endIdx > objectStart) {
+      try { return { parsed: JSON.parse(text.substring(objectStart, endIdx)), strategy: 'bracket-matched-object' } } catch {}
+    }
   }
-  // 3. Last resort: parse the whole trimmed text
-  return JSON.parse(text.trim())
+
+  // Strategy 3: balanced JSON array
+  const arrayStart = text.indexOf('[')
+  if (arrayStart !== -1) {
+    const endIdx = findBalancedEnd(text, arrayStart, '[', ']')
+    if (endIdx > arrayStart) {
+      try { return { parsed: JSON.parse(text.substring(arrayStart, endIdx)), strategy: 'bracket-matched-array' } } catch {}
+    }
+  }
+
+  // Strategy 4: full text
+  try { return { parsed: JSON.parse(text.trim()), strategy: 'full-text' } } catch {}
+
+  throw new Error(
+    `All JSON extraction strategies failed.\n` +
+    `Text length: ${text.length} chars\n` +
+    `Text preview (first 500 chars):\n${text.substring(0, 500)}`
+  )
 }
 
 /**
  * Call the AI and parse the response as JSON.
- * If parsing fails, retry once with a repair prompt asking the model to
- * return only the JSON it already produced — no prose, no fences.
+ * Uses enhanced multi-strategy parsing with smart repair attempts.
+ * 
+ * Returns: { parsed, raw, strategy, wasRepaired, repairAttempts }
  */
 async function callAiJson(prompt, options = {}) {
   const result = await callAi(prompt, options)
+  let parseResult
+
+  // Attempt 1: Try enhanced parsing on raw response
   try {
-    return { parsed: parseJson(result.response), raw: result.response }
-  } catch (firstErr) {
-    // Retry: send the bad response back and ask for JSON only
-    console.warn('[callAiJson] First parse failed, retrying with repair prompt:', firstErr.message)
-    const repairPrompt =
-      `The following text contains a JSON object but also includes extra prose or markdown that makes it unparseable.\n` +
-      `Extract and return ONLY the raw JSON object — no explanation, no markdown fences, no commentary.\n` +
-      `Start your response with { and end it with }.\n\n` +
-      `TEXT TO REPAIR:\n${result.response}`
-    const retry = await callAi(repairPrompt, { maxTokens: options.maxTokens ?? 3000, temperature: 0 })
-    try {
-      return { parsed: parseJson(retry.response), raw: retry.response, wasRepaired: true }
-    } catch (secondErr) {
-      throw new Error(
-        `JSON parse failed after repair attempt.\n` +
-        `Original error: ${firstErr.message}\n` +
-        `Repair error: ${secondErr.message}\n\n` +
-        `Original response:\n${result.response}`
-      )
+    parseResult = parseJson(result.response)
+    console.log(`[callAiJson] Parse succeeded on attempt 1 using strategy: ${parseResult.strategy}`)
+    return {
+      parsed: parseResult.parsed,
+      raw: result.response,
+      strategy: parseResult.strategy,
+      wasRepaired: false,
+      repairAttempts: 0,
     }
+  } catch (firstErr) {
+    console.warn('[callAiJson] Parse attempt 1 failed:', firstErr.message)
   }
+
+  // Repair attempt 1: Ask for strict JSON-only response
+  console.log('[callAiJson] Attempting repair 1: strict JSON-only format')
+  const repairPrompt1 =
+    `You previously returned text that contains JSON but is not valid. ` +
+    `Extract and return ONLY the raw JSON object or array — nothing else.\n` +
+    `- Do not include markdown code fences\n` +
+    `- Do not include explanatory text before or after\n` +
+    `- Do not include comments\n` +
+    `- Start with { or [ and end with } or ]\n` +
+    `- Ensure all strings are properly quoted\n` +
+    `- Ensure all braces and brackets are balanced\n\n` +
+    `Original response to repair:\n${result.response}`
+
+  const retry1 = await callAi(repairPrompt1, {
+    maxTokens: options.maxTokens ?? 3000,
+    temperature: 0,
+  })
+
+  try {
+    parseResult = parseJson(retry1.response)
+    console.log(`[callAiJson] Parse succeeded on repair 1 using strategy: ${parseResult.strategy}`)
+    return {
+      parsed: parseResult.parsed,
+      raw: retry1.response,
+      strategy: parseResult.strategy,
+      wasRepaired: true,
+      repairAttempts: 1,
+    }
+  } catch (secondErr) {
+    console.warn('[callAiJson] Repair 1 failed:', secondErr.message)
+  }
+
+  // Repair attempt 2: Extract the JSON object/array and ask to fix it
+  console.log('[callAiJson] Attempting repair 2: JSON fragment extraction and validation')
+  const extractPrompt =
+    `Extract the JSON object or array from this text (even if incomplete or malformed).\n` +
+    `Return ONLY the JSON, fixing any obvious issues:\n` +
+    `- Add missing closing braces/brackets\n` +
+    `- Fix unescaped quotes in strings\n` +
+    `- Fix trailing commas\n` +
+    `- Ensure valid JSON syntax\n\n` +
+    `Text:\n${result.response}`
+
+  const retry2 = await callAi(extractPrompt, {
+    maxTokens: options.maxTokens ?? 3000,
+    temperature: 0,
+  })
+
+  try {
+    parseResult = parseJson(retry2.response)
+    console.log(`[callAiJson] Parse succeeded on repair 2 using strategy: ${parseResult.strategy}`)
+    return {
+      parsed: parseResult.parsed,
+      raw: retry2.response,
+      strategy: parseResult.strategy,
+      wasRepaired: true,
+      repairAttempts: 2,
+    }
+  } catch (thirdErr) {
+    console.warn('[callAiJson] Repair 2 failed:', thirdErr.message)
+  }
+
+  // All repair attempts failed — throw comprehensive error
+  throw new Error(
+    `JSON parsing failed after 2 repair attempts.\n\n` +
+    `Original response (${result.response.length} chars):\n` +
+    `${result.response.substring(0, 1000)}${result.response.length > 1000 ? '\n[...truncated]' : ''}\n\n` +
+    `Repair 1 response (${retry1.response.length} chars):\n` +
+    `${retry1.response.substring(0, 500)}${retry1.response.length > 500 ? '\n[...truncated]' : ''}\n\n` +
+    `Repair 2 response (${retry2.response.length} chars):\n` +
+    `${retry2.response.substring(0, 500)}${retry2.response.length > 500 ? '\n[...truncated]' : ''}`
+  )
 }
 
 function initSse(res) {
@@ -126,6 +239,29 @@ function buildRepSetInfo(zones, repeatableSlides) {
   const hasBlocks = zones.some(z => !repSet.has(z.slideIndex) && z.autoGenerate !== false && !z.ignored)
   const hasShared = zones.some(z => repSet.has(z.slideIndex) && z.unique === false && z.autoGenerate !== false && !z.ignored)
   return { repSet, hasBlocks, hasShared }
+}
+
+/**
+ * Parse a customInput string for explicit sheet name directives.
+ * Recognises patterns like:
+ *   sheet "2026 Estimates"
+ *   sheet '2026 Estimates'
+ *   only sheet "2026 Estimates"
+ *   use only sheet "2026 Estimates"
+ *   sheets "Sheet1", "Sheet2"
+ *
+ * Returns a Set of lowercase sheet names, or null if no directive found.
+ */
+function parseSheetFilter(customInput) {
+  if (!customInput) return null
+  // Match: sheet(s) followed by one or more quoted names
+  const pattern = /\bsheets?\s+(?:"([^"]+)"|'([^']+)')/gi
+  const names = []
+  let match
+  while ((match = pattern.exec(customInput)) !== null) {
+    names.push((match[1] || match[2]).trim().toLowerCase())
+  }
+  return names.length > 0 ? new Set(names) : null
 }
 
 function assembleResults(agentResults) {
@@ -186,12 +322,67 @@ router.post('/agentic/plan', async (req, res) => {
 
      const projectDir = path.join(RESOLVED_PROJECTS_DIR, projectName)
 
-      // ── Context / summaries ──────────────────────────────────────────────────
-      phase('analyzing')
+     // ── Context / summaries ──────────────────────────────────────────────────
+       phase('analyzing')
 
-      log(`Custom input received: ${customInput ? `"${customInput.substring(0, 50)}..."` : '(empty)'}`)
-       log('Reading AI Context files (compact schema)...')
-     const compactContext = await readContextFilesCompact(projectDir, { selectedFiles })
+       log(`Custom input received: ${customInput ? `"${customInput.substring(0, 50)}..."` : '(empty)'}`)
+
+    // ── Sheet filter: parse customInput for explicit sheet directives ─────────
+    const sheetFilter = parseSheetFilter(customInput || contentPrompt)
+    if (sheetFilter) {
+      log(`Sheet filter detected: ${[...sheetFilter].join(', ')}`)
+    }
+
+    // ── Fast path: no repeatable slides — skip orchestrator entirely ──────────
+    if (repeatableSlides.length === 0) {
+      log('No repeatable slides — skipping orchestrator, reading full context directly...')
+      const fullContext = await readContextFiles(projectDir, { selectedFiles, sheetFilter })
+
+      if (fullContext.fileCount === 0) {
+        log('No context files found — proceeding without context')
+      } else {
+        log(`Context files: ${fullContext.files?.join(', ') || '(none)'}`)
+        log(`Full context: ${(fullContext.totalChars / 1000).toFixed(1)}k chars`)
+      }
+
+      // Persist full context to disk so /run can re-read it without a browser round-trip
+      if (flowId) {
+        const flowDir = path.join(RESOLVED_PROJECTS_DIR, projectName, 'flows', flowId)
+        try {
+          await fsp.mkdir(flowDir, { recursive: true })
+          const sliceLines = `${'='.repeat(60)}\nSLICE KEY: blocks\n${'='.repeat(60)}\n${fullContext.text || ''}`
+          await Promise.all([
+            fsp.writeFile(path.join(flowDir, 'ai-context-blocks.txt'), fullContext.text || '', 'utf8'),
+            fsp.writeFile(path.join(flowDir, 'ai-context-slices.txt'), sliceLines, 'utf8'),
+          ])
+          log(`Saved full context to disk for /run to re-read`)
+        } catch (err) {
+          console.error(`[agentic/plan] Failed to save context: ${err.message}`)
+          log(`Warning: Failed to save context to disk: ${err.message}`)
+        }
+      }
+
+      const { hasBlocks, hasShared } = buildRepSetInfo(zones, repeatableSlides)
+      const agentPlan = []
+      if (hasBlocks || hasShared) agentPlan.push({ id: 'blocks', label: 'Blocks & Shared' })
+
+      log(`Plan ready — ${agentPlan.length} agent${agentPlan.length !== 1 ? 's' : ''} queued (no orchestrator)`)
+
+      // contextSlices is intentionally omitted — /run will re-read from disk
+      emit(res, 'plan', JSON.stringify({
+        instances: {},
+        instanceNames: [],
+        contextSlices: null,
+        rationale: 'No repeatable slides — full context passed directly to blocks agent.',
+        agentPlan,
+        contextFiles: fullContext.fileCount,
+      }))
+      return res.end()
+    }
+
+    // ── Orchestrator path: repeatable slides present ──────────────────────────
+    log('Reading AI Context files (compact schema for orchestrator)...')
+    const compactContext = await readContextFilesCompact(projectDir, { selectedFiles, sheetFilter })
 
     if (compactContext.fileCount === 0) {
       log('No context files found — proceeding without context')
@@ -209,17 +400,19 @@ router.post('/agentic/plan', async (req, res) => {
      const orchestratorPrompt = buildOrchestratorPrompt(recipe, compactContext.text, promptToUse, repeatableSlides)
      log(`Orchestrator prompt: ${orchestratorPrompt.length} chars`)
 
-     let orchResult
-    try {
-      const orchAi = await callAiJson(orchestratorPrompt, { maxTokens: 1000, temperature: 0.1 })
-      log(`Orchestrator response received (${orchAi.raw.length} chars)${orchAi.wasRepaired ? ' [repaired]' : ''}`)
-      console.log(`[agentic/plan] Orchestrator raw response:\n${orchAi.raw}`)
-      orchResult = orchAi.parsed
-      console.log('[agentic/plan] Orchestrator parsed OK:', JSON.stringify(orchResult, null, 2))
-    } catch (parseErr) {
-      console.error(`[agentic/plan] Orchestrator JSON parse FAILED: ${parseErr.message}`)
-      return error(`Orchestrator returned invalid JSON.\n${parseErr.message}`)
-    }
+      let orchResult
+     try {
+       const orchAi = await callAiJson(orchestratorPrompt, { maxTokens: 1000, temperature: 0.1 })
+       const repairInfo = orchAi.wasRepaired ? ` [repaired in ${orchAi.repairAttempts} attempt(s), strategy: ${orchAi.strategy}]` : ` [strategy: ${orchAi.strategy}]`
+       log(`Orchestrator response received (${orchAi.raw.length} chars)${repairInfo}`)
+       console.log(`[agentic/plan] Orchestrator raw response:\n${orchAi.raw}`)
+       console.log(`[agentic/plan] Parse strategy: ${orchAi.strategy}, repairs: ${orchAi.repairAttempts}`)
+       orchResult = orchAi.parsed
+       console.log('[agentic/plan] Orchestrator parsed OK:', JSON.stringify(orchResult, null, 2))
+     } catch (parseErr) {
+       console.error(`[agentic/plan] Orchestrator JSON parse FAILED after all repair attempts:\n${parseErr.message}`)
+       return error(`Orchestrator returned invalid JSON.\n${parseErr.message}`)
+     }
 
       const { instances: rawInstances = {}, instanceNames = [], rationale = '', grouping = null } = orchResult
       const remappedInstances = remapInstances(rawInstances, repeatableSlides)
@@ -243,33 +436,33 @@ router.post('/agentic/plan', async (req, res) => {
         log(`Slices built: ${Object.keys(slices).length} instance slice(s)${blocksText ? ' + blocks' : ''}`)
       } else {
         log(`Warning: column "${grouping.column}" not found in any file — falling back to full context`)
-        const fullContext = await readContextFiles(projectDir, { selectedFiles })
+        const fullContext = await readContextFiles(projectDir, { selectedFiles, sheetFilter })
         if (fullContext.text) contextSlices['blocks'] = fullContext.text
         log(`Fallback: loaded full context (${fullContext.text?.length ?? 0} chars) into blocks slice`)
       }
-    } else if (grouping === null || repeatableSlides.length === 0) {
-      // No repeatable slides, or orchestrator explicitly returned null grouping
-      // — read full context for the blocks agent
-      log('No grouping or no repeatable slides — reading full context for blocks agent...')
-      const fullContext = await readContextFiles(projectDir, { selectedFiles })
+    } else {
+      log('Orchestrator returned null grouping — reading full context for blocks agent...')
+      const fullContext = await readContextFiles(projectDir, { selectedFiles, sheetFilter })
       if (fullContext.text) contextSlices['blocks'] = fullContext.text
       log(`Full context loaded: ${fullContext.text?.length ?? 0} chars`)
-    } else {
-      log('Warning: orchestrator did not return a usable grouping spec — falling back to full context')
-      const fullContext = await readContextFiles(projectDir, { selectedFiles })
-      if (fullContext.text) contextSlices['blocks'] = fullContext.text
-      log(`Fallback: loaded full context (${fullContext.text?.length ?? 0} chars) into blocks slice`)
     }
 
     // Save orchestrator prompt and context slices for debugging
     if (flowId) {
       const flowDir = path.join(RESOLVED_PROJECTS_DIR, projectName, 'flows', flowId)
-      if (fs.existsSync(flowDir)) {
-        fs.writeFileSync(path.join(flowDir, 'ai-orchestrator-prompt.txt'), orchestratorPrompt, 'utf8')
+      try {
+        await fsp.mkdir(flowDir, { recursive: true })
         const sliceLines = Object.entries(contextSlices).map(([key, text]) =>
           `${'='.repeat(60)}\nSLICE KEY: ${key}\n${'='.repeat(60)}\n${text}`
         ).join('\n\n')
-        fs.writeFileSync(path.join(flowDir, 'ai-context-slices.txt'), sliceLines, 'utf8')
+        await Promise.all([
+          fsp.writeFile(path.join(flowDir, 'ai-orchestrator-prompt.txt'), orchestratorPrompt, 'utf8'),
+          fsp.writeFile(path.join(flowDir, 'ai-context-slices.txt'), sliceLines, 'utf8'),
+        ])
+        log(`Saved orchestrator prompt and ${Object.keys(contextSlices).length} context slice(s) to disk`)
+      } catch (err) {
+        console.error(`[agentic/plan] Failed to save slices: ${err.message}`)
+        log(`Warning: Failed to save slices to disk: ${err.message}`)
       }
     }
 
@@ -340,6 +533,27 @@ router.post('/agentic/run', async (req, res) => {
     const remappedInstances = remapInstances(instances, repeatableSlides)
     const { repSet, hasBlocks, hasShared } = buildRepSetInfo(zones, repeatableSlides)
 
+    // ── Resolve context slices ────────────────────────────────────────────────
+    // When contextSlices is null the /plan fast-path was used (no repeatable slides).
+    // Re-read the persisted blocks context from disk instead of relying on the
+    // browser round-trip, which avoids sending large payloads through the client.
+    let resolvedSlices = contextSlices
+    if (!contextSlices || Object.keys(contextSlices).length === 0) {
+      if (flowId) {
+        const blocksFile = path.join(RESOLVED_PROJECTS_DIR, projectName, 'flows', flowId, 'ai-context-blocks.txt')
+        try {
+          const blocksText = await fsp.readFile(blocksFile, 'utf8')
+          resolvedSlices = { blocks: blocksText }
+          log(`Re-read blocks context from disk: ${blocksText.length} chars`)
+        } catch {
+          log('Warning: no ai-context-blocks.txt found — context will be empty')
+          resolvedSlices = {}
+        }
+      } else {
+        resolvedSlices = {}
+      }
+    }
+
     // ── Build agent list ──────────────────────────────────────────────────────
     const agents = []
     if (hasBlocks || hasShared) {
@@ -359,7 +573,7 @@ router.post('/agentic/run', async (req, res) => {
     phase('generating')
     log(`Starting ${agents.length} parallel agent${agents.length !== 1 ? 's' : ''}...`)
     console.log(`[agentic/run] Agents: ${agents.map(a => a.label).join(', ')}`)
-    console.log(`[agentic/run] Context slice keys: ${Object.keys(contextSlices).join(', ') || '(none)'}`)
+    console.log(`[agentic/run] Context slice keys: ${Object.keys(resolvedSlices).join(', ') || '(none)'}`)
     console.log(`[agentic/run] Zones: ${zones.length}, RepeatableSlides: ${repeatableSlides.length}`)
 
       // ── Parallel generation ───────────────────────────────────────────────────
@@ -370,39 +584,48 @@ router.post('/agentic/run', async (req, res) => {
         let agentContext = ''
 
         if (agent.type === 'blocks') {
-          agentContext = contextSlices['blocks'] || ''
+          agentContext = resolvedSlices['blocks'] || ''
         } else {
-          agentContext = contextSlices[agent.globalIndex.toString()] || ''
+          agentContext = resolvedSlices[agent.globalIndex.toString()] || ''
         }
 
-        console.log(`[agentic/run][${agent.label}] Context slice length: ${agentContext.length} chars`)
-        console.log(`[agentic/run][${agent.label}] Context preview: ${agentContext.slice(0, 200)}`)
+         console.log(`[agentic/run][${agent.label}] Context slice length: ${agentContext.length} chars`)
+         if (agentContext.length > 1_000_000) {
+           console.warn(`[agentic/run][${agent.label}] WARNING: Context exceeds 1M chars (${(agentContext.length / 1_000_000).toFixed(1)}M) — will be capped by prompt builder`)
+         }
+         console.log(`[agentic/run][${agent.label}] Context preview: ${agentContext.slice(0, 200)}`)
 
-        const prompt = agent.type === 'blocks'
-          ? buildBlocksPrompt(zones, repeatableSlides, agentContext, repSet, customInput || contentPrompt)
-          : buildInstancePrompt(zones, repeatableSlides, agent.slideKey, agent.instanceIndex, agent.instanceCount, agentContext, customInput || contentPrompt)
+         const prompt = agent.type === 'blocks'
+           ? buildBlocksPrompt(zones, repeatableSlides, agentContext, repSet, customInput || contentPrompt)
+           : buildInstancePrompt(zones, repeatableSlides, agent.slideKey, agent.instanceIndex, agent.instanceCount, agentContext, customInput || contentPrompt)
 
-        console.log(`[agentic/run][${agent.label}] Prompt length: ${prompt.length} chars`)
-        console.log(`[agentic/run][${agent.label}] Prompt preview (first 500):\n${prompt.slice(0, 500)}`)
+         console.log(`[agentic/run][${agent.label}] Prompt length: ${prompt.length} chars`)
+         if (prompt.length > 2_000_000) {
+           console.warn(`[agentic/run][${agent.label}] WARNING: Prompt exceeds 2M chars (${(prompt.length / 1_000_000).toFixed(1)}M) — may fail API limits`)
+         }
+         console.log(`[agentic/run][${agent.label}] Prompt preview (first 500):\n${prompt.slice(0, 500)}`)
 
        log(`[${agent.label}] Sending prompt (${prompt.length} chars)...`)
-      let parsed
-      try {
-        const agentAi = await callAiJson(prompt, { maxTokens: 3000, temperature: 0.4 })
-        log(`[${agent.label}] Response received (${agentAi.raw.length} chars)${agentAi.wasRepaired ? ' [repaired]' : ''}`)
-        console.log(`[agentic/run][${agent.label}] Raw response (${agentAi.raw.length} chars):\n${agentAi.raw}`)
-        parsed = agentAi.parsed
-      } catch (parseErr) {
-        emit(res, 'agent_update', { id: agent.id, state: 'error' })
-        console.error(`[agentic/run][${agent.label}] JSON parse FAILED after repair: ${parseErr.message}`)
-        log(`[${agent.label}] PARSE ERROR (after repair attempt): ${parseErr.message}`)
-        throw new Error(`Agent "${agent.label}" returned invalid JSON.\n${parseErr.message}`)
-      }
+       let parsed
+       try {
+         const agentAi = await callAiJson(prompt, { maxTokens: 3000, temperature: 0.4 })
+         const repairInfo = agentAi.wasRepaired ? ` [repaired in ${agentAi.repairAttempts} attempt(s), strategy: ${agentAi.strategy}]` : ` [strategy: ${agentAi.strategy}]`
+         log(`[${agent.label}] Response received (${agentAi.raw.length} chars)${repairInfo}`)
+         console.log(`[agentic/run][${agent.label}] Raw response (${agentAi.raw.length} chars):\n${agentAi.raw}`)
+         console.log(`[agentic/run][${agent.label}] Parse strategy: ${agentAi.strategy}, repairs: ${agentAi.repairAttempts}`)
+         parsed = agentAi.parsed
+       } catch (parseErr) {
+         emit(res, 'agent_update', { id: agent.id, state: 'error' })
+         console.error(`[agentic/run][${agent.label}] JSON parse FAILED after all repair attempts:\n${parseErr.message}`)
+         log(`[${agent.label}] PARSE ERROR (exhausted all repair strategies)`)
+         log(`[${agent.label}] Error details: ${parseErr.message.split('\n')[0]}`)
+         throw new Error(`Agent "${agent.label}" returned invalid JSON.\n${parseErr.message}`)
+       }
 
-      log(`[${agent.label}] Parsed OK — ${Object.keys(parsed).length} top-level keys`)
-      console.log(`[agentic/run][${agent.label}] Parsed top-level keys: ${Object.keys(parsed).join(', ')}`)
-      emit(res, 'agent_update', { id: agent.id, state: 'done' })
-      log(`${agent.label} done (${((Date.now() - t0) / 1000).toFixed(1)}s)`)
+       log(`[${agent.label}] Parsed OK — ${Object.keys(parsed).length} top-level keys`)
+       console.log(`[agentic/run][${agent.label}] Parsed top-level keys: ${Object.keys(parsed).join(', ')}`)
+       emit(res, 'agent_update', { id: agent.id, state: 'done' })
+       log(`${agent.label} done (${((Date.now() - t0) / 1000).toFixed(1)}s)`)
 
       return { agent, parsed, prompt }
     }))
@@ -410,9 +633,14 @@ router.post('/agentic/run', async (req, res) => {
     // Save agent prompts for debugging
     if (flowId) {
       const flowDir = path.join(RESOLVED_PROJECTS_DIR, projectName, 'flows', flowId)
-      if (fs.existsSync(flowDir)) {
+      try {
+        await fsp.mkdir(flowDir, { recursive: true })
         const content = agentResults.map((r, i) => `=== Agent ${i + 1}: ${r.agent.label} ===\n${r.prompt}`).join('\n\n')
-        fs.writeFileSync(path.join(flowDir, 'ai-agent-prompts.txt'), content, 'utf8')
+        await fsp.writeFile(path.join(flowDir, 'ai-agent-prompts.txt'), content, 'utf8')
+        log(`Saved ${agentResults.length} agent prompt(s) to disk`)
+      } catch (err) {
+        console.error(`[agentic/run] Failed to save agent prompts: ${err.message}`)
+        log(`Warning: Failed to save agent prompts: ${err.message}`)
       }
     }
 
