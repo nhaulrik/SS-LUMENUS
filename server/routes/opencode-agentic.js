@@ -23,7 +23,7 @@ import express from 'express'
 import fsp     from 'fs/promises'
 import path    from 'path'
 import { callAi }              from '../lib/ai-client.js'
-import { readContextFiles, readContextFilesCompact, buildInstanceSlices, getSummaryStatus } from '../lib/context-reader.js'
+import { readContextFiles, readContextFilesCompact, getSummaryStatus } from '../lib/context-reader.js'
 import { validateHtmlJson }    from '../lib/html-recipe-builder.js'
 import { generateSummaries }   from '../lib/summary-generator.js'
 import {
@@ -362,14 +362,18 @@ router.post('/agentic/plan', async (req, res) => {
     }
 
     // ── Orchestrator path: repeatable slides present ──────────────────────────
-    log('Reading AI Context files (compact schema for orchestrator)...')
-    const compactContext = await readContextFilesCompact(projectDir, { selectedFiles })
+    log('Reading AI Context files...')
+    const [compactContext, fullContext] = await Promise.all([
+      readContextFilesCompact(projectDir, { selectedFiles }),
+      readContextFiles(projectDir, { selectedFiles }),
+    ])
 
     if (compactContext.fileCount === 0) {
       log('No context files found — proceeding without context')
     } else {
       log(`Context files: ${compactContext.files?.join(', ') || '(none)'}`)
       log(`Compact schema: ${(compactContext.totalChars / 1000).toFixed(1)}k chars`)
+      log(`Full context: ${(fullContext.totalChars / 1000).toFixed(1)}k chars`)
     }
 
      // ── Orchestrator ─────────────────────────────────────────────────────────
@@ -416,34 +420,38 @@ router.post('/agentic/plan', async (req, res) => {
 
        console.log('[agentic/plan] instances:', JSON.stringify(rawInstances))
 
-     // ── Build instance slices from real data (v2: intent-driven, exhaustive) ──
-     log('Building instance slices (v2)...')
-     const contextDir = path.join(projectDir, 'AI Context')
-     const { slices, blocksText } = await buildInstanceSlices(
-       contextDir,
-       resolvedInstanceKeys,
-       compactContext.files,
-     )
-     log(`Instance slices built: ${Object.keys(slices).length} instance(s)`)
+     // ── Single AI slicer call: extract structured data for all instances at once ──
+     const blocksText = fullContext.text
+     const slices = {}
+     let slicerPrompt = null
 
-     // AI slicer: run per instance to extract and structure data using the output template
-     if (Object.keys(slices).length > 0) {
-       log('AI-structuring instance slices using output template (parallel)...')
-       const slicerResults = await Promise.all(
-         Object.entries(slices).map(async ([idx, rawText]) => {
-           const instanceName = instanceNames[parseInt(idx)] || resolvedInstanceKeys[parseInt(idx)] || `instance-${idx}`
-           const cappedRaw = rawText.length > 80_000
-             ? rawText.slice(0, 80_000) + '\n[...raw data capped for AI slicer]'
-             : rawText
-           const slicerPrompt = buildSlicerPrompt(instanceName, cappedRaw, sliceTemplateBody)
-           log(`  Slicing instance [${idx}]: "${instanceName}" (${cappedRaw.length} chars raw)`)
-           const { response } = await callAi(slicerPrompt, { temperature: 0.1, maxTokens: 2000 })
-           log(`  Instance [${idx}] structured: ${response.length} chars`)
-           return [idx, response.trim()]
-         })
-       )
-       slicerResults.forEach(([idx, text]) => { slices[idx] = text })
-       log(`AI-focused ${slicerResults.length} instance slice(s)`)
+     if (instanceNames.length > 0) {
+       const cappedRaw = fullContext.text.length > 300_000
+         ? fullContext.text.slice(0, 300_000) + '\n[...raw data capped for AI slicer]'
+         : fullContext.text
+       log(`AI-structuring ${instanceNames.length} instance(s) in one slicer call (${cappedRaw.length} chars input)...`)
+       slicerPrompt = buildSlicerPrompt(instanceNames, cappedRaw, sliceTemplateBody)
+       log(`Slicer prompt: ${slicerPrompt.length} chars`)
+       const { response: slicerResponse } = await callAi(slicerPrompt, { temperature: 0.1, maxTokens: 8000 })
+       log(`Slicer response: ${slicerResponse.length} chars`)
+
+       // Parse response: split on [SLIDE_INSTANCE_N] delimiters
+       const instanceRegex = /\[SLIDE_INSTANCE_(\d+)\]/g
+       const parsedSections = []
+       let lastName = null, lastEnd = 0, m
+       while ((m = instanceRegex.exec(slicerResponse)) !== null) {
+         if (lastName !== null) parsedSections[lastName] = slicerResponse.slice(lastEnd, m.index).trim()
+         lastName = parseInt(m[1]) - 1
+         lastEnd = m.index + m[0].length
+       }
+       if (lastName !== null) parsedSections[lastName] = slicerResponse.slice(lastEnd).trim()
+
+       instanceNames.forEach((name, i) => {
+         const text = parsedSections[i] || `[No data extracted for instance: "${name}"]`
+         slices[i.toString()] = text
+         log(`  Instance [${i}] "${name}": ${text.length} chars`)
+       })
+       log(`Slicer complete: ${Object.keys(slices).length} instance slice(s) extracted`)
      }
 
      // Save slice files to disk with new naming convention
@@ -462,6 +470,7 @@ router.post('/agentic/plan', async (req, res) => {
          const writeOps = [
            fsp.writeFile(path.join(debugDir, 'ai-orchestrator-prompt.txt'), orchestratorPrompt, 'utf8'),
            fsp.writeFile(path.join(debugDir, 'ai-slice-blocks.txt'), blocksText || '', 'utf8'),
+           ...(slicerPrompt ? [fsp.writeFile(path.join(debugDir, 'ai-slicer-prompt.txt'), slicerPrompt, 'utf8')] : []),
          ]
 
          // Write one named slice file per instance

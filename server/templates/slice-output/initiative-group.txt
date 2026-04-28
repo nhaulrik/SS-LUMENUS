@@ -3,35 +3,57 @@ TEMPLATE_DESCRIPTION: Roadmap initiative group with feature counts and effort br
 
 ---
 
-=== {{ROADMAP_GROUP}} ===
+=== {{ROADMAP_INITIATIVE_GROUP}} ===
 
-=== Feature Counts === [~30 words]
-Total Features Across All Initiatives: {{TOTAL_FEATURE_COUNT}}
+=== Feature Counts (count of IRM) === [~30 words]
+Total Unique Features Across All Initiatives: {{TOTAL_FEATURE_COUNT}}
 
 {{#EACH_INITIATIVE}}
 Initiative: {{INITIATIVE_NAME}}
-Feature Count: {{FEATURE_COUNT}}
+Unique Feature Count: {{FEATURE_COUNT}}
 Features:
 {{FEATURE_LIST}}
 {{/EACH_INITIATIVE}}
 
-=== Effort Estimates by Initiative === [~80 words]
+=== Effort Estimates by Initiative ===
 
 {{#EACH_INITIATIVE}}
 {{INITIATIVE_NAME}}
-Total Estimate: {{TOTAL_HOURS}} hours
-- Build: {{BUILD}}
-- Analysis & Design: {{ANALYSIS}}
-- Test Preparation: {{TEST_PREP}}
-- Test Execution: {{TEST_EXEC}}
-- Finalization (e2e testing, regression, stabilization, IAT): {{FINALIZATION}}
-- Bugfix: {{BUGFIX}}
+Total Hours PI28: {{TOTAL_HOURS_PI28}} hours
+[Read this value from the "Estimate Pivot" sheet, column "Roadmap Initiative Group Estimates", in the row where column A matches this initiative name exactly. Do NOT sum raw rows — use only the pre-computed pivot value.]
+Description of initiative: {{INITIATIVE_DESCRIPTION}}
+[~80 words — describe what this initiative delivers, which systems or teams are involved, why it is being done (business value or driver), and any known dependencies, risks, or constraints. Draw from columns such as "Description", "Notes", "Business Value", "Objective", or any free-text field associated with this initiative row.]
+
+Feature Progress:
+[Read all values from the "Progress Pivot" sheet, in the row where column A matches this initiative name exactly. Copy the count for each status column that has a non-zero value. The status columns are: HLD | In Design | In Progress | Ready for Dev | To Do | Under Analysis | Waiting Analysis Approval | Waiting Solution Approval. Grand Total = total feature count for this initiative. If a status column is blank or zero, omit it. Do NOT invent statuses — only report what is present in the pivot row.]
+HLD: {{STATUS_HLD}}
+In Design: {{STATUS_IN_DESIGN}}
+In Progress: {{STATUS_IN_PROGRESS}}
+Ready for Dev: {{STATUS_READY_FOR_DEV}}
+To Do: {{STATUS_TO_DO}}
+Under Analysis: {{STATUS_UNDER_ANALYSIS}}
+Waiting Analysis Approval: {{STATUS_WAITING_ANALYSIS}}
+Waiting Solution Approval: {{STATUS_WAITING_SOLUTION}}
+Total Features: {{STATUS_GRAND_TOTAL}}
+
+Feature Priority:
+[Read all values from the "Priority Pivot" sheet, in the row where column A matches this initiative name exactly. The priority columns are: p1 | p2 | p3. Grand Total = total feature count. If a priority column is blank or zero, write 0. Do NOT invent priority values — only report what is present in the pivot row.]
+P1: {{PRIORITY_P1}}
+P2: {{PRIORITY_P2}}
+P3: {{PRIORITY_P3}}
+Total Features: {{PRIORITY_GRAND_TOTAL}}
 
 {{/EACH_INITIATIVE}}
 
-=== Summary === [~100 words]
+=== Summary === [~250 words]
 Roadmap Group: {{ROADMAP_GROUP}}
+[Look for the column "roadmap initiative group"]
 Total Effort Across All Initiatives: {{GRAND_TOTAL}} hours
-Number of Initiatives: {{INITIATIVE_COUNT}}
+[Read this value from the "Pivot" sheet, column "Roadmap Initiative Group Estimates", in the bold/group-level row where column A matches this initiative group name. Do NOT sum — use only the pre-computed pivot total.]
+Number of Unique Initiatives: {{INITIATIVE_COUNT}}
 Number of Features: {{TOTAL_FEATURE_COUNT}}
+[Look for the coulmn "IRM" and count all items within the "roadmap initiative group"]
 Requester: {{REQUESTER}}
+[Look for the requester in the column "Requester"]
+Description of initiative group: {{INITIATIVE_GROUP_DESCRIPTION}}
+[~120 words — summarize the strategic purpose and overall scope of this initiative group. Highlight the highest-effort initiatives and any cross-initiative themes. Note shared dependencies, delivery phases, or risks that affect multiple initiatives. Draw from description, notes, summary, or objective columns across all initiatives in the group.]
