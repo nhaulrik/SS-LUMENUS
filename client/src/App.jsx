@@ -66,16 +66,6 @@ export default function App() {
   const [htmlApplied, setHtmlApplied] = useState(null)
   // { outputFile, previewHtml, roundId, slideCount }
 
-  const [htmlRecipe, setHtmlRecipe] = useState('')
-
-  // ── HTML recipe step state (preserved across navigation) ────────
-  const [htmlRecipeState, setHtmlRecipeState] = useState({
-    recipe:             '',
-    globalPrompt:       '',
-    jsonInput:          '',
-    recipeGenerationId: null,
-  })
-
   // ── AI response tracking (for debug context) ────────────────────
   const [htmlAiResponse, setHtmlAiResponse] = useState(null)
 
@@ -132,10 +122,6 @@ export default function App() {
     navigateTo('project-dashboard')
   }, [navigateTo])
 
-  const handleHtmlRecipeStateChange = useCallback((updates) => {
-    setHtmlRecipeState(prev => ({ ...prev, ...updates }))
-  }, [])
-
   const handleHtmlAiResponseChange = useCallback((aiResponse) => {
     setHtmlAiResponse(aiResponse)
   }, [])
@@ -177,7 +163,6 @@ export default function App() {
           repeatableSlides: htmlProject.repeatableSlides ?? [],
         }
       : null,
-    recipe:  htmlRecipe || null,
     applied: htmlApplied
       ? {
           roundId:    htmlApplied.roundId,
@@ -197,8 +182,6 @@ export default function App() {
     setHtmlUploadSession(null)
     setHtmlProject(null)
     setHtmlApplied(null)
-    setHtmlRecipe('')
-    setHtmlRecipeState({ recipe: '', globalPrompt: '', jsonInput: '', recipeGenerationId: null })
     setPendingFlowName(flowName || null)
     navigateTo('html-upload')
   }, [navigateTo])
@@ -259,15 +242,12 @@ export default function App() {
            flowId={currentFlowId}
            step={step}
            canNavigateTo={canNavigateTo}
-           navigateTo={navigateTo}
-           onBack={handleBackToHtmlUpload}
-           onApplied={handleHtmlApplied}
-           onRecipeChange={setHtmlRecipe}
-           onRecipeStateChange={handleHtmlRecipeStateChange}
-           onAiResponseChange={handleHtmlAiResponseChange}
-           recipeState={htmlRecipeState}
-           setToast={setToast}
-           debugContext={debugContext}
+            navigateTo={navigateTo}
+            onBack={handleBackToHtmlUpload}
+            onApplied={handleHtmlApplied}
+            onAiResponseChange={handleHtmlAiResponseChange}
+            setToast={setToast}
+            debugContext={debugContext}
            // Agentic state
            agenticStatus={agenticStatus}
            agenticPhase={agenticPhase}

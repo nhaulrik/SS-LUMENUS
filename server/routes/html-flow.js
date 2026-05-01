@@ -18,7 +18,7 @@ import path           from 'path';
 import { randomUUID } from 'crypto';
 import { parse }      from 'node-html-parser';
 import { PROJECTS_DIR } from '../config.js';
-import { buildHtmlRecipe, validateHtmlJson } from '../lib/html/html-recipe-builder.js';
+import { validateHtmlJson } from '../lib/html/html-recipe-builder.js';
 import { applyHtmlContent }                  from '../lib/html/html-patcher.js';
 import { buildSectionTree, flattenTree, extractSlideNamesFromHtml } from '../lib/html/build-tree.js';
 import { selectionsToZones, resolveConflicts, autoDiscoverZonesForFullSlide } from '../lib/zones/selections-to-zones.js';
@@ -353,47 +353,6 @@ router.post('/html-flow/create-project', (req, res) => {
     });
   } catch (err) {
     console.error('[html-flow] create-project error:', err);
-    return res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
-// ── POST /api/html-flow/generate-recipe ──────────────────────────────────────
-
-router.post('/html-flow/generate-recipe', (req, res) => {
-  try {
-    const { projectName, flowId, globalPrompt, repeatableSlides: clientRepSlides } = req.body;
-
-    if (!projectName || !/^[\w-]{1,100}$/.test(projectName) || !flowId || !/^[\w-]{1,100}$/.test(flowId)) {
-      return res.status(400).json({ ok: false, error: 'projectName and flowId are required.' });
-    }
-
-    const flowDir  = path.join(PROJECTS_DIR, projectName, 'flows', flowId);
-    const flowPath = path.join(flowDir, 'flow.json');
-    if (!fs.existsSync(flowPath)) {
-      return res.status(404).json({ ok: false, error: 'Flow not found.' });
-    }
-
-    const flow      = JSON.parse(fs.readFileSync(flowPath, 'utf8'));
-    const zones     = flow._metadata?.zones || [];
-    const prompt    = globalPrompt ?? flow.globalPrompt ?? '';
-
-    // Accept client-provided repeatableSlides (may include user-edited prompts)
-    // and persist them back to flow.json so subsequent operations are consistent.
-    const repSlides = Array.isArray(clientRepSlides) ? clientRepSlides : (flow._metadata?.repeatableSlides || []);
-
-    const dirty = globalPrompt !== undefined || Array.isArray(clientRepSlides);
-    if (dirty) {
-      if (globalPrompt !== undefined) flow.globalPrompt = globalPrompt;
-      if (Array.isArray(clientRepSlides)) flow._metadata.repeatableSlides = repSlides;
-      flow.updatedAt = new Date().toISOString();
-      fs.writeFileSync(flowPath, JSON.stringify(flow, null, 2), 'utf8');
-    }
-
-     const recipe = buildHtmlRecipe(zones, prompt, repSlides);
-
-      return res.json({ ok: true, recipe, generationId: randomUUID() });
-  } catch (err) {
-    console.error('[html-flow] generate-recipe error:', err);
     return res.status(500).json({ ok: false, error: err.message });
   }
 });
