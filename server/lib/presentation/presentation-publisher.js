@@ -10,7 +10,7 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { resolveProjectDir } from '../project/project-manager.js'
 
-const TEMPLATES_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../templates/publish');
+const TEMPLATES_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../../templates/publish');
 
 /**
  * Resolve all slide nodes from a tree structure.
