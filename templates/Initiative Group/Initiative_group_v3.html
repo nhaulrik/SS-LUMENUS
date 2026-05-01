@@ -7,14 +7,13 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    overflow: hidden;
+    width: 100vw; height: 100vh;
+  }
   body {
     font-family: 'Inter', sans-serif;
-    background: #e8e8e8;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    padding: 20px;
+    background: #d0cfcb;
   }
   .slide {
     width: 1280px;
@@ -736,6 +735,27 @@
   // Default: sort by Effort descending (no animation on load)
   const effortTh = document.querySelector('thead th[data-type="effort"]');
   sortBy(effortTh, false, false);
+
+  // Scale slide to fit viewport
+  (function () {
+    var slide = document.querySelector('.slide');
+    var PAD = 20;
+    function scaleSlide() {
+      var scale = Math.min(
+        (window.innerWidth  - PAD * 2) / 1280,
+        (window.innerHeight - PAD * 2) / 720
+      );
+      var x = (window.innerWidth  - 1280 * scale) / 2;
+      var y = (window.innerHeight - 720  * scale) / 2;
+      slide.style.position        = 'fixed';
+      slide.style.top             = '0';
+      slide.style.left            = '0';
+      slide.style.transformOrigin = 'top left';
+      slide.style.transform       = 'translate(' + x + 'px,' + y + 'px) scale(' + scale + ')';
+    }
+    scaleSlide();
+    window.addEventListener('resize', scaleSlide);
+  })();
 </script>
 </body>
 </html>
