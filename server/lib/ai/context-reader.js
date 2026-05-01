@@ -7,10 +7,6 @@
  * Excel/CSV files are summarised rather than dumped as raw CSV — this cuts
  * noise (empty cells, repeated commas) while preserving all meaningful data:
  * headers, unique values per column, row count, and a data sample.
- *
- * Summary files: each context file may have a paired AI-generated summary saved
- * alongside it as "{filename}.summary.md". readContextFiles() can be told to
- * prefer summaries over the originals.
  */
 
 import fs from 'fs/promises'
@@ -19,8 +15,7 @@ import { MAX_CONTEXT_CHARS, MAX_TEXT_FILE_CHARS, EXCEL_MAX_CELL_LENGTH } from '.
 
 const SUPPORTED_EXT = new Set(['.txt', '.md', '.html', '.pdf', '.docx', '.xlsx', '.xls', '.csv'])
 
-// Suffix used for AI-generated summary files
-export const SUMMARY_SUFFIX = '.summary.md'
+const SUMMARY_SUFFIX = '.summary.md'
 
 
 // ── Excel / CSV summariser ─────────────────────────────────────────────────────
@@ -136,74 +131,6 @@ async function extractText(filePath, compact = false) {
   }
 }
 
-// ── Single-file reader (for summarisation) ────────────────────────────────────
-
-/**
- * Extract the text content of one context file, with a generous per-file cap.
- * Used by the summary-generation pipeline so large files are not truncated.
- *
- * @param {string} contextDir  Absolute path to the "AI Context" folder.
- * @param {string} filename    Filename (not full path) of the context file.
- * @returns {Promise<{ text: string, truncated: boolean }>}
- */
-export async function readSingleContextFile(contextDir, filename) {
-  const filePath = path.join(contextDir, filename)
-  const raw = await extractText(filePath)
-  const text = raw.trim()
-  if (text.length > MAX_TEXT_FILE_CHARS) {
-    return { text: text.slice(0, MAX_TEXT_FILE_CHARS) + '\n[...truncated at 400k chars]', truncated: true }
-  }
-  return { text, truncated: false }
-}
-
-// ── Summary file helpers ───────────────────────────────────────────────────────
-
-/**
- * Returns the path to the summary file for a given context file.
- */
-export function summaryFilePath(contextDir, filename) {
-  return path.join(contextDir, filename + SUMMARY_SUFFIX)
-}
-
-/**
- * Save an AI-generated summary for a context file.
- */
-export async function saveSummaryFile(contextDir, filename, summaryText) {
-  await fs.writeFile(summaryFilePath(contextDir, filename), summaryText, 'utf-8')
-}
-
-/**
- * Check which context files in a project already have a saved summary.
- * Returns a Map<filename, boolean>.
- */
-export async function getSummaryStatus(projectDir) {
-  const contextDir = path.join(projectDir, 'AI Context')
-  let filenames
-  try {
-    filenames = await fs.readdir(contextDir)
-  } catch {
-    return new Map()
-  }
-
-  const contextFiles = filenames.filter(f =>
-    SUPPORTED_EXT.has(path.extname(f).toLowerCase()) &&
-    !f.startsWith('~$') &&
-    !f.startsWith('.') &&
-    !f.endsWith(SUMMARY_SUFFIX)
-  )
-
-  const status = new Map()
-  await Promise.all(contextFiles.map(async (filename) => {
-    try {
-      await fs.access(summaryFilePath(contextDir, filename))
-      status.set(filename, true)
-    } catch {
-      status.set(filename, false)
-    }
-  }))
-  return status
-}
-
 // ── Public API ─────────────────────────────────────────────────────────────────
 
 /**
@@ -211,24 +138,20 @@ export async function getSummaryStatus(projectDir) {
  *
  * @param {string} projectDir      Absolute path to the project folder.
  * @param {object} [opts]
- * @param {boolean} [opts.useSummaries=false]
- *   When true, use the saved .summary.md for each file if it exists,
- *   falling back to original extraction only if no summary is found.
- * @returns {{ fileCount, files, text, totalChars, summaryUsed }}
- *   summaryUsed: Map<filename, 'summary'|'original'>
+ * @param {string[]} [opts.selectedFiles]  If non-empty, restrict to these filenames.
+ * @returns {{ fileCount, files, text, totalChars }}
  */
-export async function readContextFiles(projectDir, { useSummaries = false, selectedFiles = [] } = {}) {
+export async function readContextFiles(projectDir, { selectedFiles = [] } = {}) {
   const contextDir = path.join(projectDir, 'AI Context')
 
   let filenames
   try {
     filenames = await fs.readdir(contextDir)
   } catch {
-    return { fileCount: 0, files: [], text: '', totalChars: 0, summaryUsed: new Map() }
+    return { fileCount: 0, files: [], text: '', totalChars: 0 }
   }
 
-  // Exclude Office temp/lock files (~$), hidden files, and summary files
-  // (summaries are only read explicitly via useSummaries logic below)
+  // Exclude Office temp/lock files (~$), hidden files, and any legacy summary files
   let supported = filenames.filter(f =>
     SUPPORTED_EXT.has(path.extname(f).toLowerCase()) &&
     !f.startsWith('~$') &&
@@ -244,44 +167,24 @@ export async function readContextFiles(projectDir, { useSummaries = false, selec
   }
 
   if (supported.length === 0) {
-    return { fileCount: 0, files: [], text: '', totalChars: 0, summaryUsed: new Map() }
+    return { fileCount: 0, files: [], text: '', totalChars: 0 }
   }
-
-  const summaryUsed = new Map()
 
   // Read files concurrently
   const fileContents = await Promise.all(
     supported.map(async (filename) => {
       try {
-        let text
-        let source = 'original'
-
-        if (useSummaries) {
-          const summaryPath = summaryFilePath(contextDir, filename)
-          try {
-            text   = (await fs.readFile(summaryPath, 'utf-8')).trim()
-            source = 'summary'
-          } catch {
-            // No summary file — fall back to original extraction
-          }
-        }
-
-        if (!text) {
-          const ext     = path.extname(filename).toLowerCase()
-          const raw     = await extractText(path.join(contextDir, filename), false)
-          const hasTabularExt = ext === '.xlsx' || ext === '.xls' || ext === '.csv'
-          const limit   = hasTabularExt ? MAX_CONTEXT_CHARS : MAX_TEXT_FILE_CHARS
-          const clipped = raw.trim()
-          text = clipped.length > limit
-            ? clipped.slice(0, limit) + '\n[...truncated]'
-            : clipped
-        }
-
-        summaryUsed.set(filename, source)
-        return { filename, text, originalLength: text.length, ok: true, source }
+        const ext           = path.extname(filename).toLowerCase()
+        const raw           = await extractText(path.join(contextDir, filename), false)
+        const hasTabularExt = ext === '.xlsx' || ext === '.xls' || ext === '.csv'
+        const limit         = hasTabularExt ? MAX_CONTEXT_CHARS : MAX_TEXT_FILE_CHARS
+        const clipped       = raw.trim()
+        const text          = clipped.length > limit
+          ? clipped.slice(0, limit) + '\n[...truncated]'
+          : clipped
+        return { filename, text, ok: true }
       } catch (err) {
-        summaryUsed.set(filename, 'error')
-        return { filename, text: `[Error reading file: ${err.message}]`, originalLength: 0, ok: false, source: 'error' }
+        return { filename, text: `[Error reading file: ${err.message}]`, ok: false }
       }
     })
   )
@@ -290,10 +193,8 @@ export async function readContextFiles(projectDir, { useSummaries = false, selec
   const parts = []
   let totalChars = 0
 
-  for (const { filename, text, source } of fileContents) {
-    const label   = source === 'summary' ? ' [summary]' : ''
-    const header  = `=== ${filename}${label} ===`
-    const section = `${header}\n${text}`
+  for (const { filename, text } of fileContents) {
+    const section = `=== ${filename} ===\n${text}`
 
     if (totalChars + section.length > MAX_CONTEXT_CHARS) {
       const remaining = MAX_CONTEXT_CHARS - totalChars
@@ -308,11 +209,10 @@ export async function readContextFiles(projectDir, { useSummaries = false, selec
   }
 
   return {
-    fileCount:   fileContents.length,
-    files:       fileContents.map(f => f.filename),
-    text:        parts.join('\n\n'),
+    fileCount: fileContents.length,
+    files:     fileContents.map(f => f.filename),
+    text:      parts.join('\n\n'),
     totalChars,
-    summaryUsed,
   }
 }
 
@@ -490,8 +390,6 @@ export async function extractGroupedSlices(contextDir, column, groupValues, allF
  * @param {string}   contextDir      Absolute path to the AI Context folder
  * @param {string[]} instanceKeys    Search terms for each instance (e.g. ["acme", "globex"])
  * @param {string[]} allFilenames    All supported filenames in contextDir
- * @param {object}   [opts]
- * @param {boolean}  [opts.useSummaries=false]  If true, prefer .summary.md files for document layer
  * @returns {Promise<{ slices: Object, blocksText: string }>}
  *   slices:     { "0": "...", "1": "...", ... } — one per instance, zero-indexed string keys
  *   blocksText: All tabular files in full + all document files (capped at 400k chars)
@@ -500,9 +398,7 @@ export async function buildInstanceSlices(
   contextDir,
   instanceKeys,
   allFilenames,
-  opts = {}
 ) {
-  const { useSummaries = false } = opts
   const { default: XLSX } = await import('xlsx')
 
   const TABULAR_EXT = new Set(['.xlsx', '.xls', '.csv'])
@@ -598,23 +494,11 @@ export async function buildInstanceSlices(
   const layer3Parts = []
   for (const filename of nonTabularFiles) {
     const filePath = path.join(contextDir, filename)
-    let text = ''
-
-    if (useSummaries) {
-      const summaryPath = summaryFilePath(contextDir, filename)
-      try {
-        text = (await fs.readFile(summaryPath, 'utf-8')).trim()
-      } catch {
-        // Summary not found, fall back to extractText
-      }
-    }
-
-    if (!text) {
-      try {
-        text = await extractText(filePath)
-      } catch {
-        text = `[Error reading file: ${filename}]`
-      }
+    let text
+    try {
+      text = await extractText(filePath)
+    } catch {
+      text = `[Error reading file: ${filename}]`
     }
 
     const trimmed = text.trim()

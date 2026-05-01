@@ -23,9 +23,8 @@ import express from 'express'
 import fsp     from 'fs/promises'
 import path    from 'path'
 import { callAi }              from '../lib/ai/ai-client.js'
-import { readContextFiles, readContextFilesCompact, getSummaryStatus } from '../lib/ai/context-reader.js'
+import { readContextFiles, readContextFilesCompact } from '../lib/ai/context-reader.js'
 import { validateHtmlJson }    from '../lib/html/html-recipe-builder.js'
-import { generateSummaries }   from '../lib/ai/summary-generator.js'
 import {
   buildOrchestratorPrompt,
   buildBlocksPrompt,
@@ -295,8 +294,6 @@ router.post('/agentic/plan', async (req, res) => {
         recipe              = '',
         zones               = [],
         repeatableSlides    = [],
-        summaryMode         = 'use',
-        summaryPrompt       = '',
         contentPrompt       = '',
         customInput         = '',
         selectedFiles       = [],
@@ -453,27 +450,31 @@ router.post('/agentic/plan', async (req, res) => {
      // ── Per-instance slicer calls (parallel) ─────────────────────────────────
      const blocksText = fullContext.text
      const slices = {}
-     const slicerPrompts = []
 
      if (instanceNames.length > 0) {
        const cappedRaw = fullContext.text.length > 300_000
          ? fullContext.text.slice(0, 300_000) + '\n[...raw data capped for AI slicer]'
          : fullContext.text
-       log(`AI-structuring ${instanceNames.length} instance(s) sequentially (${cappedRaw.length} chars input each)...`)
+       const SLICER_BATCH_SIZE = 3
+       const batchCount = Math.ceil(instanceNames.length / SLICER_BATCH_SIZE)
+       log(`AI-structuring ${instanceNames.length} instance(s) in batches of ${SLICER_BATCH_SIZE} (${cappedRaw.length} chars input each)...`)
 
-       for (let i = 0; i < instanceNames.length; i++) {
-         const name = instanceNames[i]
-         const prompt = buildSlicerPrompt([name], cappedRaw, sliceTemplateBody)
-         slicerPrompts.push({ index: i, name, prompt })
-         try {
-           const { response } = await callAi(prompt, { temperature: 0.1, maxTokens: 8000 })
-           log(`  Slicer [${i}] "${name}": ${response.length} chars`)
-           const stripped = response.replace(/^\s*\[SLIDE_INSTANCE_\d+\]\s*/i, '').trim()
-           slices[i.toString()] = stripped || `[No data extracted for instance: "${name}"]`
-         } catch (err) {
-           console.error(`[agentic/plan] Slicer failed for instance [${i}] "${name}": ${err.message}`)
-           slices[i.toString()] = `[Slicer error for instance: "${name}": ${err.message}]`
-         }
+       for (let b = 0; b < batchCount; b++) {
+         const batchStart = b * SLICER_BATCH_SIZE
+         const batch = instanceNames.slice(batchStart, batchStart + SLICER_BATCH_SIZE)
+         await Promise.all(batch.map(async (name, j) => {
+           const i = batchStart + j
+           const prompt = buildSlicerPrompt([name], cappedRaw, sliceTemplateBody)
+           try {
+             const { response } = await callAi(prompt, { temperature: 0.1, maxTokens: 8000 })
+             log(`  Slicer [${i}] "${name}": ${response.length} chars`)
+             const stripped = response.replace(/^\s*\[SLIDE_INSTANCE_\d+\]\s*/i, '').trim()
+             slices[i.toString()] = stripped || `[No data extracted for instance: "${name}"]`
+           } catch (err) {
+             console.error(`[agentic/plan] Slicer failed for instance [${i}] "${name}": ${err.message}`)
+             slices[i.toString()] = `[Slicer error for instance: "${name}": ${err.message}]`
+           }
+         }))
        }
        log(`Slicer complete: ${Object.keys(slices).length} instance slice(s) extracted`)
      }
@@ -494,10 +495,6 @@ router.post('/agentic/plan', async (req, res) => {
          const writeOps = [
            fsp.writeFile(path.join(debugDir, 'ai-orchestrator-prompt.txt'), orchestratorPrompt, 'utf8'),
            fsp.writeFile(path.join(debugDir, 'ai-slice-blocks.txt'), blocksText || '', 'utf8'),
-           ...slicerPrompts.map(({ index, name, prompt }) => {
-             const slug = toSlug(name)
-             return fsp.writeFile(path.join(debugDir, `ai-slicer-prompt-${index}-${slug}.txt`), prompt, 'utf8')
-           }),
          ]
 
          // Write one named slice file per instance
@@ -642,13 +639,16 @@ router.post('/agentic/run', async (req, res) => {
 
     emit(res, 'agents', agents.map(a => ({ id: a.id, label: a.label, state: 'pending' })))
     phase('generating')
-    log(`Starting ${agents.length} parallel agent${agents.length !== 1 ? 's' : ''}...`)
+      // ── Batched generation ────────────────────────────────────────────────────
+      const AGENT_BATCH_SIZE = 3
+    log(`Starting ${agents.length} agent${agents.length !== 1 ? 's' : ''} in batches of ${AGENT_BATCH_SIZE}...`)
     console.log(`[agentic/run] Agents: ${agents.map(a => a.label).join(', ')}`)
     console.log(`[agentic/run] Context slice keys: ${Object.keys(resolvedSlices).join(', ') || '(none)'}`)
     console.log(`[agentic/run] Zones: ${zones.length}, RepeatableSlides: ${repeatableSlides.length}`)
-
-      // ── Parallel generation ───────────────────────────────────────────────────
-      const agentResults = await Promise.all(agents.map(async (agent) => {
+      const agentResults = []
+      for (let b = 0; b < agents.length; b += AGENT_BATCH_SIZE) {
+        const batch = agents.slice(b, b + AGENT_BATCH_SIZE)
+        const batchRes = await Promise.all(batch.map(async (agent) => {
         emit(res, 'agent_update', { id: agent.id, state: 'running' })
         const t0 = Date.now()
 
@@ -706,7 +706,9 @@ router.post('/agentic/run', async (req, res) => {
        log(`${agent.label} done (${((Date.now() - t0) / 1000).toFixed(1)}s)`)
 
       return { agent, parsed, prompt }
-    }))
+        }))
+        agentResults.push(...batchRes)
+      }
 
     // Save agent prompts for debugging
     if (flowId) {

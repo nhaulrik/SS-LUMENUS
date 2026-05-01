@@ -86,8 +86,6 @@ export default function App() {
   const [agenticAgents,       setAgenticAgents]       = useState([])
   const [agenticErrorMsg,     setAgenticErrorMsg]     = useState('')
   const [agenticElapsed,      setAgenticElapsed]      = useState(0)
-  const [agenticSummaryMode,    setAgenticSummaryMode]    = useState('use')
-  const [agenticSummaryPrompt,  setAgenticSummaryPrompt]  = useState('')
   const [agenticContentPrompt,  setAgenticContentPrompt]  = useState('')
   const [agenticPlan,           setAgenticPlan]           = useState(null)
 
@@ -277,8 +275,6 @@ export default function App() {
            agenticAgents={agenticAgents}
            agenticErrorMsg={agenticErrorMsg}
            agenticElapsed={agenticElapsed}
-           agenticSummaryMode={agenticSummaryMode}
-           agenticSummaryPrompt={agenticSummaryPrompt}
            agenticContentPrompt={agenticContentPrompt}
            agenticPlan={agenticPlan}
            // Agentic setters
@@ -288,8 +284,6 @@ export default function App() {
            setAgenticAgents={setAgenticAgents}
            setAgenticErrorMsg={setAgenticErrorMsg}
            setAgenticElapsed={setAgenticElapsed}
-           setAgenticSummaryMode={setAgenticSummaryMode}
-           setAgenticSummaryPrompt={setAgenticSummaryPrompt}
            setAgenticContentPrompt={setAgenticContentPrompt}
            setAgenticPlan={setAgenticPlan}
          />

@@ -36,8 +36,6 @@ export default function HtmlRecipeStep({
   agenticAgents,
   agenticErrorMsg,
   agenticElapsed,
-  agenticSummaryMode,
-  agenticSummaryPrompt,
   agenticContentPrompt,
   agenticPlan,
   // Agentic setter props
@@ -47,8 +45,6 @@ export default function HtmlRecipeStep({
   setAgenticAgents,
   setAgenticErrorMsg,
   setAgenticElapsed,
-  setAgenticSummaryMode,
-  setAgenticSummaryPrompt,
   setAgenticContentPrompt,
   setAgenticPlan,
 }) {
@@ -115,7 +111,6 @@ export default function HtmlRecipeStep({
       const normalizedFiles = (data.files || []).map(f => ({
         filename: f.name,
         ext: f.ext,
-        hasSummary: f.hasSummary,
       }))
       setContextFiles(normalizedFiles)
       // Initialize selected files from flow if available
@@ -209,9 +204,6 @@ export default function HtmlRecipeStep({
 
    // Initialise agentic prompts from persisted flow data (runs once on mount)
   useEffect(() => {
-    if (project.summaryPrompt && !agenticSummaryPrompt) {
-      setAgenticSummaryPrompt(project.summaryPrompt)
-    }
     if (project.contentPrompt && !agenticContentPrompt) {
       setAgenticContentPrompt(project.contentPrompt)
     }
@@ -412,8 +404,6 @@ export default function HtmlRecipeStep({
             recipe,
             zones,
             repeatableSlides,
-            summaryMode: agenticSummaryMode,
-            summaryPrompt: agenticSummaryPrompt,
             contentPrompt: agenticContentPrompt,
             customInput: agenticCustomInput,
             selectedFiles,
@@ -446,7 +436,7 @@ export default function HtmlRecipeStep({
        setAgenticStatus('error')
        setAgenticErrorMsgLocal(err.message)
      }
-    }, [isAgenticActive, projectName, recipe, zones, repeatableSlides, agenticSummaryMode, agenticSummaryPrompt, agenticContentPrompt, selectedFiles, setAgenticStatus])
+    }, [isAgenticActive, projectName, recipe, zones, repeatableSlides, agenticContentPrompt, selectedFiles, setAgenticStatus])
 
   // Agentic: Phase 2 — user accepted, call /run SSE stream
   const handleAgenticAccept = useCallback(async () => {

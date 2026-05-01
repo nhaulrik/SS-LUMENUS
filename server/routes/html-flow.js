@@ -23,7 +23,6 @@ import { applyHtmlContent }                  from '../lib/html/html-patcher.js';
 import { buildSectionTree, flattenTree, extractSlideNamesFromHtml } from '../lib/html/build-tree.js';
 import { selectionsToZones, resolveConflicts, autoDiscoverZonesForFullSlide } from '../lib/zones/selections-to-zones.js';
 import { buildOutputPreviewHtml, buildPreviewHtml, parseTemplate } from '../lib/html/html-preview.js';
-import { getSummaryStatus } from '../lib/ai/context-reader.js';
 import { loadFlow, saveFlow } from '../lib/project/project-manager.js';
 import {
   createExport,
@@ -199,9 +198,6 @@ router.get('/html-flow/context-files', async (req, res) => {
       return res.json({ ok: true, files: [] });
     }
 
-    // Get summary status for all files
-    const summaryStatus = await getSummaryStatus(projectDir);
-
     // Read the directory and filter supported files
     let filenames;
     try {
@@ -223,7 +219,6 @@ router.get('/html-flow/context-files', async (req, res) => {
       .map(name => ({
         name,
         ext: path.extname(name),
-        hasSummary: summaryStatus.get(name) ?? false,
       }));
 
     return res.json({ ok: true, files });
