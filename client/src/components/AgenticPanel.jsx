@@ -11,7 +11,7 @@
  * /agentic/run   — SSE stream, runs parallel agents given the accepted plan
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import css from './AgenticPanel.module.css'
 
 // ── SSE reader ─────────────────────────────────────────────────────────────────
@@ -90,8 +90,25 @@ export default function AgenticPanel({
   const timerRef  = useRef(null)
   const abortRef  = useRef(null)
 
+  const [availableColumns, setAvailableColumns] = useState([])
+  const [groupingColumn, setGroupingColumn]     = useState('')
+  const [columnsLoading, setColumnsLoading]     = useState(false)
+
   const hasRecipe = Boolean(recipe?.trim())
   const isActive  = status === 'planning' || status === 'running'
+
+  // Fetch column names whenever projectName changes
+  useEffect(() => {
+    if (!projectName) { setAvailableColumns([]); return }
+    let cancelled = false
+    setColumnsLoading(true)
+    fetch(`/api/opencode/agentic/context-columns?projectName=${encodeURIComponent(projectName)}`)
+      .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
+      .then(data => { if (!cancelled) setAvailableColumns(data.columns || []) })
+      .catch(() => { if (!cancelled) setAvailableColumns([]) })
+      .finally(() => { if (!cancelled) setColumnsLoading(false) })
+    return () => { cancelled = true }
+  }, [projectName])
 
   // Auto-scroll log
   useEffect(() => {
@@ -129,7 +146,7 @@ export default function AgenticPanel({
       const response = await fetch('/api/opencode/agentic/plan', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ projectName, recipe, zones, repeatableSlides, contentPrompt }),
+        body:    JSON.stringify({ projectName, recipe, zones, repeatableSlides, contentPrompt, groupingColumn: groupingColumn || null }),
       })
       if (!response.ok) throw new Error(`Server error ${response.status}`)
 
@@ -151,7 +168,7 @@ export default function AgenticPanel({
       setStatus('error')
       setErrorMsg(err.message)
     }
-  }, [hasRecipe, isActive, projectName, recipe, zones, repeatableSlides, contentPrompt, setStatus, setPhase, setLogs, setAgents, setErrorMsg, setElapsed, setPlan])
+  }, [hasRecipe, isActive, projectName, recipe, zones, repeatableSlides, contentPrompt, groupingColumn, setStatus, setPhase, setLogs, setAgents, setErrorMsg, setElapsed, setPlan])
 
   // ── Phase 2: user accepted — call /run SSE stream ─────────────────────────
 
@@ -249,6 +266,42 @@ export default function AgenticPanel({
         />
       </div>
 
+      {/* ── Grouping column picker ───────────────────────────────────────── */}
+      {availableColumns.length > 0 && (
+        <div className={css.columnPickerSection}>
+          <label htmlFor="groupingColumn" className={css.columnPickerLabel}>
+            Grouping column
+            <span className={css.columnPickerHint}>One slide instance per unique value in this column</span>
+          </label>
+          <div className={css.columnPickerRow}>
+            <select
+              id="groupingColumn"
+              className={css.columnSelect}
+              value={groupingColumn}
+              onChange={e => setGroupingColumn(e.target.value)}
+              disabled={isActive || status === 'confirming'}
+            >
+              <option value="">AI decides grouping</option>
+              {availableColumns.map(col => (
+                <option key={col} value={col}>{col}</option>
+              ))}
+            </select>
+            {groupingColumn && (
+              <button
+                className={css.columnClearBtn}
+                onClick={() => setGroupingColumn('')}
+                disabled={isActive || status === 'confirming'}
+                title="Clear — let AI decide"
+              >×</button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {columnsLoading && (
+        <p className={css.columnsLoadingHint}>Loading columns…</p>
+      )}
+
       {/* ── Trigger row ─────────────────────────────────────────────────── */}
       <div className={css.triggerRow}>
         <button
@@ -317,6 +370,9 @@ export default function AgenticPanel({
           <p className={css.confirmCount}>
             {plan.agentPlan.length} agent{plan.agentPlan.length !== 1 ? 's' : ''} will run in parallel
             {plan.contextFiles > 0 && ` · ${plan.contextFiles} context file${plan.contextFiles !== 1 ? 's' : ''} loaded`}
+            {plan.groupingColumn && (
+              <span className={css.confirmGroupingTag}>grouped by <strong>{plan.groupingColumn}</strong></span>
+            )}
           </p>
 
           <div className={css.confirmActions}>

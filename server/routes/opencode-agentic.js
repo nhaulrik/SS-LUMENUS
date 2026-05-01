@@ -23,7 +23,13 @@ import express from 'express'
 import fsp     from 'fs/promises'
 import path    from 'path'
 import { callAi }              from '../lib/ai/ai-client.js'
-import { readContextFiles, readContextFilesCompact } from '../lib/ai/context-reader.js'
+import {
+  readContextFiles,
+  readContextFilesCompact,
+  readTabularColumns,
+  readColumnUniqueValues,
+  extractGroupedSlices,
+} from '../lib/ai/context-reader.js'
 import { validateHtmlJson }    from '../lib/html/html-recipe-builder.js'
 import {
   buildOrchestratorPrompt,
@@ -278,6 +284,26 @@ function assembleResults(agentResults) {
   return assembled
 }
 
+// ── GET /agentic/context-columns — return column names from tabular context files ──
+
+router.get('/agentic/context-columns', async (req, res) => {
+  try {
+    const { projectName, selectedFiles } = req.query
+    if (!projectName) return res.status(400).json({ error: 'projectName is required' })
+
+    const projectDir = path.join(RESOLVED_PROJECTS_DIR, projectName)
+    const sel = selectedFiles
+      ? (Array.isArray(selectedFiles) ? selectedFiles : selectedFiles.split(',').map(s => s.trim()).filter(Boolean))
+      : []
+
+    const { columns, fileCount } = await readTabularColumns(projectDir, { selectedFiles: sel })
+    return res.json({ columns, fileCount })
+  } catch (err) {
+    console.error('[agentic/context-columns]', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
 // ── POST /agentic/plan — orchestration only, SSE stream ───────────────────────
 
 router.post('/agentic/plan', async (req, res) => {
@@ -298,6 +324,7 @@ router.post('/agentic/plan', async (req, res) => {
         customInput         = '',
         selectedFiles       = [],
         sliceOutputTemplate = null,
+        groupingColumn      = null,
       } = req.body
 
       if (!projectName) return error('projectName is required')
@@ -381,103 +408,154 @@ router.post('/agentic/plan', async (req, res) => {
 
     // ── Orchestrator path: repeatable slides present ──────────────────────────
     log('Reading AI Context files...')
-    const [compactContext, fullContext] = await Promise.all([
-      readContextFilesCompact(projectDir, { selectedFiles }),
-      readContextFiles(projectDir, { selectedFiles }),
-    ])
 
-    if (compactContext.fileCount === 0) {
-      log('No context files found — proceeding without context')
+    let instanceNames = []
+    let remappedInstances = {}
+    let rationale = ''
+    let blocksText = ''
+    let slices = {}
+    let contextFileCount = 0
+    let orchestratorPrompt = ''
+
+    if (groupingColumn) {
+      // ── Deterministic path: user selected a grouping column ────────────────
+      phase('planning')
+      log(`Grouping column selected: "${groupingColumn}" — skipping orchestrator`)
+
+      const fullContext = await readContextFiles(projectDir, { selectedFiles })
+      contextFileCount = fullContext.fileCount
+
+      if (fullContext.fileCount === 0) {
+        log('No context files found — proceeding without context')
+      } else {
+        log(`Context files: ${fullContext.files?.join(', ') || '(none)'}`)
+        log(`Full context: ${(fullContext.totalChars / 1000).toFixed(1)}k chars`)
+      }
+
+      const contextDir = path.join(projectDir, 'AI Context')
+      const groupValues = await readColumnUniqueValues(contextDir, groupingColumn, fullContext.files || [])
+
+      if (groupValues.length === 0) {
+        return error(`Column "${groupingColumn}" not found or has no values in context files`)
+      }
+
+      log(`Column "${groupingColumn}": ${groupValues.length} unique value(s) found`)
+
+      instanceNames = groupValues
+      rationale = `Grouped by column "${groupingColumn}" — ${groupValues.length} unique value(s) found.`
+
+      // Assign all instances to the first repeatable slide key
+      const expectedKeys = repeatableSlides.map(rs => rs.key)
+      expectedKeys.forEach((key, i) => {
+        remappedInstances[key] = i === 0 ? groupValues.length : 0
+      })
+
+      log(`Extracting slices deterministically...`)
+      const det = await extractGroupedSlices(contextDir, groupingColumn, groupValues, fullContext.files || [])
+      slices = det.slices
+      blocksText = det.blocksText
+      log(`Deterministic slicing complete: ${Object.keys(slices).length} instance slice(s)`)
+
     } else {
-      log(`Context files: ${compactContext.files?.join(', ') || '(none)'}`)
-      log(`Compact schema: ${(compactContext.totalChars / 1000).toFixed(1)}k chars`)
-      log(`Full context: ${(fullContext.totalChars / 1000).toFixed(1)}k chars`)
-    }
+      // ── Orchestrator + AI-slicer path ──────────────────────────────────────
+      const [compactContext, fullContext] = await Promise.all([
+        readContextFilesCompact(projectDir, { selectedFiles }),
+        readContextFiles(projectDir, { selectedFiles }),
+      ])
+      contextFileCount = compactContext.fileCount
 
-     // ── Orchestrator ─────────────────────────────────────────────────────────
-     phase('planning')
-     log('Orchestrator: identifying grouping from schema...')
+      if (compactContext.fileCount === 0) {
+        log('No context files found — proceeding without context')
+      } else {
+        log(`Context files: ${compactContext.files?.join(', ') || '(none)'}`)
+        log(`Compact schema: ${(compactContext.totalChars / 1000).toFixed(1)}k chars`)
+        log(`Full context: ${(fullContext.totalChars / 1000).toFixed(1)}k chars`)
+      }
+
+      phase('planning')
+      log('Orchestrator: identifying grouping from schema...')
 
       const promptToUse = customInput || contentPrompt
       console.log('[agentic/plan] Building orchestrator prompt with:', { customInput: customInput?.substring(0, 50), contentPrompt: contentPrompt?.substring(0, 50), promptToUse: promptToUse?.substring(0, 50) })
-      const orchestratorPrompt = buildOrchestratorPrompt(recipe, compactContext.text, promptToUse, repeatableSlides)
-     log(`Orchestrator prompt: ${orchestratorPrompt.length} chars`)
+      orchestratorPrompt = buildOrchestratorPrompt(recipe, compactContext.text, promptToUse, repeatableSlides)
+      log(`Orchestrator prompt: ${orchestratorPrompt.length} chars`)
 
       let orchResult
-     try {
-       const orchAi = await callAiJson(orchestratorPrompt, { maxTokens: 1000, temperature: 0.1 }, log)
-       const repairInfo = orchAi.wasRepaired ? ` [repaired in ${orchAi.repairAttempts} attempt(s), strategy: ${orchAi.strategy}]` : ` [strategy: ${orchAi.strategy}]`
-       log(`Orchestrator response received (${orchAi.raw.length} chars)${repairInfo}`)
-       console.log(`[agentic/plan] Orchestrator raw response:\n${orchAi.raw}`)
-       console.log(`[agentic/plan] Parse strategy: ${orchAi.strategy}, repairs: ${orchAi.repairAttempts}`)
-       orchResult = orchAi.parsed
-       console.log('[agentic/plan] Orchestrator parsed OK:', JSON.stringify(orchResult, null, 2))
-     } catch (parseErr) {
-       const isApiError = parseErr.message.startsWith('Cortex API error')
-       if (isApiError) {
-         log(`Cortex API error — ${parseErr.message.split('\n')[0]}`)
-         log(`This is an upstream API failure. Check Cortex service health.`)
-         console.error(`[agentic/plan] Cortex API error (orchestrator):\n${parseErr.message}`)
-         return error(`Cortex API error during orchestration: ${parseErr.message.split('\n')[0]}`)
-       }
-       log(`Orchestrator JSON parse failed after all repair attempts`)
-       log(`Error: ${parseErr.message.split('\n')[0]}`)
-       console.error(`[agentic/plan] Orchestrator JSON parse FAILED after all repair attempts:\n${parseErr.message}`)
-       return error(`Orchestrator returned invalid JSON.\n${parseErr.message}`)
-     }
+      try {
+        const orchAi = await callAiJson(orchestratorPrompt, { maxTokens: 1000, temperature: 0.1 }, log)
+        const repairInfo = orchAi.wasRepaired ? ` [repaired in ${orchAi.repairAttempts} attempt(s), strategy: ${orchAi.strategy}]` : ` [strategy: ${orchAi.strategy}]`
+        log(`Orchestrator response received (${orchAi.raw.length} chars)${repairInfo}`)
+        console.log(`[agentic/plan] Orchestrator raw response:\n${orchAi.raw}`)
+        console.log(`[agentic/plan] Parse strategy: ${orchAi.strategy}, repairs: ${orchAi.repairAttempts}`)
+        orchResult = orchAi.parsed
+        console.log('[agentic/plan] Orchestrator parsed OK:', JSON.stringify(orchResult, null, 2))
+      } catch (parseErr) {
+        const isApiError = parseErr.message.startsWith('Cortex API error')
+        if (isApiError) {
+          log(`Cortex API error — ${parseErr.message.split('\n')[0]}`)
+          log(`This is an upstream API failure. Check Cortex service health.`)
+          console.error(`[agentic/plan] Cortex API error (orchestrator):\n${parseErr.message}`)
+          return error(`Cortex API error during orchestration: ${parseErr.message.split('\n')[0]}`)
+        }
+        log(`Orchestrator JSON parse failed after all repair attempts`)
+        log(`Error: ${parseErr.message.split('\n')[0]}`)
+        console.error(`[agentic/plan] Orchestrator JSON parse FAILED after all repair attempts:\n${parseErr.message}`)
+        return error(`Orchestrator returned invalid JSON.\n${parseErr.message}`)
+      }
 
-       const { instances: rawInstances = {}, instanceNames = [], instanceKeys = [], rationale = '' } = orchResult
+      const { instances: rawInstances = {}, instanceNames: orchNames = [], instanceKeys = [], rationale: orchRationale = '' } = orchResult
+      instanceNames = orchNames
+      rationale = orchRationale
 
-       // Validate instanceKeys length matches total instance count
-       const totalInstances = Object.values(rawInstances).reduce((s, n) => s + n, 0)
-       let resolvedInstanceKeys = instanceKeys
-       if (instanceKeys.length !== totalInstances) {
-         log(`Warning: instanceKeys length (${instanceKeys.length}) does not match total instances (${totalInstances}) — falling back to instanceNames`)
-         resolvedInstanceKeys = instanceNames
-       }
+      // Validate instanceKeys length matches total instance count
+      const totalInstances = Object.values(rawInstances).reduce((s, n) => s + n, 0)
+      let resolvedInstanceKeys = instanceKeys
+      if (instanceKeys.length !== totalInstances) {
+        log(`Warning: instanceKeys length (${instanceKeys.length}) does not match total instances (${totalInstances}) — falling back to instanceNames`)
+        resolvedInstanceKeys = instanceNames
+      }
 
-       // Remap instances by position to correct slide keys (AI may rename keys)
-       const remappedInstances = {}
-       const expectedKeys = repeatableSlides.map(rs => rs.key)
-       const returnedKeys = Object.keys(rawInstances)
-       expectedKeys.forEach((key, i) => {
-         const aiKey = returnedKeys[i] ?? returnedKeys[0]
-         remappedInstances[key] = rawInstances[key] ?? rawInstances[aiKey] ?? 1
-       })
+      // Remap instances by position to correct slide keys (AI may rename keys)
+      const expectedKeys = repeatableSlides.map(rs => rs.key)
+      const returnedKeys = Object.keys(rawInstances)
+      expectedKeys.forEach((key, i) => {
+        const aiKey = returnedKeys[i] ?? returnedKeys[0]
+        remappedInstances[key] = rawInstances[key] ?? rawInstances[aiKey] ?? 1
+      })
 
-       console.log('[agentic/plan] instances:', JSON.stringify(rawInstances))
+      console.log('[agentic/plan] instances:', JSON.stringify(rawInstances))
 
-     // ── Per-instance slicer calls (parallel) ─────────────────────────────────
-     const blocksText = fullContext.text
-     const slices = {}
+      // ── Per-instance AI slicer calls (parallel) ───────────────────────────
+      blocksText = fullContext.text
 
-     if (instanceNames.length > 0) {
-       const cappedRaw = fullContext.text.length > 300_000
-         ? fullContext.text.slice(0, 300_000) + '\n[...raw data capped for AI slicer]'
-         : fullContext.text
-       const SLICER_BATCH_SIZE = 3
-       const batchCount = Math.ceil(instanceNames.length / SLICER_BATCH_SIZE)
-       log(`AI-structuring ${instanceNames.length} instance(s) in batches of ${SLICER_BATCH_SIZE} (${cappedRaw.length} chars input each)...`)
+      if (instanceNames.length > 0) {
+        const cappedRaw = fullContext.text.length > 300_000
+          ? fullContext.text.slice(0, 300_000) + '\n[...raw data capped for AI slicer]'
+          : fullContext.text
+        const SLICER_BATCH_SIZE = 3
+        const batchCount = Math.ceil(instanceNames.length / SLICER_BATCH_SIZE)
+        log(`AI-structuring ${instanceNames.length} instance(s) in batches of ${SLICER_BATCH_SIZE} (${cappedRaw.length} chars input each)...`)
 
-       for (let b = 0; b < batchCount; b++) {
-         const batchStart = b * SLICER_BATCH_SIZE
-         const batch = instanceNames.slice(batchStart, batchStart + SLICER_BATCH_SIZE)
-         await Promise.all(batch.map(async (name, j) => {
-           const i = batchStart + j
-           const prompt = buildSlicerPrompt([name], cappedRaw, sliceTemplateBody)
-           try {
-             const { response } = await callAi(prompt, { temperature: 0.1, maxTokens: 8000 })
-             log(`  Slicer [${i}] "${name}": ${response.length} chars`)
-             const stripped = response.replace(/^\s*\[SLIDE_INSTANCE_\d+\]\s*/i, '').trim()
-             slices[i.toString()] = stripped || `[No data extracted for instance: "${name}"]`
-           } catch (err) {
-             console.error(`[agentic/plan] Slicer failed for instance [${i}] "${name}": ${err.message}`)
-             slices[i.toString()] = `[Slicer error for instance: "${name}": ${err.message}]`
-           }
-         }))
-       }
-       log(`Slicer complete: ${Object.keys(slices).length} instance slice(s) extracted`)
-     }
+        for (let b = 0; b < batchCount; b++) {
+          const batchStart = b * SLICER_BATCH_SIZE
+          const batch = instanceNames.slice(batchStart, batchStart + SLICER_BATCH_SIZE)
+          await Promise.all(batch.map(async (name, j) => {
+            const i = batchStart + j
+            const prompt = buildSlicerPrompt([name], cappedRaw, sliceTemplateBody)
+            try {
+              const { response } = await callAi(prompt, { temperature: 0.1, maxTokens: 8000 })
+              log(`  Slicer [${i}] "${name}": ${response.length} chars`)
+              const stripped = response.replace(/^\s*\[SLIDE_INSTANCE_\d+\]\s*/i, '').trim()
+              slices[i.toString()] = stripped || `[No data extracted for instance: "${name}"]`
+            } catch (err) {
+              console.error(`[agentic/plan] Slicer failed for instance [${i}] "${name}": ${err.message}`)
+              slices[i.toString()] = `[Slicer error for instance: "${name}": ${err.message}]`
+            }
+          }))
+        }
+        log(`Slicer complete: ${Object.keys(slices).length} instance slice(s) extracted`)
+      }
+    }
 
      // Save slice files to disk with new naming convention
      if (flowId) {
@@ -493,7 +571,7 @@ router.post('/agentic/plan', async (req, res) => {
            .slice(0, 40)
 
          const writeOps = [
-           fsp.writeFile(path.join(debugDir, 'ai-orchestrator-prompt.txt'), orchestratorPrompt, 'utf8'),
+           fsp.writeFile(path.join(debugDir, 'ai-orchestrator-prompt.txt'), orchestratorPrompt || `[deterministic path — grouped by "${groupingColumn}"]`, 'utf8'),
            fsp.writeFile(path.join(debugDir, 'ai-slice-blocks.txt'), blocksText || '', 'utf8'),
          ]
 
@@ -542,7 +620,8 @@ router.post('/agentic/plan', async (req, res) => {
          instanceNames,
          rationale,
          agentPlan,
-         contextFiles: compactContext.fileCount,
+         contextFiles: contextFileCount,
+         groupingColumn: groupingColumn || null,
        }))
     res.end()
 
@@ -747,6 +826,110 @@ router.post('/agentic/run', async (req, res) => {
   } catch (err) {
     log(`FATAL ERROR: ${err.stack || err.message}`)
     error(err.message)
+  }
+})
+
+// ── POST /agentic/retry-agent — re-run a single failed agent ─────────────────
+//
+// Reads the pre-computed slice from disk (written during /plan), runs the agent
+// prompt again, then merges the result into the caller-supplied currentJson.
+
+router.post('/agentic/retry-agent', async (req, res) => {
+  try {
+    const {
+      projectName,
+      flowId,
+      agentId,
+      zones            = [],
+      repeatableSlides = [],
+      instances        = {},
+      contentPrompt    = '',
+      customInput      = '',
+      currentJson      = '{}',
+    } = req.body
+
+    if (!projectName || !flowId || !agentId) {
+      return res.status(400).json({ ok: false, error: 'projectName, flowId and agentId are required' })
+    }
+
+    // Parse agentId → slideKey + instanceIndex.
+    // Format: `${slideKey}_${instanceIndex}` — the instanceIndex is always a
+    // non-negative integer after the last underscore.
+    const lastUnder = agentId.lastIndexOf('_')
+    const slideKey     = agentId.slice(0, lastUnder)
+    const instanceIndex = parseInt(agentId.slice(lastUnder + 1), 10)
+
+    if (!slideKey || isNaN(instanceIndex)) {
+      return res.status(400).json({ ok: false, error: `Cannot parse agentId: "${agentId}"` })
+    }
+
+    // Reconstruct remappedInstances the same way /run does.
+    const remappedInstances = {}
+    const expectedKeys = repeatableSlides.map(rs => rs.key)
+    const returnedKeys = Object.keys(instances)
+    expectedKeys.forEach((key, i) => {
+      const aiKey = returnedKeys[i] ?? returnedKeys[0]
+      remappedInstances[key] = instances[key] ?? instances[aiKey] ?? 1
+    })
+    if (repeatableSlides.length === 0) Object.assign(remappedInstances, instances)
+
+    // Find globalIndex by iterating in the same order as the agent-build loop.
+    let globalIndex = 0
+    let found = false
+    outer: for (const [sk, count] of Object.entries(remappedInstances)) {
+      for (let i = 0; i < count; i++) {
+        if (sk === slideKey && i === instanceIndex) { found = true; break outer }
+        globalIndex++
+      }
+    }
+    if (!found) {
+      return res.status(400).json({ ok: false, error: `Agent "${agentId}" not found in instances map` })
+    }
+
+    // Read the pre-computed slice from disk.
+    const debugDir = path.join(RESOLVED_PROJECTS_DIR, projectName, 'flows', flowId, 'debug')
+    let agentContext = ''
+    try {
+      const debugFiles = await fsp.readdir(debugDir)
+      const sliceFile  = debugFiles.find(f => new RegExp(`^ai-slice-instance-${globalIndex}-`).test(f))
+      if (sliceFile) {
+        agentContext = await fsp.readFile(path.join(debugDir, sliceFile), 'utf8')
+      } else {
+        console.warn(`[retry-agent] No slice file found for globalIndex ${globalIndex} in ${debugDir}`)
+      }
+    } catch (err) {
+      console.warn(`[retry-agent] Could not read debug dir: ${err.message}`)
+    }
+
+    // Build prompt and call the AI.
+    const { repSet } = buildRepSetInfo(zones, repeatableSlides)
+    const instanceCount = remappedInstances[slideKey] ?? 1
+    const prompt = buildInstancePrompt(
+      zones, repeatableSlides, slideKey, instanceIndex, instanceCount,
+      agentContext, customInput || contentPrompt
+    )
+
+    let parsed
+    try {
+      const agentAi = await callAiJson(prompt, { maxTokens: 3000, temperature: 0.4 })
+      parsed = agentAi.parsed
+    } catch (parseErr) {
+      return res.status(422).json({ ok: false, error: `Agent returned invalid JSON: ${parseErr.message.split('\n')[0]}` })
+    }
+
+    // Merge the new result into the existing assembled JSON.
+    let current = {}
+    try { current = JSON.parse(currentJson) } catch {}
+    current.slides          ??= {}
+    current.slides[slideKey] ??= { instances: [] }
+    current.slides[slideKey].instances                    ??= []
+    current.slides[slideKey].instances[instanceIndex]       = parsed
+
+    return res.json({ ok: true, json: JSON.stringify(current) })
+
+  } catch (err) {
+    console.error('[agentic/retry-agent]', err)
+    return res.status(500).json({ ok: false, error: err.message })
   }
 })
 

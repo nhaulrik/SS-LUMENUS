@@ -381,6 +381,90 @@ export async function extractGroupedSlices(contextDir, column, groupValues, allF
 }
 
 /**
+ * Read all column names from tabular files in the AI Context folder.
+ * Returns deduplicated column names across all sheets, in encounter order.
+ *
+ * @param {string} projectDir
+ * @param {object} [opts]
+ * @param {string[]} [opts.selectedFiles]
+ * @returns {Promise<{ columns: string[], fileCount: number }>}
+ */
+export async function readTabularColumns(projectDir, { selectedFiles = [] } = {}) {
+  const contextDir = path.join(projectDir, 'AI Context')
+  const { default: XLSX } = await import('xlsx')
+
+  let filenames
+  try { filenames = await fs.readdir(contextDir) } catch { return { columns: [], fileCount: 0 } }
+
+  const TABULAR_EXT = new Set(['.xlsx', '.xls', '.csv'])
+  let tabular = filenames.filter(f =>
+    TABULAR_EXT.has(path.extname(f).toLowerCase()) &&
+    !f.startsWith('~$') &&
+    !f.startsWith('.')
+  )
+  if (selectedFiles.length > 0) {
+    const selSet = new Set(selectedFiles)
+    tabular = tabular.filter(f => selSet.has(f))
+  }
+
+  const seen = new Set()
+  const columns = []
+
+  for (const filename of tabular) {
+    try {
+      const workbook = XLSX.readFile(path.join(contextDir, filename))
+      for (const sheetName of workbook.SheetNames) {
+        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: '' })
+        const dataRows = rows.filter(row => row.some(cell => String(cell).trim() !== ''))
+        if (dataRows.length === 0) continue
+        for (const cell of dataRows[0]) {
+          const col = String(cell).trim()
+          if (col && !seen.has(col)) { seen.add(col); columns.push(col) }
+        }
+      }
+    } catch {}
+  }
+
+  return { columns, fileCount: tabular.length }
+}
+
+/**
+ * Read ordered unique non-empty values from a specific column across all tabular files.
+ *
+ * @param {string} contextDir   Absolute path to the AI Context folder
+ * @param {string} columnName   Column header to search (case-insensitive)
+ * @param {string[]} filenames  All supported filenames to scan
+ * @returns {Promise<string[]>} Ordered unique values
+ */
+export async function readColumnUniqueValues(contextDir, columnName, filenames) {
+  const { default: XLSX } = await import('xlsx')
+  const TABULAR_EXT = new Set(['.xlsx', '.xls', '.csv'])
+  const tabular = filenames.filter(f => TABULAR_EXT.has(path.extname(f).toLowerCase()))
+
+  const seen = new Set()
+  const values = []
+
+  for (const filename of tabular) {
+    try {
+      const workbook = XLSX.readFile(path.join(contextDir, filename))
+      for (const sheetName of workbook.SheetNames) {
+        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' })
+        if (rows.length === 0) continue
+        const headers = Object.keys(rows[0])
+        const colKey = headers.find(h => h.trim().toLowerCase() === columnName.trim().toLowerCase())
+        if (!colKey) continue
+        for (const row of rows) {
+          const val = String(row[colKey] ?? '').trim()
+          if (val && !seen.has(val)) { seen.add(val); values.push(val) }
+        }
+      }
+    } catch {}
+  }
+
+  return values
+}
+
+/**
  * Build instance-specific context slices for multiple instances by searching for
  * instance keys in tabular data. Each instance gets a slice with:
  * - Layer 1: Rows from instance-specific sheets (containing the instance key)

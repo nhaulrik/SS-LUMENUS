@@ -167,7 +167,8 @@ router.get('/html-flow/load-flow', (req, res) => {
        contentPrompt:        flow.contentPrompt           || '',
        sliceOutputTemplate:  flow.sliceOutputTemplate     || null,
        agenticCustomInput:   flow.agenticCustomInput      || '',
-       agenticJsonResponse: flow.agenticJsonResponse     || null,
+       agenticJsonResponse:  flow.agenticJsonResponse     || null,
+       groupingColumn:       flow.groupingColumn          || null,
        previewHtml,
        slideNames:          latestGeneration?.slideNames || [],
        violations: violations.length ? violations : undefined,
@@ -737,7 +738,7 @@ router.post('/projects/:projectName/flows/:flowId/exports/:exportId/fork', (req,
 router.patch('/projects/:projectName/flows/:flowId/agentic', (req, res) => {
   try {
     const { projectName, flowId } = req.params;
-    const { agenticCustomInput, agenticJsonResponse } = req.body;
+    const { agenticCustomInput, agenticJsonResponse, groupingColumn } = req.body;
 
     if (!projectName || !/^[\w-]{1,100}$/.test(projectName)) {
       return res.status(400).json({ ok: false, error: 'Invalid projectName.' });
@@ -757,6 +758,9 @@ router.patch('/projects/:projectName/flows/:flowId/agentic', (req, res) => {
     if (agenticJsonResponse !== undefined) {
       flow.agenticJsonResponse = agenticJsonResponse;
     }
+    if (groupingColumn !== undefined) {
+      flow.groupingColumn = groupingColumn || null;
+    }
     flow.updatedAt = new Date().toISOString();
 
     const saved = saveFlow(projectName, flowId, flow);
@@ -768,6 +772,7 @@ router.patch('/projects/:projectName/flows/:flowId/agentic', (req, res) => {
       ok: true,
       agenticCustomInput: flow.agenticCustomInput || '',
       agenticJsonResponse: flow.agenticJsonResponse || null,
+      groupingColumn: flow.groupingColumn || null,
     });
   } catch (err) {
     console.error('[html-flow] patch-agentic error:', err);

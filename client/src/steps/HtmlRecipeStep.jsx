@@ -56,6 +56,10 @@ export default function HtmlRecipeStep({
   const [agenticCustomInput, setAgenticCustomInput] = useState(project?.agenticCustomInput || '')
   const [sliceTemplates, setSliceTemplates] = useState([])
   const [sliceOutputTemplate, setSliceOutputTemplate] = useState(project?.sliceOutputTemplate || null)
+  const [groupingColumn, setGroupingColumn] = useState(project?.groupingColumn || '')
+  const [availableColumns, setAvailableColumns] = useState([])
+  const [columnsLoading, setColumnsLoading] = useState(false)
+  const [retryingAgents, setRetryingAgents] = useState(new Set())
 
   const customInputSaveTimerRef = useRef(null)
   const validateTimerRef = useRef(null)
@@ -85,6 +89,18 @@ export default function HtmlRecipeStep({
     }
   }, [contextFiles.length, fetchContextFiles, sliceTemplates.length])
 
+  useEffect(() => {
+    if (!projectName) return
+    setColumnsLoading(true)
+    const params = new URLSearchParams({ projectName })
+    if (selectedFiles.length > 0) params.set('selectedFiles', selectedFiles.join(','))
+    fetch(`/api/opencode/agentic/context-columns?${params}`)
+      .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
+      .then(data => setAvailableColumns(data.columns || []))
+      .catch(() => setAvailableColumns([]))
+      .finally(() => setColumnsLoading(false))
+  }, [projectName, selectedFiles])
+
   const saveSelectedFilesToFlow = useCallback(async (files) => {
     try {
       await fetch(`/api/projects/${projectName}/flows/${flowId}`, {
@@ -105,6 +121,16 @@ export default function HtmlRecipeStep({
       })
     } catch {
     }
+  }, [flowId, projectName])
+
+  const saveGroupingColumnToFlow = useCallback(async (value) => {
+    try {
+      await fetch(`/api/projects/${projectName}/flows/${flowId}/agentic`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupingColumn: value || null }),
+      })
+    } catch {}
   }, [flowId, projectName])
 
   const saveAgenticCustomInputToFlow = useCallback(async (value) => {
@@ -232,6 +258,7 @@ export default function HtmlRecipeStep({
           customInput: agenticCustomInput,
           selectedFiles,
           sliceOutputTemplate,
+          groupingColumn: groupingColumn || null,
         }),
       })
       if (!response.ok) throw new Error(`Server error ${response.status}`)
@@ -314,6 +341,39 @@ export default function HtmlRecipeStep({
     setAgenticErrorMsgLocal('')
     setAgenticElapsedLocal(0)
   }
+
+  const handleAgenticRetry = useCallback(async (agentId) => {
+    setRetryingAgents(prev => new Set([...prev, agentId]))
+    setAgenticAgentsLocal(prev => prev.map(a => a.id === agentId ? { ...a, state: 'running' } : a))
+    try {
+      const res = await fetch('/api/opencode/agentic/retry-agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectName,
+          flowId,
+          agentId,
+          zones,
+          repeatableSlides: project.repeatableSlides || [],
+          instances: agenticPlanLocal?.instances || {},
+          contentPrompt: agenticContentPrompt,
+          customInput: agenticCustomInput,
+          currentJson: jsonInput,
+        }),
+      })
+      const data = await res.json()
+      if (!data.ok) throw new Error(data.error || 'Retry failed')
+      setAgenticAgentsLocal(prev => prev.map(a => a.id === agentId ? { ...a, state: 'done' } : a))
+      handleJsonChange(data.json)
+      saveAgenticJsonResponseToFlow(data.json)
+      setToast({ message: 'Agent retried successfully', type: 'success' })
+    } catch (err) {
+      setAgenticAgentsLocal(prev => prev.map(a => a.id === agentId ? { ...a, state: 'error' } : a))
+      setToast({ message: 'Retry failed: ' + err.message, type: 'error' })
+    } finally {
+      setRetryingAgents(prev => { const s = new Set(prev); s.delete(agentId); return s })
+    }
+  }, [agenticContentPrompt, agenticCustomInput, agenticPlanLocal, flowId, handleJsonChange, jsonInput, project.repeatableSlides, projectName, saveAgenticJsonResponseToFlow, setToast, zones])
 
   useEffect(() => {
     if (agenticStatus === 'running') {
@@ -417,6 +477,44 @@ export default function HtmlRecipeStep({
             <textarea id="agenticCustomInput" className="agentic-prompt-textarea" value={agenticCustomInput} onChange={e => handleAgenticCustomInputChange(e.target.value)} disabled={isAgenticActive || agenticStatus === 'confirming'} placeholder="Describe the slides you want - tone, focus, number of instances, anything specific…" />
           </div>
 
+          {(availableColumns.length > 0 || columnsLoading) && (
+            <div className="agentic-prompt-section">
+              <label htmlFor="groupingColumn" className="agentic-prompt-label">
+                Grouping column
+                <span className="agentic-prompt-hint">One slide instance per unique value · leave blank for AI to decide</span>
+              </label>
+              {columnsLoading ? (
+                <div className="agentic-columns-loading">Loading columns…</div>
+              ) : (
+                <div className="agentic-column-picker-row">
+                  <select
+                    id="groupingColumn"
+                    className="agentic-template-select"
+                    value={groupingColumn}
+                    onChange={e => {
+                      setGroupingColumn(e.target.value)
+                      saveGroupingColumnToFlow(e.target.value)
+                    }}
+                    disabled={isAgenticActive || agenticStatus === 'confirming'}
+                  >
+                    <option value="">AI decides grouping</option>
+                    {availableColumns.map(col => (
+                      <option key={col} value={col}>{col}</option>
+                    ))}
+                  </select>
+                  {groupingColumn && (
+                    <button
+                      className="agentic-column-clear-btn"
+                      onClick={() => { setGroupingColumn(''); saveGroupingColumnToFlow('') }}
+                      disabled={isAgenticActive || agenticStatus === 'confirming'}
+                      title="Clear — let AI decide"
+                    >×</button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="agentic-generate-section">
             <button className={`agentic-generate-btn ${isAgenticActive ? 'running' : ''}`} onClick={isAgenticActive ? undefined : handleAgenticGenerate} disabled={isAgenticActive || agenticStatus === 'confirming' || !sliceOutputTemplate}>{agenticStatus === 'planning' ? 'Analysing…' : agenticStatus === 'running' ? 'Generating…' : '✦ Generate with AI'}</button>
             {agenticStatus === 'running' && <span className={agenticCss.timer}>{agenticElapsedLocal}s</span>}
@@ -441,7 +539,14 @@ export default function HtmlRecipeStep({
           {agenticStatus === 'confirming' && agenticPlanLocal && (
             <div className={agenticCss.confirmCard}>
               <div className={agenticCss.confirmHeader}><span className={agenticCss.confirmIcon}>◎</span><span className={agenticCss.confirmTitle}>Review generated content</span></div>
-              {agenticPlanLocal.rationale && <p className={agenticCss.confirmRationale}>{agenticPlanLocal.rationale}</p>}
+              {agenticPlanLocal.rationale && (
+                <p className={agenticCss.confirmRationale}>
+                  {agenticPlanLocal.rationale}
+                  {agenticPlanLocal.groupingColumn && (
+                    <span className={agenticCss.confirmGroupingTag}>grouped by <strong>{agenticPlanLocal.groupingColumn}</strong></span>
+                  )}
+                </p>
+              )}
               {agenticPlanLocal.contextSlices && Object.keys(agenticPlanLocal.contextSlices).length > 0 ? (
                 <div className={agenticCss.reviewTableWrapper}><ContentReviewTable contextSlices={agenticPlanLocal.contextSlices} instanceNames={agenticPlanLocal.instanceNames || []} /></div>
               ) : (
@@ -459,7 +564,19 @@ export default function HtmlRecipeStep({
               <div className={agenticCss.chipsLabel}>Agents</div>
               <div className={agenticCss.chips}>
                 {agenticAgentsLocal.map(agent => (
-                  <div key={agent.id} className={`${agenticCss.chip} ${agenticCss[agent.state]}`}>{agent.state === 'running' && <div className={agenticCss.chipSpinner} />}{agent.state === 'done' && '✓ '}{agent.state === 'error' && '✕ '}{agent.label}</div>
+                  <div key={agent.id} className={`${agenticCss.chip} ${agenticCss[agent.state]}`}>
+                    {agent.state === 'running' && <div className={agenticCss.chipSpinner} />}
+                    {agent.state === 'done'    && '✓ '}
+                    {agent.state === 'error'   && '✕ '}
+                    {agent.label}
+                    {agent.state === 'error' && !retryingAgents.has(agent.id) && (
+                      <button
+                        className={agenticCss.chipRetryBtn}
+                        onClick={() => handleAgenticRetry(agent.id)}
+                        title="Retry this agent"
+                      >↺</button>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
