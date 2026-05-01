@@ -122,6 +122,26 @@
   border-radius: 20px;
 }
 
+.addSectionBtn {
+  padding: 6px 14px;
+  background: transparent;
+  border: 1px solid var(--border, #ddd);
+  border-radius: 4px;
+  color: var(--text-1, #222);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.addSectionBtn:hover {
+  background: var(--surface-1, #fff);
+  border-color: var(--accent, #0066cc);
+  color: var(--accent, #0066cc);
+}
+
 /* ── Nesting hint ── */
 
 .nestingHint {
@@ -336,6 +356,15 @@
   color: var(--text-2, #777);
 }
 
+/* ── Section icon ── */
+
+.sectionIcon {
+  flex-shrink: 0;
+  display: inline-block;
+  margin-right: 6px;
+  font-size: 14px;
+}
+
 /* ── Title ── */
 
 .titleButton {
@@ -356,6 +385,11 @@
 }
 
 .titleButton:hover { color: var(--accent, #0066cc); }
+
+.sectionNode {
+  font-weight: 700;
+  color: #334155;
+}
 
 .titleInput {
   flex: 1;

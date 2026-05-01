@@ -178,6 +178,26 @@
     }
     .nav-children.open { max-height: 800px; }
 
+    /* ── Section header (top-level structural separator) ── */
+    .nav-section-header {
+      padding: 16px 14px 7px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      color: rgba(255,255,255,0.82);
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      border-left: 3px solid var(--red);
+      margin-top: 8px;
+    }
+    .nav-section-header:first-child {
+      border-top: none;
+      margin-top: 0;
+      padding-top: 8px;
+    }
+
     /* ── Leaf nav item ── */
     .nav-item {
       display: flex;
@@ -219,6 +239,14 @@
     }
     .nav-item:hover .item-label   { color: rgba(255,255,255,0.78); }
     .nav-item.active .item-label  { color: #fff; font-weight: 500; }
+
+    /* Direct child of a section with no sub-items — same visual weight as a group row */
+    .nav-item.section-leaf { padding: 7px 14px; }
+    .nav-item.section-leaf .dot { width: 5px; height: 5px; background: rgba(255,99,89,0.4); }
+    .nav-item.section-leaf.active .dot { background: var(--red); }
+    .nav-item.section-leaf .item-label { font-size: 11.5px; font-weight: 600; color: rgba(255,255,255,0.6); }
+    .nav-item.section-leaf:hover .item-label { color: rgba(255,255,255,0.88); }
+    .nav-item.section-leaf.active .item-label { color: #fff; font-weight: 600; }
 
     /* ── Expand button when sidebar is collapsed ── */
     #reveal-btn {
@@ -430,9 +458,19 @@
   /* ── Build nav tree ── */
   let slideCount = 0;
 
-  function buildItems(nodes, container, isTop) {
+  function buildItems(nodes, container, isTop, insideSection) {
     nodes.forEach(node => {
       const hasChildren = node.children && node.children.length > 0;
+
+      /* ── Section header: always-visible label, children rendered below ── */
+      if (node.type === 'section') {
+        const header = document.createElement('div');
+        header.className = 'nav-section-header';
+        header.textContent = node.label;
+        container.appendChild(header);
+        if (hasChildren) buildItems(node.children, container, false, true);
+        return;
+      }
 
       if (hasChildren) {
         /* Group row */
@@ -468,7 +506,8 @@
         const item = document.createElement('div');
         item.className = 'nav-item' +
           (node.hasSlide ? ' has-slide' : '') +
-          (isTop ? ' top-level' : '');
+          (isTop ? ' top-level' : '') +
+          (insideSection && !isTop ? ' section-leaf' : '');
         item.dataset.id = node.id;
         item.innerHTML =
           '<span class="dot"></span>' +

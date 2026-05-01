@@ -3,28 +3,33 @@ import styles from './PublishTreeWorkspace.module.css'
 
 // ── Tree helpers ───────────────────────────────────────────────────────────
 
+export function createSectionNode(title = 'New Section') {
+  return { id: crypto.randomUUID(), type: 'section', title, children: [] }
+}
+
 function flattenTree(tree, slides, depth = 0, parentId = null) {
   const result = []
   for (const node of tree) {
-    const slide = slides.find(s => s.id === node.slideRefId)
+    const nodeId = node.slideRefId || node.id
+    const slide = slides.find(s => s.id === nodeId)
     result.push({ node, slide, depth, parentId })
     if (node.children && node.children.length > 0) {
-      result.push(...flattenTree(node.children, slides, depth + 1, node.slideRefId))
+      result.push(...flattenTree(node.children, slides, depth + 1, nodeId))
     }
   }
   return result
 }
 
-function removeFromTree(tree, slideRefId) {
+function removeFromTree(tree, nodeId) {
   return tree
-    .filter(n => n.slideRefId !== slideRefId)
-    .map(n => ({ ...n, children: removeFromTree(n.children || [], slideRefId) }))
+    .filter(n => (n.slideRefId || n.id) !== nodeId)
+    .map(n => ({ ...n, children: removeFromTree(n.children || [], nodeId) }))
 }
 
-function findNode(tree, slideRefId) {
+function findNode(tree, nodeId) {
   for (const node of tree) {
-    if (node.slideRefId === slideRefId) return node
-    const found = findNode(node.children || [], slideRefId)
+    if ((node.slideRefId || node.id) === nodeId) return node
+    const found = findNode(node.children || [], nodeId)
     if (found) return found
   }
   return null
@@ -32,7 +37,7 @@ function findNode(tree, slideRefId) {
 
 function insertUnderParent(tree, parentId, childNodes) {
   return tree.map(node => {
-    if (node.slideRefId === parentId) {
+    if ((node.slideRefId || node.id) === parentId) {
       return { ...node, children: [...(node.children || []), ...childNodes] }
     }
     return { ...node, children: insertUnderParent(node.children || [], parentId, childNodes) }
@@ -43,7 +48,7 @@ function insertUnderParent(tree, parentId, childNodes) {
 function insertSibling(tree, sourceNodes, targetId, position) {
   const result = []
   for (const node of tree) {
-    if (node.slideRefId === targetId) {
+    if ((node.slideRefId || node.id) === targetId) {
       if (position === 'before') {
         result.push(...sourceNodes, node)
       } else {
@@ -57,6 +62,19 @@ function insertSibling(tree, sourceNodes, targetId, position) {
     }
   }
   return result
+}
+
+// Update section node title recursively
+function updateNodeTitleInTree(tree, nodeId, newTitle) {
+  return tree.map(node => {
+    if (node.id === nodeId) {
+      return { ...node, title: newTitle }
+    }
+    if (node.children && node.children.length > 0) {
+      return { ...node, children: updateNodeTitleInTree(node.children, nodeId, newTitle) }
+    }
+    return node
+  })
 }
 
 // Move nodes: remove from wherever they are, then insert at target position
@@ -79,20 +97,20 @@ function moveNodes(tree, sourceIds, targetId, zone) {
 // Indent: make node a last child of the node immediately above it in the flat list
 function indentNode(tree, slides, nodeId) {
   const flat = flattenTree(tree, slides)
-  const idx = flat.findIndex(f => f.node.slideRefId === nodeId)
+  const idx = flat.findIndex(f => (f.node.slideRefId || f.node.id) === nodeId)
   if (idx <= 0) return tree // nothing above
   const above = flat[idx - 1]
   const nodeToMove = findNode(tree, nodeId)
   if (!nodeToMove) return tree
   let newTree = removeFromTree(tree, nodeId)
-  newTree = insertUnderParent(newTree, above.node.slideRefId, [nodeToMove])
+  newTree = insertUnderParent(newTree, above.node.slideRefId || above.node.id, [nodeToMove])
   return newTree
 }
 
 // Outdent: move node out of its parent, insert after parent in grandparent's children
 function outdentNode(tree, slides, nodeId) {
   const flat = flattenTree(tree, slides)
-  const entry = flat.find(f => f.node.slideRefId === nodeId)
+  const entry = flat.find(f => (f.node.slideRefId || f.node.id) === nodeId)
   if (!entry || entry.depth === 0) return tree // already root
   const parentId = entry.parentId
   const nodeToMove = findNode(tree, nodeId)
@@ -130,18 +148,20 @@ function TreeNode({
   onDrop,
   setEditingNodeId,
 }) {
-  const slide = slides.find(s => s.id === node.slideRefId)
+  const nodeId = node.slideRefId || node.id
+  const isSection = node.type === 'section'
+  const slide = !isSection ? slides.find(s => s.id === nodeId) : null
   const hasChildren = node.children && node.children.length > 0
-  const isExpanded = expandedIds.has(node.slideRefId)
-  const isDragTarget = dragOverId === node.slideRefId
-  const isEditingTitle = editingNodeId === node.slideRefId
+  const isExpanded = expandedIds.has(nodeId)
+  const isDragTarget = dragOverId === nodeId
+  const isEditingTitle = editingNodeId === nodeId
   const levelLabel = (levelNames || [])[depth]
 
   // Find index in flat list to know if there's a node above
-  const flatIdx = flatList.findIndex(f => f.node.slideRefId === node.slideRefId)
+  const flatIdx = flatList.findIndex(f => (f.node.slideRefId || f.node.id) === nodeId)
   const hasNodeAbove = flatIdx > 0
-  const canIndent = hasNodeAbove && !isDragging
-  const canOutdent = depth > 0 && !isDragging
+  const canIndent = hasNodeAbove && !isDragging && !isSection
+  const canOutdent = depth > 0 && !isDragging && !isSection
 
   const dropClass =
     isDragTarget && dragOverZone === 'before' ? styles.dropBefore :
@@ -155,14 +175,14 @@ function TreeNode({
       <div
         className={`${styles.nodeRow} ${dropClass}`}
         style={{ paddingLeft: `${16 + depth * 28}px` }}
-        onDragOver={e => onNodeDragOver(e, node.slideRefId)}
-        onDrop={e => onDrop(e, node.slideRefId)}
+        onDragOver={e => onNodeDragOver(e, nodeId)}
+        onDrop={e => onDrop(e, nodeId)}
       >
         {/* Drag handle */}
         <span
           className={styles.dragHandle}
           draggable
-          onDragStart={e => onDragStart(e, node.slideRefId)}
+          onDragStart={e => onDragStart(e, nodeId)}
           onDragEnd={onDragEnd}
           title="Drag to reorder or nest"
           aria-hidden="true"
@@ -174,7 +194,7 @@ function TreeNode({
         {hasChildren ? (
           <button
             className={styles.expandToggle}
-            onClick={() => onToggleExpand(node.slideRefId)}
+            onClick={() => onToggleExpand(nodeId)}
             aria-label={isExpanded ? 'Collapse' : 'Expand'}
           >
             {isExpanded ? '▼' : '▶'}
@@ -183,29 +203,33 @@ function TreeNode({
           <div className={styles.expandPlaceholder} />
         )}
 
-        {/* Slide index badge */}
-        <span className={styles.slideIndexBadge}>{slide?.slideIndex ?? '?'}</span>
+        {/* Slide index badge or section icon */}
+        {isSection ? (
+          <span className={styles.sectionIcon}>📂</span>
+        ) : (
+          <span className={styles.slideIndexBadge}>{slide?.slideIndex ?? '?'}</span>
+        )}
 
-        {/* Slide title */}
+        {/* Slide/Section title */}
         {isEditingTitle ? (
           <input
             className={styles.titleInput}
             autoFocus
             value={editingNodeValue}
             onChange={e => onEditValueChange(e.target.value)}
-            onBlur={() => onFinishEditNode(node.slideRefId)}
+            onBlur={() => onFinishEditNode(nodeId)}
             onKeyDown={e => {
-              if (e.key === 'Enter') onFinishEditNode(node.slideRefId)
+              if (e.key === 'Enter') onFinishEditNode(nodeId)
               if (e.key === 'Escape') setEditingNodeId(null)
             }}
           />
         ) : (
           <button
-            className={styles.titleButton}
-            onClick={() => onStartEditNode(node.slideRefId, slide?.title || node.slideRefId)}
+            className={isSection ? `${styles.titleButton} ${styles.sectionNode}` : styles.titleButton}
+            onClick={() => onStartEditNode(nodeId, isSection ? node.title : slide?.title || nodeId)}
             title="Click to rename"
           >
-            {slide?.title || node.slideRefId}
+            {isSection ? node.title : (slide?.title || nodeId)}
           </button>
         )}
 
@@ -217,7 +241,7 @@ function TreeNode({
           {canOutdent && (
             <button
               className={styles.nestBtn}
-              onClick={() => onOutdent(node.slideRefId)}
+              onClick={() => onOutdent(nodeId)}
               title="Move out one level (←)"
               aria-label="Outdent"
             >
@@ -227,7 +251,7 @@ function TreeNode({
           {canIndent && (
             <button
               className={styles.nestBtn}
-              onClick={() => onIndent(node.slideRefId)}
+              onClick={() => onIndent(nodeId)}
               title="Nest under node above (→)"
               aria-label="Indent"
             >
@@ -239,8 +263,8 @@ function TreeNode({
         {/* Delete button */}
         <button
           className={styles.deleteBtn}
-          onClick={() => onRemove(node.slideRefId)}
-          aria-label={`Remove ${slide?.title || node.slideRefId}`}
+          onClick={() => onRemove(nodeId)}
+          aria-label={`Remove ${isSection ? node.title : (slide?.title || nodeId)}`}
           title="Remove from tree"
         >
           ×
@@ -252,11 +276,11 @@ function TreeNode({
         <div className={styles.childrenContainer}>
           {node.children.map(child => (
             <TreeNode
-              key={child.slideRefId}
+              key={child.slideRefId || child.id}
               node={child}
               slides={slides}
               depth={depth + 1}
-              parentId={node.slideRefId}
+              parentId={nodeId}
               flatList={flatList}
               levelNames={levelNames}
               expandedIds={expandedIds}
@@ -295,6 +319,7 @@ export default function PublishTreeWorkspace({
   onLevelNamesChange,
   onSave,
   onExternalDrop,
+  onAddSection,
 }) {
   const [expandedIds, setExpandedIds] = useState(new Set())
   const [editingNodeId, setEditingNodeId] = useState(null)
@@ -345,10 +370,19 @@ export default function PublishTreeWorkspace({
 
   const finishEditingNode = useCallback((nodeId) => {
     if (editingNodeId === nodeId && editingNodeValue.trim()) {
-      const newSlides = slides.map(s =>
-        s.id === nodeId ? { ...s, title: editingNodeValue.trim() } : s
-      )
-      onChange(newSlides, tree)
+      // Check if it's a section node or a slide node
+      const node = findNode(tree, nodeId)
+      if (node && node.type === 'section') {
+        // Update section node title in tree
+        const newTree = updateNodeTitleInTree(tree, nodeId, editingNodeValue.trim())
+        onChange(slides, newTree)
+      } else {
+        // Update slide node title in slides array
+        const newSlides = slides.map(s =>
+          s.id === nodeId ? { ...s, title: editingNodeValue.trim() } : s
+        )
+        onChange(newSlides, tree)
+      }
     }
     setEditingNodeId(null)
     setEditingNodeValue('')
@@ -600,7 +634,7 @@ export default function PublishTreeWorkspace({
         </button>
       </div>
 
-      {/* Level name pills */}
+      {/* Level name pills + Add Section button */}
       {slides.length > 0 && depthLevels.length > 0 && (
         <div className={styles.levelNamesSection}>
           <span className={styles.levelNamesLabel}>Levels:</span>
@@ -634,6 +668,11 @@ export default function PublishTreeWorkspace({
               </div>
             ))}
           </div>
+          {onAddSection && (
+            <button className={styles.addSectionBtn} onClick={onAddSection} title="Add a new section">
+              + Add Section
+            </button>
+          )}
         </div>
       )}
 
@@ -666,37 +705,37 @@ export default function PublishTreeWorkspace({
            </div>
          ) : (
            <>
-             <div className={styles.treeList}>
-               {tree.map(node => (
-                 <TreeNode
-                   key={node.slideRefId}
-                   node={node}
-                   slides={slides}
-                   depth={0}
-                   parentId={null}
-                   flatList={flat}
-                   levelNames={levelNames}
-                   expandedIds={expandedIds}
-                   editingNodeId={editingNodeId}
-                   editingNodeValue={editingNodeValue}
-                   dragOverId={dragOverId}
-                   dragOverZone={dragOverZone}
-                   isDragging={isDragging}
-                   onToggleExpand={toggleExpanded}
-                   onStartEditNode={startEditingNode}
-                   onFinishEditNode={finishEditingNode}
-                   onEditValueChange={setEditingNodeValue}
-                   onRemove={handleRemove}
-                   onIndent={handleIndent}
-                   onOutdent={handleOutdent}
-                   onDragStart={handleDragStart}
-                   onDragEnd={handleDragEnd}
-                   onNodeDragOver={handleNodeDragOver}
-                   onDrop={handleDrop}
-                   setEditingNodeId={setEditingNodeId}
-                 />
-               ))}
-             </div>
+              <div className={styles.treeList}>
+                {tree.map(node => (
+                  <TreeNode
+                    key={node.slideRefId || node.id}
+                    node={node}
+                    slides={slides}
+                    depth={0}
+                    parentId={null}
+                    flatList={flat}
+                    levelNames={levelNames}
+                    expandedIds={expandedIds}
+                    editingNodeId={editingNodeId}
+                    editingNodeValue={editingNodeValue}
+                    dragOverId={dragOverId}
+                    dragOverZone={dragOverZone}
+                    isDragging={isDragging}
+                    onToggleExpand={toggleExpanded}
+                    onStartEditNode={startEditingNode}
+                    onFinishEditNode={finishEditingNode}
+                    onEditValueChange={setEditingNodeValue}
+                    onRemove={handleRemove}
+                    onIndent={handleIndent}
+                    onOutdent={handleOutdent}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    onNodeDragOver={handleNodeDragOver}
+                    onDrop={handleDrop}
+                    setEditingNodeId={setEditingNodeId}
+                  />
+                ))}
+              </div>
              {isCatalogDrag && catalogDropLinePos && (
                <div
                  className={styles.insertionLine}

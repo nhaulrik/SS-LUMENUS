@@ -14,16 +14,16 @@ const TEMPLATES_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '.
 
 /**
  * Resolve all slide nodes from a tree structure.
- * Returns a lean tree (no HTML content) and a flat map of slide files.
+ * Returns a lean tree (no HTML content) and a flat list of slides + section separators.
  *
- * @param {Array} tree - Array of tree nodes: { slideRefId, label?, children[] }
+ * @param {Array} tree - Array of tree nodes: { slideRefId, label?, type, title?, children[] }
  * @param {Array} slidesRegistry - Array of slide entries: { id, flowId, exportId, slideIndex, title }
  * @param {string} projectDir - Absolute path to the project directory
- * @returns {{ resolvedTree: Array, slideFiles: Object }} Lean tree and slide content map
+ * @returns {{ resolvedTree: Array, slideFiles: Object, flatList: Array }} Lean tree, slide content map, and flat list with sections
  */
 function resolveSlideNodes(tree, slidesRegistry, projectDir) {
-  if (!Array.isArray(tree)) return { resolvedTree: [], slideFiles: {} };
-  if (!Array.isArray(slidesRegistry)) return { resolvedTree: [], slideFiles: {} };
+  if (!Array.isArray(tree)) return { resolvedTree: [], slideFiles: {}, flatList: [] };
+  if (!Array.isArray(slidesRegistry)) return { resolvedTree: [], slideFiles: {}, flatList: [] };
 
   // Build lookup map: slideRefId -> slide entry
   const slideMap = {};
@@ -34,9 +34,37 @@ function resolveSlideNodes(tree, slidesRegistry, projectDir) {
   }
 
   const slideFiles = {};
+  const flatList = [];
 
   // Recursively resolve tree nodes
   function resolveNode(node) {
+    // Handle section nodes
+    if (node.type === 'section') {
+      const sectionEntry = {
+        type: 'section',
+        id: node.id,
+        title: node.title || 'Untitled Section',
+      };
+      flatList.push(sectionEntry);
+
+      const resolved = {
+        id: node.id,
+        type: 'section',
+        label: node.title || 'Untitled Section',
+        children: [],
+      };
+
+      // Recursively resolve children
+      if (Array.isArray(node.children)) {
+        for (const child of node.children) {
+          resolved.children.push(resolveNode(child));
+        }
+      }
+
+      return resolved;
+    }
+
+    // Handle slide nodes
     const slideRefId = node.slideRefId;
     const slideEntry = slideMap[slideRefId];
 
@@ -77,6 +105,13 @@ function resolveSlideNodes(tree, slidesRegistry, projectDir) {
               const htmlContent = fs.readFileSync(slideFilePath, 'utf8');
               slideFiles[slideRefId] = htmlContent;
               resolved.hasSlide = true;
+
+              // Add slide to flat list
+              flatList.push({
+                type: 'slide',
+                id: slideRefId,
+                label: label,
+              });
             }
           }
         }
@@ -96,7 +131,7 @@ function resolveSlideNodes(tree, slidesRegistry, projectDir) {
   }
 
   const resolvedTree = tree.map(node => resolveNode(node));
-  return { resolvedTree, slideFiles };
+  return { resolvedTree, slideFiles, flatList };
 }
 
 /**
@@ -149,7 +184,7 @@ export function publishPresentation(projectName, presentationName, structureId) 
     }
 
     // Resolve all slide nodes from the tree
-    const { resolvedTree, slideFiles } = resolveSlideNodes(structure.tree, structure.slides || [], projectDir);
+    const { resolvedTree, slideFiles, flatList } = resolveSlideNodes(structure.tree, structure.slides || [], projectDir);
 
     // Check that at least one slide was found
     if (Object.keys(slideFiles).length === 0) {
@@ -171,7 +206,7 @@ export function publishPresentation(projectName, presentationName, structureId) 
     }
 
     // Build and write index.html
-    const indexHtml = buildPresentationHtml(resolvedTree, presentationName, publishedAt);
+    const indexHtml = buildPresentationHtml(resolvedTree, flatList, presentationName, publishedAt);
     const indexPath = path.join(presentationDir, 'index.html');
     fs.writeFileSync(indexPath, indexHtml, 'utf8');
 
@@ -202,14 +237,16 @@ export function publishPresentation(projectName, presentationName, structureId) 
  * Build the presentation HTML document.
  * Produces a complete, self-contained two-panel layout with sidebar navigation and iframe scaling.
  *
- * @param {Array} resolvedTree - Resolved tree nodes: { id, label, hasSlide, children[] }
+ * @param {Array} resolvedTree - Resolved tree nodes: { id, label, hasSlide, children[], type?, title? }
+ * @param {Array} flatList - Flat list of slides and sections for ordered navigation: { type: 'slide'|'section', id, label?, title? }
  * @param {string} presentationName - The presentation name
  * @param {string} publishedAt - ISO timestamp
  * @returns {string} Complete HTML document
  */
-function buildPresentationHtml(resolvedTree, presentationName, publishedAt) {
+function buildPresentationHtml(resolvedTree, flatList, presentationName, publishedAt) {
   const presentationData = {
     tree: resolvedTree,
+    flatList: flatList,
     meta: { name: presentationName, publishedAt },
   };
 

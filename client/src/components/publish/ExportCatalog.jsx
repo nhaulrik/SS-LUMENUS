@@ -16,7 +16,22 @@ export default function ExportCatalog({ exports, loading, activeSlides, onAddSli
   const [selectedKeys, setSelectedKeys] = useState(new Set())
 
   const activeSlideKeys = useMemo(() => {
-    return new Set(activeSlides.map(s => `${s.flowId}::${s.exportId}::${s.slideIndex}`))
+    const result = new Set()
+    
+    function collectActiveKeys(tree) {
+      for (const node of (tree || [])) {
+        if (node.slideRefId) {
+          const [flowId, exportId, slideIndex] = node.slideRefId.split('::')
+          result.add(`${flowId}::${exportId}::${slideIndex}`)
+        }
+        if (node.children?.length) {
+          collectActiveKeys(node.children)
+        }
+      }
+    }
+    
+    collectActiveKeys(activeSlides)
+    return result
   }, [activeSlides])
 
   const toggleExport = (exportId) => {

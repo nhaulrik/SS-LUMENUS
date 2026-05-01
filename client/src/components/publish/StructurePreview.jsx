@@ -29,43 +29,59 @@ export default function StructurePreview({ slides, tree, levelNames, projectName
         </div>
       ) : (
         <div className={styles.previewList}>
-          {flat.map(({ node, slide, depth }, idx) => (
-            <div
-              key={node.slideRefId}
-              className={styles.previewNode}
-              style={{ '--depth': depth }}
-            >
-              {/* Depth connector lines */}
-              <div className={styles.depthLine} style={{ width: `${depth * 20}px` }} aria-hidden="true" />
+           {flat.map(({ node, slide, depth }, idx) => {
+             const isSection = node.type === 'section'
+             return (
+               <div
+                 key={node.slideRefId || node.id}
+                 className={styles.previewNode}
+                 style={{ '--depth': depth }}
+               >
+                 {isSection ? (
+                   <>
+                     {/* Section header */}
+                     <div className={styles.depthLine} style={{ width: `${depth * 20}px` }} aria-hidden="true" />
+                     <div className={styles.sectionHeader}>
+                       <span className={styles.sectionIcon}>📂</span>
+                       <span>{node.title}</span>
+                     </div>
+                   </>
+                 ) : (
+                   <>
+                     {/* Depth connector lines */}
+                     <div className={styles.depthLine} style={{ width: `${depth * 20}px` }} aria-hidden="true" />
 
-              {/* Connector icon */}
-              {depth > 0 && (
-                <span className={styles.connector} aria-hidden="true">└</span>
-              )}
+                     {/* Connector icon */}
+                     {depth > 0 && (
+                       <span className={styles.connector} aria-hidden="true">└</span>
+                     )}
 
-              {/* Slide card */}
-              <div className={styles.slideCard}>
-                {/* Thumbnail placeholder */}
-                <div className={styles.thumbnail} aria-hidden="true">
-                  <span className={styles.thumbnailIndex}>{idx + 1}</span>
-                </div>
+                     {/* Slide card */}
+                     <div className={styles.slideCard}>
+                       {/* Thumbnail placeholder */}
+                       <div className={styles.thumbnail} aria-hidden="true">
+                         <span className={styles.thumbnailIndex}>{idx + 1}</span>
+                       </div>
 
-                {/* Info */}
-                <div className={styles.slideInfo}>
-                  <span className={styles.slideTitle}>{slide?.title || 'Untitled'}</span>
-                  <span className={styles.slideMeta}>
-                    {slide?.exportId} · Slide {slide?.slideIndex}
-                    {((levelNames || [])[depth] || depth > 0) && (
-                      <span className={styles.depthBadge}>
-                        {(levelNames || [])[depth] || `Level ${depth}`}
-                      </span>
-                    )}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+                       {/* Info */}
+                       <div className={styles.slideInfo}>
+                         <span className={styles.slideTitle}>{slide?.title || 'Untitled'}</span>
+                         <span className={styles.slideMeta}>
+                           {slide?.exportId} · Slide {slide?.slideIndex}
+                           {((levelNames || [])[depth] || depth > 0) && (
+                             <span className={styles.depthBadge}>
+                               {(levelNames || [])[depth] || `Level ${depth}`}
+                             </span>
+                           )}
+                         </span>
+                       </div>
+                     </div>
+                   </>
+                 )}
+               </div>
+             )
+           })}
+         </div>
       )}
     </div>
   )
