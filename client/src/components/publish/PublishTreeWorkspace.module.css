@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--surface-1, #fff);
+  background: var(--bg-tertiary, #0F2B26);
   border-radius: var(--radius-md, 8px);
   overflow: hidden;
 }
@@ -14,8 +14,8 @@
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  border-bottom: 1px solid var(--border, #e0e0e0);
-  background: var(--surface-1, #fff);
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-secondary, #0A1F1B);
   flex-shrink: 0;
 }
 
@@ -23,30 +23,37 @@
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: var(--text-1, #111);
+  color: var(--text-primary);
   flex: 1;
 }
 
 .slideCount {
   font-size: 13px;
-  color: var(--text-2, #888);
+  color: var(--text-secondary);
 }
 
 .saveBtn {
-  padding: 7px 16px;
-  background: var(--accent, #0066cc);
+  padding: 8px 18px;
+  background: var(--accent-primary);
   color: #fff;
   border: none;
   border-radius: var(--radius-sm, 4px);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: all 0.15s;
   flex-shrink: 0;
 }
 
-.saveBtn:hover { opacity: 0.88; }
+.saveBtn:hover { 
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
 .saveBtn:active { opacity: 0.75; }
+.saveBtn:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
 
 /* ── Level names ── */
 
@@ -54,18 +61,19 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--border, #e0e0e0);
-  background: var(--surface-2, #fafafa);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-default);
+  background: var(--bg-elevated, #142F29);
   flex-shrink: 0;
   flex-wrap: wrap;
 }
 
 .levelNamesLabel {
   font-size: 12px;
-  color: var(--text-2, #888);
+  color: var(--text-secondary);
   font-weight: 500;
   flex-shrink: 0;
+  text-transform: none;
 }
 
 .levelNamesList {
@@ -77,8 +85,8 @@
 .levelNamePill {
   display: inline-flex;
   align-items: center;
-  background: var(--surface-1, #fff);
-  border: 1px solid var(--border, #ddd);
+  background: var(--bg-tertiary, #0F2B26);
+  border: 1px solid var(--border-default);
   border-radius: 20px;
   overflow: hidden;
 }
@@ -90,7 +98,7 @@
   padding: 4px 12px;
   background: transparent;
   border: none;
-  color: var(--text-1, #222);
+  color: var(--text-primary);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -98,11 +106,11 @@
   white-space: nowrap;
 }
 
-.levelNameButton:hover { background: var(--surface-2, #f5f5f5); }
+.levelNameButton:hover { background: var(--bg-elevated, #142F29); }
 
 .editIcon {
   font-size: 11px;
-  color: var(--text-2, #aaa);
+  color: var(--text-secondary);
   opacity: 0;
   transition: opacity 0.15s;
 }
@@ -113,10 +121,10 @@
   padding: 4px 12px;
   border: none;
   background: transparent;
-  color: var(--text-1, #111);
+  color: var(--text-primary);
   font-size: 12px;
   font-weight: 500;
-  outline: 2px solid var(--accent, #0066cc);
+  outline: 2px solid var(--accent-primary);
   outline-offset: -2px;
   min-width: 80px;
   border-radius: 20px;
@@ -124,44 +132,50 @@
 
 .addSectionBtn {
   padding: 6px 14px;
-  background: transparent;
-  border: 1px solid var(--border, #ddd);
+  background: var(--bg-elevated, #142F29);
+  border: 1px solid var(--border-default);
   border-radius: 4px;
-  color: var(--text-1, #222);
+  color: var(--text-secondary);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: all 0.15s;
   white-space: nowrap;
   flex-shrink: 0;
+  min-height: 36px;
 }
 
 .addSectionBtn:hover {
-  background: var(--surface-1, #fff);
-  border-color: var(--accent, #0066cc);
-  color: var(--accent, #0066cc);
+  background: var(--bg-tertiary, #0F2B26);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.addSectionBtn:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
 }
 
 /* ── Nesting hint ── */
 
 .nestingHint {
-  padding: 6px 16px;
+  padding: 8px 16px;
   font-size: 11px;
-  color: var(--text-2, #aaa);
-  background: var(--surface-2, #fafafa);
-  border-bottom: 1px solid var(--border, #eee);
+  color: var(--text-secondary);
+  background: var(--bg-elevated, #142F29);
+  border-bottom: 1px solid var(--border-default);
   flex-shrink: 0;
 }
 
 .nestingHint kbd {
   display: inline-block;
   padding: 1px 5px;
-  background: var(--surface-1, #fff);
-  border: 1px solid var(--border, #ddd);
+  background: var(--bg-tertiary, #0F2B26);
+  border: 1px solid var(--border-default);
   border-radius: 3px;
   font-size: 11px;
   font-family: inherit;
-  color: var(--text-1, #444);
+  color: var(--text-secondary);
 }
 
 /* ── Tree workspace ── */
@@ -174,8 +188,8 @@
 }
 
 .treeWorkspace.dragOverRoot {
-  background: color-mix(in srgb, var(--accent, #0066cc) 4%, transparent);
-  outline: 2px dashed color-mix(in srgb, var(--accent, #0066cc) 40%, transparent);
+  background: color-mix(in srgb, var(--accent-primary) 4%, transparent);
+  outline: 2px dashed var(--accent-primary);
   outline-offset: -4px;
 }
 
@@ -201,20 +215,22 @@
   min-height: 200px;
   padding: 32px;
   text-align: center;
-  border: 2px dashed var(--border, #ddd);
+  border: 2px dashed var(--border-default);
   border-radius: 8px;
   margin: 8px;
   transition: border-color 0.2s, background 0.2s;
 }
 
 .emptyDropZone.emptyDropZoneActive {
-  border-color: var(--accent, #0066cc);
-  background: color-mix(in srgb, var(--accent, #0066cc) 4%, transparent);
+  border-color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 8%, transparent);
+  box-shadow: inset 0 0 0 2px var(--accent-primary);
+  animation: emptyDropZoneActive 0.2s ease-out;
 }
 
 .emptyIcon {
   font-size: 32px;
-  color: var(--text-2, #ccc);
+  color: var(--text-muted);
   margin-bottom: 12px;
 }
 
@@ -222,13 +238,13 @@
   margin: 0 0 8px;
   font-size: 15px;
   font-weight: 500;
-  color: var(--text-2, #888);
+  color: var(--text-secondary);
 }
 
 .emptyHint {
   margin: 0;
   font-size: 13px;
-  color: var(--text-2, #aaa);
+  color: var(--text-secondary);
   max-width: 280px;
   line-height: 1.5;
 }
@@ -238,7 +254,7 @@
 .treeList {
   display: flex;
   flex-direction: column;
-  padding: 8px 0;
+  padding: 12px 0;
 }
 
 /* ── Tree node ── */
@@ -264,26 +280,29 @@
 }
 
 .nodeRow:hover {
-  background: var(--surface-2, #f5f5f5);
+  background: var(--bg-elevated, #142F29);
 }
 
 /* Drop state: BEFORE — blue line on top */
 .nodeRow.dropBefore {
-  box-shadow: inset 0 2px 0 0 var(--accent, #0066cc);
-  background: color-mix(in srgb, var(--accent, #0066cc) 3%, transparent);
+  box-shadow: inset 0 3px 0 0 var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 5%, transparent);
+  animation: dropBefore 0.15s ease-out;
 }
 
 /* Drop state: INTO — accent border + tint */
 .nodeRow.dropInto {
-  background: color-mix(in srgb, var(--accent, #0066cc) 10%, transparent);
-  box-shadow: inset 0 0 0 2px var(--accent, #0066cc);
+  background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
+  box-shadow: inset 0 0 0 3px var(--accent-primary);
   border-radius: 4px;
+  animation: dropInto 0.15s ease-out;
 }
 
 /* Drop state: AFTER — blue line on bottom */
 .nodeRow.dropAfter {
-  box-shadow: inset 0 -2px 0 0 var(--accent, #0066cc);
-  background: color-mix(in srgb, var(--accent, #0066cc) 3%, transparent);
+  box-shadow: inset 0 -3px 0 0 var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 5%, transparent);
+  animation: dropAfter 0.15s ease-out;
 }
 
 /* Show action buttons on hover */
@@ -300,14 +319,21 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-2, #bbb);
+  color: var(--text-secondary);
   cursor: grab;
   font-size: 13px;
   user-select: none;
   -webkit-user-select: none;
+  opacity: 0.6;
+  transition: opacity 0.15s, color 0.15s;
 }
 
 .dragHandle:active { cursor: grabbing; }
+
+.nodeRow:hover .dragHandle {
+  opacity: 1;
+  color: var(--accent-primary);
+}
 
 /* ── Expand toggle ── */
 
@@ -320,7 +346,7 @@
   justify-content: center;
   background: transparent;
   border: none;
-  color: var(--text-2, #999);
+  color: var(--text-secondary);
   font-size: 10px;
   cursor: pointer;
   padding: 0;
@@ -329,8 +355,13 @@
 }
 
 .expandToggle:hover {
-  background: var(--surface-3, #eee);
-  color: var(--text-1, #333);
+  background: var(--bg-elevated, #142F29);
+  color: var(--text-primary);
+}
+
+.expandToggle:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
 }
 
 .expandPlaceholder {
@@ -349,11 +380,11 @@
   min-width: 22px;
   height: 22px;
   padding: 0 5px;
-  background: var(--surface-2, #f0f0f0);
+  background: var(--bg-elevated, #142F29);
   border-radius: 3px;
   font-size: 11px;
   font-weight: 600;
-  color: var(--text-2, #777);
+  color: var(--text-secondary);
 }
 
 /* ── Section icon ── */
@@ -373,7 +404,7 @@
   padding: 0;
   background: transparent;
   border: none;
-  color: var(--text-1, #111);
+  color: var(--text-primary);
   font-size: 13px;
   font-weight: 500;
   text-align: left;
@@ -384,25 +415,30 @@
   transition: color 0.12s;
 }
 
-.titleButton:hover { color: var(--accent, #0066cc); }
+.titleButton:hover { color: var(--accent-primary); }
+
+.titleButton:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
 
 .sectionNode {
   font-weight: 700;
-  color: #334155;
+  color: var(--text-primary);
 }
 
 .titleInput {
   flex: 1;
   min-width: 0;
   padding: 3px 8px;
-  background: var(--surface-1, #fff);
-  border: 1px solid var(--accent, #0066cc);
+  background: var(--bg-tertiary, #0F2B26);
+  border: 1px solid var(--accent-primary);
   border-radius: 3px;
-  color: var(--text-1, #111);
+  color: var(--text-primary);
   font-size: 13px;
   font-weight: 500;
   outline: none;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent, #0066cc) 18%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 18%, transparent);
 }
 
 /* ── Level badge ── */
@@ -412,11 +448,11 @@
   display: inline-flex;
   align-items: center;
   padding: 2px 7px;
-  background: color-mix(in srgb, var(--accent, #0066cc) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent, #0066cc) 25%, transparent);
+  background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-primary) 25%, transparent);
   border-radius: 10px;
   font-size: 11px;
-  color: var(--accent, #0066cc);
+  color: var(--accent-primary);
   font-weight: 500;
 }
 
@@ -436,21 +472,27 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface-2, #f0f0f0);
-  border: 1px solid var(--border, #ddd);
+  background: var(--bg-elevated, #142F29);
+  border: 1px solid var(--border-default);
   border-radius: 3px;
-  color: var(--text-1, #555);
+  color: var(--text-secondary);
   font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
   padding: 0;
-  transition: background 0.12s, color 0.12s;
+  transition: all 0.12s;
   line-height: 1;
 }
 
 .nestBtn:hover {
-  background: var(--accent, #0066cc);
-  border-color: var(--accent, #0066cc);
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
   color: #fff;
+}
+
+.nestBtn:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
 }
 
 /* ── Delete button ── */
@@ -464,7 +506,7 @@
   justify-content: center;
   background: transparent;
   border: none;
-  color: var(--text-2, #bbb);
+  color: var(--text-secondary);
   font-size: 16px;
   cursor: pointer;
   opacity: 0;
@@ -474,8 +516,13 @@
 }
 
 .deleteBtn:hover {
-  color: #c62828;
-  background: color-mix(in srgb, #c62828 8%, transparent);
+  color: var(--error);
+  background: color-mix(in srgb, var(--error) 8%, transparent);
+}
+
+.deleteBtn:focus-visible {
+  outline: 2px solid var(--error);
+  outline-offset: 2px;
 }
 
 /* ── Children container ── */
@@ -483,7 +530,7 @@
 .childrenContainer {
   display: flex;
   flex-direction: column;
-  border-left: 2px solid var(--border, #e8e8e8);
+  border-left: 2px solid var(--border-default);
   margin-left: 30px;
 }
 
@@ -493,10 +540,12 @@
   position: absolute;
   left: 0;
   right: 0;
-  height: 2px;
-  background: var(--accent, #0066cc);
+  height: 3px;
+  background: var(--accent-primary);
   pointer-events: none;
   z-index: 10;
+  box-shadow: 0 0 8px rgba(76, 175, 128, 0.6);
+  animation: insertionLineGlow 0.3s ease-out;
 }
 
 .insertionLineDot {
@@ -504,10 +553,12 @@
   left: 16px;
   top: 50%;
   transform: translateY(-50%);
-  width: 6px;
-  height: 6px;
-  background: var(--accent, #0066cc);
+  width: 8px;
+  height: 8px;
+  background: var(--accent-primary);
   border-radius: 50%;
+  box-shadow: 0 0 8px rgba(76, 175, 128, 0.6);
+  animation: insertionDotPulse 0.6s ease-in-out infinite;
 }
 
 /* ── Entrance animation ── */
@@ -527,9 +578,69 @@
   animation: slideIn 200ms ease-out forwards;
 }
 
+/* ── Drop zone animations ── */
+
+@keyframes dropBefore {
+  from { box-shadow: inset 0 0 0 0 var(--accent-primary); }
+  to { box-shadow: inset 0 3px 0 0 var(--accent-primary); }
+}
+
+@keyframes dropInto {
+  from { 
+    box-shadow: inset 0 0 0 0 var(--accent-primary);
+    background: transparent;
+  }
+  to { 
+    box-shadow: inset 0 0 0 3px var(--accent-primary);
+    background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
+  }
+}
+
+@keyframes dropAfter {
+  from { box-shadow: inset 0 0 0 0 var(--accent-primary); }
+  to { box-shadow: inset 0 -3px 0 0 var(--accent-primary); }
+}
+
+/* ── Insertion line animations ── */
+
+@keyframes insertionLineGlow {
+  from { 
+    opacity: 0;
+    box-shadow: 0 0 0 rgba(76, 175, 128, 0);
+  }
+  to { 
+    opacity: 1;
+    box-shadow: 0 0 8px rgba(76, 175, 128, 0.6);
+  }
+}
+
+@keyframes insertionDotPulse {
+  0%, 100% { 
+    box-shadow: 0 0 4px rgba(76, 175, 128, 0.4);
+    transform: translateY(-50%) scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 12px rgba(76, 175, 128, 0.8);
+    transform: translateY(-50%) scale(1.15);
+  }
+}
+
+/* ── Empty drop zone animation ── */
+
+@keyframes emptyDropZoneActive {
+  from { 
+    background: transparent;
+    box-shadow: inset 0 0 0 0 var(--accent-primary);
+  }
+  to { 
+    background: color-mix(in srgb, var(--accent-primary) 8%, transparent);
+    box-shadow: inset 0 0 0 2px var(--accent-primary);
+  }
+}
+
 /* ── Scrollbar ── */
 
 .treeWorkspace::-webkit-scrollbar { width: 6px; }
 .treeWorkspace::-webkit-scrollbar-track { background: transparent; }
-.treeWorkspace::-webkit-scrollbar-thumb { background: var(--border, #ddd); border-radius: 3px; }
-.treeWorkspace::-webkit-scrollbar-thumb:hover { background: var(--text-2, #aaa); }
+.treeWorkspace::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 3px; }
+.treeWorkspace::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }

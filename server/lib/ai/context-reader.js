@@ -29,7 +29,7 @@ const SUMMARY_SUFFIX = '.summary.md'
  * @param {string} sheetName   Name of the sheet.
  * @param {boolean} [fullMode=false] When true, output all rows with full cell content (no row cap, no cell truncation).
  */
-function summariseSheet(sheet, XLSX, sheetName, fullMode = false) {
+function summariseSheet(sheet, XLSX, sheetName, fullMode = false, rowFilter = null) {
   // Parse to array-of-arrays, skip completely blank rows
   const rows     = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' })
   const dataRows = rows.filter(row => row.some(cell => String(cell).trim() !== ''))
@@ -37,7 +37,14 @@ function summariseSheet(sheet, XLSX, sheetName, fullMode = false) {
   if (dataRows.length === 0) return `[Sheet: ${sheetName}]\n(empty)\n`
 
   const allHeaders = dataRows[0].map(h => String(h).trim())
-  const allBody    = dataRows.slice(1)
+  let allBody      = dataRows.slice(1)
+
+  if (rowFilter) {
+    const filterIdx = allHeaders.findIndex(h => h.toLowerCase() === rowFilter.column.toLowerCase())
+    if (filterIdx >= 0) {
+      allBody = allBody.filter(row => rowFilter.values.has(String(row[filterIdx] ?? '').trim().toLowerCase()))
+    }
+  }
 
   // Keep only columns that have a non-empty header AND at least one data value
   const activeColIdxs = [...allHeaders.keys()]
@@ -101,32 +108,32 @@ async function readDocx(filePath) {
   return result.value ?? ''
 }
 
-async function readXlsx(filePath, compact = false) {
+async function readXlsx(filePath, compact = false, rowFilter = null) {
   const { default: XLSX } = await import('xlsx')
   const workbook = XLSX.readFile(filePath)
   return workbook.SheetNames
-    .map(name => summariseSheet(workbook.Sheets[name], XLSX, name, !compact))
+    .map(name => summariseSheet(workbook.Sheets[name], XLSX, name, !compact, rowFilter))
     .join('\n\n')
 }
 
-async function readCsv(filePath, compact = false) {
+async function readCsv(filePath, compact = false, rowFilter = null) {
    const { default: XLSX } = await import('xlsx')
    const workbook = XLSX.readFile(filePath)
-   return summariseSheet(workbook.Sheets[workbook.SheetNames[0]], XLSX, path.basename(filePath), !compact)
+   return summariseSheet(workbook.Sheets[workbook.SheetNames[0]], XLSX, path.basename(filePath), !compact, rowFilter)
 }
 
 async function readTextFile(filePath) {
   return fs.readFile(filePath, 'utf-8')
 }
 
-async function extractText(filePath, compact = false) {
+async function extractText(filePath, compact = false, rowFilter = null) {
   const ext = path.extname(filePath).toLowerCase()
   switch (ext) {
     case '.pdf':  return readPdf(filePath)
     case '.docx': return readDocx(filePath)
     case '.xlsx':
-    case '.xls':  return readXlsx(filePath, compact)
-    case '.csv':  return readCsv(filePath, compact)
+    case '.xls':  return readXlsx(filePath, compact, rowFilter)
+    case '.csv':  return readCsv(filePath, compact, rowFilter)
     default:      return readTextFile(filePath)
   }
 }
@@ -141,7 +148,7 @@ async function extractText(filePath, compact = false) {
  * @param {string[]} [opts.selectedFiles]  If non-empty, restrict to these filenames.
  * @returns {{ fileCount, files, text, totalChars }}
  */
-export async function readContextFiles(projectDir, { selectedFiles = [] } = {}) {
+export async function readContextFiles(projectDir, { selectedFiles = [], rowFilter = null } = {}) {
   const contextDir = path.join(projectDir, 'AI Context')
 
   let filenames
@@ -175,7 +182,7 @@ export async function readContextFiles(projectDir, { selectedFiles = [] } = {}) 
     supported.map(async (filename) => {
       try {
         const ext           = path.extname(filename).toLowerCase()
-        const raw           = await extractText(path.join(contextDir, filename), false)
+        const raw           = await extractText(path.join(contextDir, filename), false, rowFilter)
         const hasTabularExt = ext === '.xlsx' || ext === '.xls' || ext === '.csv'
         const limit         = hasTabularExt ? MAX_CONTEXT_CHARS : MAX_TEXT_FILE_CHARS
         const clipped       = raw.trim()
@@ -221,7 +228,7 @@ export async function readContextFiles(projectDir, { selectedFiles = [] } = {}) 
  * Produces a much smaller output suitable for the orchestrator's schema-identification step.
  * Text files are read in full; Excel/CSV files are summarised (unique values + 50 sample rows).
  */
-export async function readContextFilesCompact(projectDir, { selectedFiles = [] } = {}) {
+export async function readContextFilesCompact(projectDir, { selectedFiles = [], rowFilter = null } = {}) {
   const contextDir = path.join(projectDir, 'AI Context')
 
   let filenames
@@ -257,7 +264,7 @@ export async function readContextFilesCompact(projectDir, { selectedFiles = [] }
   const fileContents = await Promise.all(
     supported.map(async (filename) => {
       try {
-        const raw     = await extractText(path.join(contextDir, filename), true)
+        const raw     = await extractText(path.join(contextDir, filename), true, rowFilter)
         const clipped = raw.trim()
         const text    = clipped.length > MAX_COMPACT_CHARS_PER_FILE
           ? clipped.slice(0, MAX_COMPACT_CHARS_PER_FILE) + '\n[...truncated for orchestrator]'
@@ -307,7 +314,7 @@ export async function readContextFilesCompact(projectDir, { selectedFiles = [] }
  *   blocksText: rows from files that don't contain the grouping column
  *   matched:    true if the column was found in at least one file
  */
-export async function extractGroupedSlices(contextDir, column, groupValues, allFilenames) {
+export async function extractGroupedSlices(contextDir, column, groupValues, allFilenames, rowFilter = null) {
   const { default: XLSX } = await import('xlsx')
 
   const TABULAR_EXT = new Set(['.xlsx', '.xls', '.csv'])
@@ -328,10 +335,20 @@ export async function extractGroupedSlices(contextDir, column, groupValues, allF
     }
 
     for (const sheetName of workbook.SheetNames) {
-      const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' })
-      if (rows.length === 0) continue
+      const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' })
+      if (rawRows.length === 0) continue
 
-      const headers = Object.keys(rows[0])
+      const headers = Object.keys(rawRows[0])
+
+      // Apply row filter before any grouping
+      let rows = rawRows
+      if (rowFilter) {
+        const filterColKey = headers.find(h => h.trim().toLowerCase() === rowFilter.column.toLowerCase())
+        if (filterColKey) {
+          rows = rawRows.filter(row => rowFilter.values.has(String(row[filterColKey] ?? '').trim().toLowerCase()))
+        }
+      }
+
       const colKey = headers.find(h => h.trim().toLowerCase() === column.trim().toLowerCase())
 
       if (!colKey) {
@@ -436,7 +453,7 @@ export async function readTabularColumns(projectDir, { selectedFiles = [] } = {}
  * @param {string[]} filenames  All supported filenames to scan
  * @returns {Promise<string[]>} Ordered unique values
  */
-export async function readColumnUniqueValues(contextDir, columnName, filenames) {
+export async function readColumnUniqueValues(contextDir, columnName, filenames, rowFilter = null) {
   const { default: XLSX } = await import('xlsx')
   const TABULAR_EXT = new Set(['.xlsx', '.xls', '.csv'])
   const tabular = filenames.filter(f => TABULAR_EXT.has(path.extname(f).toLowerCase()))
@@ -448,9 +465,18 @@ export async function readColumnUniqueValues(contextDir, columnName, filenames) 
     try {
       const workbook = XLSX.readFile(path.join(contextDir, filename))
       for (const sheetName of workbook.SheetNames) {
-        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' })
-        if (rows.length === 0) continue
-        const headers = Object.keys(rows[0])
+        const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' })
+        if (rawRows.length === 0) continue
+        const headers = Object.keys(rawRows[0])
+
+        let rows = rawRows
+        if (rowFilter) {
+          const filterColKey = headers.find(h => h.trim().toLowerCase() === rowFilter.column.toLowerCase())
+          if (filterColKey) {
+            rows = rawRows.filter(row => rowFilter.values.has(String(row[filterColKey] ?? '').trim().toLowerCase()))
+          }
+        }
+
         const colKey = headers.find(h => h.trim().toLowerCase() === columnName.trim().toLowerCase())
         if (!colKey) continue
         for (const row of rows) {

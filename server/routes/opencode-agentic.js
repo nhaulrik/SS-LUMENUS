@@ -284,6 +284,40 @@ function assembleResults(agentResults) {
   return assembled
 }
 
+// ── GET /agentic/context-column-values — return unique values for a specific column ──
+
+router.get('/agentic/context-column-values', async (req, res) => {
+  try {
+    const { projectName, column, selectedFiles } = req.query
+    if (!projectName) return res.status(400).json({ error: 'projectName is required' })
+    if (!column)      return res.status(400).json({ error: 'column is required' })
+
+    const projectDir = path.join(RESOLVED_PROJECTS_DIR, projectName)
+    const contextDir = path.join(projectDir, 'AI Context')
+    const sel = selectedFiles
+      ? (Array.isArray(selectedFiles) ? selectedFiles : selectedFiles.split(',').map(s => s.trim()).filter(Boolean))
+      : []
+
+    let filenames
+    try { filenames = await fsp.readdir(contextDir) } catch { return res.json({ values: [] }) }
+
+    const TABULAR_EXT = new Set(['.xlsx', '.xls', '.csv'])
+    let tabular = filenames.filter(f =>
+      TABULAR_EXT.has(path.extname(f).toLowerCase()) && !f.startsWith('~$') && !f.startsWith('.')
+    )
+    if (sel.length > 0) {
+      const selSet = new Set(sel)
+      tabular = tabular.filter(f => selSet.has(f))
+    }
+
+    const values = await readColumnUniqueValues(contextDir, column, tabular)
+    return res.json({ values })
+  } catch (err) {
+    console.error('[agentic/context-column-values]', err.message)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
 // ── GET /agentic/context-columns — return column names from tabular context files ──
 
 router.get('/agentic/context-columns', async (req, res) => {
@@ -325,7 +359,13 @@ router.post('/agentic/plan', async (req, res) => {
         selectedFiles       = [],
         sliceOutputTemplate = null,
         groupingColumn      = null,
+        filterColumn        = null,
+        filterValues        = [],
       } = req.body
+
+      const rowFilter = (filterColumn && filterValues.length > 0)
+        ? { column: filterColumn, values: new Set(filterValues.map(v => String(v).toLowerCase())) }
+        : null
 
       if (!projectName) return error('projectName is required')
       if (!sliceOutputTemplate) return error('sliceOutputTemplate is required — select a slice output template before generating.')
@@ -365,10 +405,12 @@ router.post('/agentic/plan', async (req, res) => {
 
        log(`Custom input received: ${customInput ? `"${customInput.substring(0, 50)}..."` : '(empty)'}`)
 
+    if (rowFilter) log(`Row filter: "${rowFilter.column}" in [${[...rowFilter.values].join(', ')}]`)
+
     // ── Fast path: no repeatable slides — skip orchestrator entirely ──────────
     if (repeatableSlides.length === 0) {
       log('No repeatable slides — skipping orchestrator, reading full context directly...')
-      const fullContext = await readContextFiles(projectDir, { selectedFiles })
+      const fullContext = await readContextFiles(projectDir, { selectedFiles, rowFilter })
 
       if (fullContext.fileCount === 0) {
         log('No context files found — proceeding without context')
@@ -422,7 +464,7 @@ router.post('/agentic/plan', async (req, res) => {
       phase('planning')
       log(`Grouping column selected: "${groupingColumn}" — skipping orchestrator`)
 
-      const fullContext = await readContextFiles(projectDir, { selectedFiles })
+      const fullContext = await readContextFiles(projectDir, { selectedFiles, rowFilter })
       contextFileCount = fullContext.fileCount
 
       if (fullContext.fileCount === 0) {
@@ -433,7 +475,7 @@ router.post('/agentic/plan', async (req, res) => {
       }
 
       const contextDir = path.join(projectDir, 'AI Context')
-      const groupValues = await readColumnUniqueValues(contextDir, groupingColumn, fullContext.files || [])
+      const groupValues = await readColumnUniqueValues(contextDir, groupingColumn, fullContext.files || [], rowFilter)
 
       if (groupValues.length === 0) {
         return error(`Column "${groupingColumn}" not found or has no values in context files`)
