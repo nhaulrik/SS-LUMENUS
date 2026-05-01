@@ -43,12 +43,18 @@ export async function generateSummaries(projectDir, logFn, onlyFiles = null, sum
       }
       if (truncated) logFn(`  Note: ${filename} exceeded 400k chars and was trimmed`)
 
-      const prompt = buildSummaryPrompt(filename, fileText, summaryPrompt, zones)
-      logFn(`  Sending summary prompt (${prompt.length} chars) to AI...`)
+       const prompt = buildSummaryPrompt(filename, fileText, summaryPrompt, zones)
+       logFn(`  Sending summary prompt (${prompt.length} chars) to AI...`)
 
-      const result      = await callAi(prompt, { maxTokens: 1200, temperature: 0.2 })
-      const summaryText = result.response.trim()
-      logFn(`  Summary received (${summaryText.length} chars, ${summaryText.split(/\s+/).length} words)`)
+       const result      = await callAi(prompt, { maxTokens: 1200, temperature: 0.2 })
+       const summaryText = result.response.trim()
+       logFn(`  Summary received (${summaryText.length} chars, ${summaryText.split(/\s+/).length} words, finish_reason: ${result.finishReason})`)
+       
+       if (result.finishReason === 'length') {
+         logFn(`  ⚠️  WARNING: Summary was truncated due to max_tokens limit`)
+       } else if (result.finishReason !== 'stop') {
+         logFn(`  ⚠️  WARNING: Unexpected finish_reason: ${result.finishReason}`)
+       }
 
       await saveSummaryFile(contextDir, filename, summaryText)
       written++

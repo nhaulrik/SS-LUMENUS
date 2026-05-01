@@ -44,6 +44,7 @@ router.post('/ai-proxy/generate', async (req, res) => {
       response: result.response,
       usage: result.usage,
       latencyMs: result.latencyMs,
+      finishReason: result.finishReason,
     });
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Response: 500 - ${error.message}`);

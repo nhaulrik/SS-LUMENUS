@@ -35,15 +35,16 @@ export async function callAi(prompt, options = {}) {
 
   if (!res.ok) {
     const text = await res.text()
-    throw new Error(`Cortex API error: ${res.status} - ${text}`)
+    throw new Error(`Cortex API error [${res.status}]: ${text}`)
   }
 
   const json   = await res.json()
   const text   = json.choices[0].message.content
+  const finishReason = json.choices[0].finish_reason
   const usage  = {
     inputTokens:  json.usage.prompt_tokens,
     outputTokens: json.usage.completion_tokens,
   }
 
-  return { response: text, usage, latencyMs: Date.now() - t0 }
+  return { response: text, usage, latencyMs: Date.now() - t0, finishReason }
 }

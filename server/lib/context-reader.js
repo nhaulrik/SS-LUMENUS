@@ -353,15 +353,20 @@ export async function readContextFilesCompact(projectDir, { selectedFiles = [] }
 
   if (supported.length === 0) return { fileCount: 0, files: [], text: '', totalChars: 0 }
 
-  const MAX_COMPACT_CHARS = 40_000
+  // Per-file cap: the orchestrator only needs structure/schema, not exhaustive data.
+  // 20k chars per file ≈ headers + top unique values + ~20 sample rows for a rich xlsx.
+  const MAX_COMPACT_CHARS_PER_FILE = 20_000
+  // Total cap: keeps the orchestrator prompt safely within Cortex's input token limit
+  // regardless of how many files are selected. 60k chars ≈ 15k tokens of context.
+  const MAX_COMPACT_CHARS_TOTAL = 60_000
 
   const fileContents = await Promise.all(
     supported.map(async (filename) => {
       try {
         const raw     = await extractText(path.join(contextDir, filename), true)
         const clipped = raw.trim()
-        const text    = clipped.length > MAX_COMPACT_CHARS
-          ? clipped.slice(0, MAX_COMPACT_CHARS) + '\n[...truncated]'
+        const text    = clipped.length > MAX_COMPACT_CHARS_PER_FILE
+          ? clipped.slice(0, MAX_COMPACT_CHARS_PER_FILE) + '\n[...truncated for orchestrator]'
           : clipped
         return { filename, text, ok: true }
       } catch (err) {
@@ -374,6 +379,14 @@ export async function readContextFilesCompact(projectDir, { selectedFiles = [] }
   let totalChars = 0
   for (const { filename, text } of fileContents) {
     const section = `=== ${filename} ===\n${text}`
+    if (totalChars + section.length > MAX_COMPACT_CHARS_TOTAL) {
+      const remaining = MAX_COMPACT_CHARS_TOTAL - totalChars
+      if (remaining > 200) {
+        parts.push(section.slice(0, remaining) + '\n[...total compact context limit reached]')
+        totalChars += remaining
+      }
+      break
+    }
     parts.push(section)
     totalChars += section.length + 2
   }

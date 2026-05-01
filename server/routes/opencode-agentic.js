@@ -114,97 +114,118 @@ function parseJson(text) {
  * 
  * Returns: { parsed, raw, strategy, wasRepaired, repairAttempts }
  */
-async function callAiJson(prompt, options = {}) {
-  const result = await callAi(prompt, options)
-  let parseResult
+async function callAiJson(prompt, options = {}, logFn = null) {
+   const warn = (msg) => { console.warn(msg); logFn?.(`⚠️  ${msg}`) }
+   const result = await callAi(prompt, options)
+   let parseResult
 
-  // Attempt 1: Try enhanced parsing on raw response
-  try {
-    parseResult = parseJson(result.response)
-    console.log(`[callAiJson] Parse succeeded on attempt 1 using strategy: ${parseResult.strategy}`)
-    return {
-      parsed: parseResult.parsed,
-      raw: result.response,
-      strategy: parseResult.strategy,
-      wasRepaired: false,
-      repairAttempts: 0,
-    }
-  } catch (firstErr) {
-    console.warn('[callAiJson] Parse attempt 1 failed:', firstErr.message)
-  }
+   // Check for truncated response
+   if (result.finishReason === 'length') {
+     warn(`Response truncated by max_tokens limit — JSON may be incomplete`)
+   } else if (result.finishReason !== 'stop') {
+     warn(`Unexpected finish_reason: ${result.finishReason}`)
+   }
 
-  // Repair attempt 1: Ask for strict JSON-only response
-  console.log('[callAiJson] Attempting repair 1: strict JSON-only format')
-  const repairPrompt1 =
-    `You previously returned text that contains JSON but is not valid. ` +
-    `Extract and return ONLY the raw JSON object or array — nothing else.\n` +
-    `- Do not include markdown code fences\n` +
-    `- Do not include explanatory text before or after\n` +
-    `- Do not include comments\n` +
-    `- Start with { or [ and end with } or ]\n` +
-    `- Ensure all strings are properly quoted\n` +
-    `- Ensure all braces and brackets are balanced\n\n` +
-    `Original response to repair:\n${result.response}`
+   // Attempt 1: Try enhanced parsing on raw response
+   try {
+     parseResult = parseJson(result.response)
+     console.log(`[callAiJson] Parse succeeded on attempt 1 using strategy: ${parseResult.strategy}`)
+     return {
+       parsed: parseResult.parsed,
+       raw: result.response,
+       strategy: parseResult.strategy,
+       wasRepaired: false,
+       repairAttempts: 0,
+       finishReason: result.finishReason,
+     }
+   } catch (firstErr) {
+     console.warn('[callAiJson] Parse attempt 1 failed:', firstErr.message)
+   }
 
-  const retry1 = await callAi(repairPrompt1, {
-    maxTokens: options.maxTokens ?? 3000,
-    temperature: 0,
-  })
+   // Repair attempt 1: Ask for strict JSON-only response
+   logFn?.(`JSON parse failed — attempting repair 1 (strict JSON-only format)...`)
+   console.log('[callAiJson] Attempting repair 1: strict JSON-only format')
+   const repairPrompt1 =
+     `You previously returned text that contains JSON but is not valid. ` +
+     `Extract and return ONLY the raw JSON object or array — nothing else.\n` +
+     `- Do not include markdown code fences\n` +
+     `- Do not include explanatory text before or after\n` +
+     `- Do not include comments\n` +
+     `- Start with { or [ and end with } or ]\n` +
+     `- Ensure all strings are properly quoted\n` +
+     `- Ensure all braces and brackets are balanced\n\n` +
+     `Original response to repair:\n${result.response}`
 
-  try {
-    parseResult = parseJson(retry1.response)
-    console.log(`[callAiJson] Parse succeeded on repair 1 using strategy: ${parseResult.strategy}`)
-    return {
-      parsed: parseResult.parsed,
-      raw: retry1.response,
-      strategy: parseResult.strategy,
-      wasRepaired: true,
-      repairAttempts: 1,
-    }
-  } catch (secondErr) {
-    console.warn('[callAiJson] Repair 1 failed:', secondErr.message)
-  }
+   const retry1 = await callAi(repairPrompt1, {
+     maxTokens: options.maxTokens ?? 3000,
+     temperature: 0,
+   })
 
-  // Repair attempt 2: Extract the JSON object/array and ask to fix it
-  console.log('[callAiJson] Attempting repair 2: JSON fragment extraction and validation')
-  const extractPrompt =
-    `Extract the JSON object or array from this text (even if incomplete or malformed).\n` +
-    `Return ONLY the JSON, fixing any obvious issues:\n` +
-    `- Add missing closing braces/brackets\n` +
-    `- Fix unescaped quotes in strings\n` +
-    `- Fix trailing commas\n` +
-    `- Ensure valid JSON syntax\n\n` +
-    `Text:\n${result.response}`
+   if (retry1.finishReason === 'length') {
+     warn(`Repair 1 response also truncated by max_tokens limit`)
+   }
 
-  const retry2 = await callAi(extractPrompt, {
-    maxTokens: options.maxTokens ?? 3000,
-    temperature: 0,
-  })
+   try {
+     parseResult = parseJson(retry1.response)
+     console.log(`[callAiJson] Parse succeeded on repair 1 using strategy: ${parseResult.strategy}`)
+     return {
+       parsed: parseResult.parsed,
+       raw: retry1.response,
+       strategy: parseResult.strategy,
+       wasRepaired: true,
+       repairAttempts: 1,
+       finishReason: retry1.finishReason,
+     }
+   } catch (secondErr) {
+     console.warn('[callAiJson] Repair 1 failed:', secondErr.message)
+   }
 
-  try {
-    parseResult = parseJson(retry2.response)
-    console.log(`[callAiJson] Parse succeeded on repair 2 using strategy: ${parseResult.strategy}`)
-    return {
-      parsed: parseResult.parsed,
-      raw: retry2.response,
-      strategy: parseResult.strategy,
-      wasRepaired: true,
-      repairAttempts: 2,
-    }
-  } catch (thirdErr) {
-    console.warn('[callAiJson] Repair 2 failed:', thirdErr.message)
-  }
+   // Repair attempt 2: Extract the JSON object/array and ask to fix it
+   logFn?.(`Repair 1 failed — attempting repair 2 (JSON fragment extraction)...`)
+   console.log('[callAiJson] Attempting repair 2: JSON fragment extraction and validation')
+   const extractPrompt =
+     `Extract the JSON object or array from this text (even if incomplete or malformed).\n` +
+     `Return ONLY the JSON, fixing any obvious issues:\n` +
+     `- Add missing closing braces/brackets\n` +
+     `- Fix unescaped quotes in strings\n` +
+     `- Fix trailing commas\n` +
+     `- Ensure valid JSON syntax\n\n` +
+     `Text:\n${result.response}`
 
-  // All repair attempts failed — throw comprehensive error
-  throw new Error(
-    `JSON parsing failed after 2 repair attempts.\n\n` +
-    `Original response (${result.response.length} chars):\n` +
-    `${result.response.substring(0, 1000)}${result.response.length > 1000 ? '\n[...truncated]' : ''}\n\n` +
-    `Repair 1 response (${retry1.response.length} chars):\n` +
-    `${retry1.response.substring(0, 500)}${retry1.response.length > 500 ? '\n[...truncated]' : ''}\n\n` +
-    `Repair 2 response (${retry2.response.length} chars):\n` +
-    `${retry2.response.substring(0, 500)}${retry2.response.length > 500 ? '\n[...truncated]' : ''}`
-  )
+   const retry2 = await callAi(extractPrompt, {
+     maxTokens: options.maxTokens ?? 3000,
+     temperature: 0,
+   })
+
+   if (retry2.finishReason === 'length') {
+     warn(`Repair 2 response also truncated by max_tokens limit`)
+   }
+
+   try {
+     parseResult = parseJson(retry2.response)
+     console.log(`[callAiJson] Parse succeeded on repair 2 using strategy: ${parseResult.strategy}`)
+     return {
+       parsed: parseResult.parsed,
+       raw: retry2.response,
+       strategy: parseResult.strategy,
+       wasRepaired: true,
+       repairAttempts: 2,
+       finishReason: retry2.finishReason,
+     }
+   } catch (thirdErr) {
+     console.warn('[callAiJson] Repair 2 failed:', thirdErr.message)
+   }
+
+   // All repair attempts failed — throw comprehensive error
+   throw new Error(
+     `JSON parsing failed after 2 repair attempts.\n\n` +
+     `Original response (${result.response.length} chars, finish_reason: ${result.finishReason}):\n` +
+     `${result.response.substring(0, 1000)}${result.response.length > 1000 ? '\n[...truncated]' : ''}\n\n` +
+     `Repair 1 response (${retry1.response.length} chars, finish_reason: ${retry1.finishReason}):\n` +
+     `${retry1.response.substring(0, 500)}${retry1.response.length > 500 ? '\n[...truncated]' : ''}\n\n` +
+     `Repair 2 response (${retry2.response.length} chars, finish_reason: ${retry2.finishReason}):\n` +
+     `${retry2.response.substring(0, 500)}${retry2.response.length > 500 ? '\n[...truncated]' : ''}`
+   )
 }
 
 function initSse(res) {
@@ -387,7 +408,7 @@ router.post('/agentic/plan', async (req, res) => {
 
       let orchResult
      try {
-       const orchAi = await callAiJson(orchestratorPrompt, { maxTokens: 1000, temperature: 0.1 })
+       const orchAi = await callAiJson(orchestratorPrompt, { maxTokens: 1000, temperature: 0.1 }, log)
        const repairInfo = orchAi.wasRepaired ? ` [repaired in ${orchAi.repairAttempts} attempt(s), strategy: ${orchAi.strategy}]` : ` [strategy: ${orchAi.strategy}]`
        log(`Orchestrator response received (${orchAi.raw.length} chars)${repairInfo}`)
        console.log(`[agentic/plan] Orchestrator raw response:\n${orchAi.raw}`)
@@ -395,6 +416,15 @@ router.post('/agentic/plan', async (req, res) => {
        orchResult = orchAi.parsed
        console.log('[agentic/plan] Orchestrator parsed OK:', JSON.stringify(orchResult, null, 2))
      } catch (parseErr) {
+       const isApiError = parseErr.message.startsWith('Cortex API error')
+       if (isApiError) {
+         log(`Cortex API error — ${parseErr.message.split('\n')[0]}`)
+         log(`This is an upstream API failure. Check Cortex service health.`)
+         console.error(`[agentic/plan] Cortex API error (orchestrator):\n${parseErr.message}`)
+         return error(`Cortex API error during orchestration: ${parseErr.message.split('\n')[0]}`)
+       }
+       log(`Orchestrator JSON parse failed after all repair attempts`)
+       log(`Error: ${parseErr.message.split('\n')[0]}`)
        console.error(`[agentic/plan] Orchestrator JSON parse FAILED after all repair attempts:\n${parseErr.message}`)
        return error(`Orchestrator returned invalid JSON.\n${parseErr.message}`)
      }
@@ -425,15 +455,21 @@ router.post('/agentic/plan', async (req, res) => {
      const slices = {}
      let slicerPrompt = null
 
-     if (instanceNames.length > 0) {
-       const cappedRaw = fullContext.text.length > 300_000
-         ? fullContext.text.slice(0, 300_000) + '\n[...raw data capped for AI slicer]'
-         : fullContext.text
-       log(`AI-structuring ${instanceNames.length} instance(s) in one slicer call (${cappedRaw.length} chars input)...`)
-       slicerPrompt = buildSlicerPrompt(instanceNames, cappedRaw, sliceTemplateBody)
-       log(`Slicer prompt: ${slicerPrompt.length} chars`)
-       const { response: slicerResponse } = await callAi(slicerPrompt, { temperature: 0.1, maxTokens: 8000 })
-       log(`Slicer response: ${slicerResponse.length} chars`)
+      if (instanceNames.length > 0) {
+        const cappedRaw = fullContext.text.length > 300_000
+          ? fullContext.text.slice(0, 300_000) + '\n[...raw data capped for AI slicer]'
+          : fullContext.text
+        log(`AI-structuring ${instanceNames.length} instance(s) in one slicer call (${cappedRaw.length} chars input)...`)
+        slicerPrompt = buildSlicerPrompt(instanceNames, cappedRaw, sliceTemplateBody)
+        log(`Slicer prompt: ${slicerPrompt.length} chars`)
+        const { response: slicerResponse, finishReason: slicerFinishReason } = await callAi(slicerPrompt, { temperature: 0.1, maxTokens: 8000 })
+        log(`Slicer response: ${slicerResponse.length} chars (finish_reason: ${slicerFinishReason})`)
+        
+        if (slicerFinishReason === 'length') {
+          log(`⚠️  WARNING: Slicer response was cut off due to max_tokens limit. Some instances may have incomplete data.`)
+        } else if (slicerFinishReason !== 'stop') {
+          log(`⚠️  WARNING: Slicer response ended with unexpected finish_reason: ${slicerFinishReason}`)
+        }
 
        // Parse response: split on [SLIDE_INSTANCE_N] delimiters
        const instanceRegex = /\[SLIDE_INSTANCE_(\d+)\]/g
@@ -652,7 +688,7 @@ router.post('/agentic/run', async (req, res) => {
        log(`[${agent.label}] Sending prompt (${prompt.length} chars)...`)
        let parsed
        try {
-         const agentAi = await callAiJson(prompt, { maxTokens: 3000, temperature: 0.4 })
+         const agentAi = await callAiJson(prompt, { maxTokens: 3000, temperature: 0.4 }, (msg) => log(`[${agent.label}] ${msg}`))
          const repairInfo = agentAi.wasRepaired ? ` [repaired in ${agentAi.repairAttempts} attempt(s), strategy: ${agentAi.strategy}]` : ` [strategy: ${agentAi.strategy}]`
          log(`[${agent.label}] Response received (${agentAi.raw.length} chars)${repairInfo}`)
          console.log(`[agentic/run][${agent.label}] Raw response (${agentAi.raw.length} chars):\n${agentAi.raw}`)
@@ -660,9 +696,16 @@ router.post('/agentic/run', async (req, res) => {
          parsed = agentAi.parsed
        } catch (parseErr) {
          emit(res, 'agent_update', { id: agent.id, state: 'error' })
-         console.error(`[agentic/run][${agent.label}] JSON parse FAILED after all repair attempts:\n${parseErr.message}`)
+         const isApiError = parseErr.message.startsWith('Cortex API error')
+         if (isApiError) {
+           log(`[${agent.label}] Cortex API error — ${parseErr.message.split('\n')[0]}`)
+           log(`[${agent.label}] This is an upstream API failure. Check Cortex service health.`)
+           console.error(`[agentic/run][${agent.label}] Cortex API error:\n${parseErr.message}`)
+           throw new Error(`Agent "${agent.label}" failed: ${parseErr.message.split('\n')[0]}`)
+         }
          log(`[${agent.label}] PARSE ERROR (exhausted all repair strategies)`)
          log(`[${agent.label}] Error details: ${parseErr.message.split('\n')[0]}`)
+         console.error(`[agentic/run][${agent.label}] JSON parse FAILED after all repair attempts:\n${parseErr.message}`)
          throw new Error(`Agent "${agent.label}" returned invalid JSON.\n${parseErr.message}`)
        }
 
