@@ -3,7 +3,7 @@
  * Agentic-only generation flow.
  */
 
-import { useRef, useState, useCallback, useEffect } from 'react'
+import { useRef, useState, useCallback, useEffect, useMemo } from 'react'
 import AppHeader from '../components/AppHeader.jsx'
 import Breadcrumbs from '../components/Breadcrumbs.jsx'
 import agenticCss from '../components/AgenticPanel.module.css'
@@ -59,6 +59,10 @@ export default function HtmlRecipeStep({
   const [groupingColumn, setGroupingColumn] = useState(project?.groupingColumn || '')
   const [availableColumns, setAvailableColumns] = useState([])
   const [columnsLoading, setColumnsLoading] = useState(false)
+  const [filterColumn, setFilterColumn] = useState('')
+  const [filterValues, setFilterValues] = useState([])
+  const [availableFilterValues, setAvailableFilterValues] = useState([])
+  const [filterValuesLoading, setFilterValuesLoading] = useState(false)
   const [retryingAgents, setRetryingAgents] = useState(new Set())
 
   const customInputSaveTimerRef = useRef(null)
@@ -100,6 +104,32 @@ export default function HtmlRecipeStep({
       .catch(() => setAvailableColumns([]))
       .finally(() => setColumnsLoading(false))
   }, [projectName, selectedFiles])
+
+  const filterValuesSet = useMemo(() => new Set(filterValues), [filterValues])
+
+  useEffect(() => {
+    if (!filterColumn || !projectName) {
+      setAvailableFilterValues([])
+      setFilterValues([])
+      return
+    }
+    let cancelled = false
+    setFilterValuesLoading(true)
+    const params = new URLSearchParams({ projectName, column: filterColumn })
+    if (selectedFiles.length > 0) params.set('selectedFiles', selectedFiles.join(','))
+    fetch(`/api/opencode/agentic/context-column-values?${params}`)
+      .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
+      .then(data => {
+        if (!cancelled) {
+          const vals = data.values || []
+          setAvailableFilterValues(vals)
+          setFilterValues(vals)
+        }
+      })
+      .catch(() => { if (!cancelled) { setAvailableFilterValues([]); setFilterValues([]) } })
+      .finally(() => { if (!cancelled) setFilterValuesLoading(false) })
+    return () => { cancelled = true }
+  }, [filterColumn, projectName, selectedFiles])
 
   const saveSelectedFilesToFlow = useCallback(async (files) => {
     try {
@@ -259,6 +289,8 @@ export default function HtmlRecipeStep({
           selectedFiles,
           sliceOutputTemplate,
           groupingColumn: groupingColumn || null,
+          filterColumn:   filterColumn   || null,
+          filterValues:   filterColumn ? filterValues : [],
         }),
       })
       if (!response.ok) throw new Error(`Server error ${response.status}`)
@@ -515,8 +547,79 @@ export default function HtmlRecipeStep({
             </div>
           )}
 
+          {availableColumns.length > 0 && (
+            <div className="agentic-prompt-section">
+              <label className="agentic-prompt-label">
+                Filter data
+                <span className="agentic-prompt-hint">Limit which rows the AI receives · leave blank for no filter</span>
+              </label>
+              <div className="agentic-column-picker-row">
+                <select
+                  className="agentic-template-select"
+                  value={filterColumn}
+                  onChange={e => setFilterColumn(e.target.value)}
+                  disabled={isAgenticActive || agenticStatus === 'confirming'}
+                >
+                  <option value="">No filter</option>
+                  {availableColumns.map(col => (
+                    <option key={col} value={col}>{col}</option>
+                  ))}
+                </select>
+                {filterColumn && (
+                  <button
+                    className="agentic-column-clear-btn"
+                    onClick={() => { setFilterColumn(''); setFilterValues([]) }}
+                    disabled={isAgenticActive || agenticStatus === 'confirming'}
+                    title="Clear filter"
+                  >×</button>
+                )}
+              </div>
+              {filterValuesLoading && (
+                <div className="agentic-columns-loading">Loading values…</div>
+              )}
+              {filterColumn && !filterValuesLoading && availableFilterValues.length > 0 && (
+                <div className={agenticCss.filterValuesList}>
+                  <div className={agenticCss.filterValuesHeader}>
+                    <span className={agenticCss.filterValuesCount}>
+                      {filterValues.length} of {availableFilterValues.length} selected
+                    </span>
+                    <button
+                      className={agenticCss.filterToggleBtn}
+                      onClick={() => setFilterValues([...availableFilterValues])}
+                      disabled={isAgenticActive || agenticStatus === 'confirming'}
+                    >All</button>
+                    <button
+                      className={agenticCss.filterToggleBtn}
+                      onClick={() => setFilterValues([])}
+                      disabled={isAgenticActive || agenticStatus === 'confirming'}
+                    >None</button>
+                  </div>
+                  <div className={agenticCss.filterCheckboxList}>
+                    {availableFilterValues.map(val => (
+                      <label key={val} className={agenticCss.filterCheckboxItem}>
+                        <input
+                          type="checkbox"
+                          checked={filterValuesSet.has(val)}
+                          onChange={e => {
+                            if (e.target.checked) setFilterValues(prev => [...prev, val])
+                            else setFilterValues(prev => prev.filter(v => v !== val))
+                          }}
+                          disabled={isAgenticActive || agenticStatus === 'confirming'}
+                        />
+                        <span className={agenticCss.filterCheckboxLabel}>{val}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {filterValues.length === 0 && (
+                    <p className={agenticCss.filterWarning}>No values selected — all rows will be excluded</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="agentic-generate-section">
-            <button className={`agentic-generate-btn ${isAgenticActive ? 'running' : ''}`} onClick={isAgenticActive ? undefined : handleAgenticGenerate} disabled={isAgenticActive || agenticStatus === 'confirming' || !sliceOutputTemplate}>{agenticStatus === 'planning' ? 'Analysing…' : agenticStatus === 'running' ? 'Generating…' : '✦ Generate with AI'}</button>
+            <button className={`agentic-generate-btn ${isAgenticActive ? 'running' : ''}`} onClick={isAgenticActive ? undefined : handleAgenticGenerate} disabled={isAgenticActive || agenticStatus === 'confirming' || !sliceOutputTemplate || (filterColumn && filterValues.length === 0)}>{agenticStatus === 'planning' ? 'Analysing…' : agenticStatus === 'running' ? 'Generating…' : '✦ Generate with AI'}</button>
             {agenticStatus === 'running' && <span className={agenticCss.timer}>{agenticElapsedLocal}s</span>}
           </div>
 

@@ -262,6 +262,103 @@
   font-style: italic;
 }
 
+/* ── Filter values list ──────────────────────────────────────────────────── */
+
+.filterValuesList {
+  margin-top: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 7px;
+  background: rgba(9, 9, 11, 0.4);
+  overflow: hidden;
+}
+
+.filterValuesHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  background: rgba(24, 24, 27, 0.6);
+}
+
+.filterValuesCount {
+  flex: 1;
+  font-size: 11px;
+  color: #52525b;
+}
+
+.filterToggleBtn {
+  padding: 2px 8px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 4px;
+  background: transparent;
+  color: #71717a;
+  font-size: 11px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.filterToggleBtn:hover:not(:disabled) {
+  color: #a1a1aa;
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+.filterToggleBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.filterCheckboxList {
+  padding: 6px 4px;
+  max-height: 180px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.2) transparent;
+}
+
+.filterCheckboxItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.filterCheckboxItem:hover {
+  background: rgba(148, 163, 184, 0.06);
+}
+
+.filterCheckboxItem input[type="checkbox"] {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  accent-color: #60a5fa;
+  cursor: pointer;
+}
+
+.filterCheckboxItem input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+}
+
+.filterCheckboxLabel {
+  font-size: 12px;
+  color: #a1a1aa;
+  word-break: break-word;
+}
+
+.filterWarning {
+  padding: 6px 10px;
+  font-size: 11px;
+  color: #f59e0b;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+  margin: 0;
+}
+
 /* ── Trigger row ─────────────────────────────────────────────────────────── */
 
 .triggerRow {

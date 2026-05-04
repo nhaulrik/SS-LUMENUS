@@ -310,7 +310,8 @@ router.get('/agentic/context-column-values', async (req, res) => {
       tabular = tabular.filter(f => selSet.has(f))
     }
 
-    const values = await readColumnUniqueValues(contextDir, column, tabular)
+    const values = (await readColumnUniqueValues(contextDir, column, tabular))
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }))
     return res.json({ values })
   } catch (err) {
     console.error('[agentic/context-column-values]', err.message)
@@ -493,7 +494,7 @@ router.post('/agentic/plan', async (req, res) => {
       })
 
       log(`Extracting slices deterministically...`)
-      const det = await extractGroupedSlices(contextDir, groupingColumn, groupValues, fullContext.files || [])
+      const det = await extractGroupedSlices(contextDir, groupingColumn, groupValues, fullContext.files || [], rowFilter)
       slices = det.slices
       blocksText = det.blocksText
       log(`Deterministic slicing complete: ${Object.keys(slices).length} instance slice(s)`)
@@ -501,8 +502,8 @@ router.post('/agentic/plan', async (req, res) => {
     } else {
       // ── Orchestrator + AI-slicer path ──────────────────────────────────────
       const [compactContext, fullContext] = await Promise.all([
-        readContextFilesCompact(projectDir, { selectedFiles }),
-        readContextFiles(projectDir, { selectedFiles }),
+        readContextFilesCompact(projectDir, { selectedFiles, rowFilter }),
+        readContextFiles(projectDir, { selectedFiles, rowFilter }),
       ])
       contextFileCount = compactContext.fileCount
 
