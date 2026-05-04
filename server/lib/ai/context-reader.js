@@ -322,9 +322,15 @@ export async function extractGroupedSlices(contextDir, column, groupValues, allF
   const tabularFiles = allFilenames.filter(f => TABULAR_EXT.has(path.extname(f).toLowerCase()))
 
   // Build per-group row buckets, keyed by sheet
-  const buckets = groupValues.map(() => ({})) // [{ "filename / sheetName": ["row...", ...] }]
+  const buckets    = groupValues.map(() => ({})) // [{ "filename / sheetName": ["row...", ...] }]
+  const rawBuckets = groupValues.map(() => [])   // flat raw row objects per group (for metadata)
   const blocksParts = []
   let matched = false
+
+  // Only the FIRST sheet that contains the grouping column is used for slicing.
+  // All other sheets — even if they also contain the grouping column — go to shared
+  // reference data. This ensures pivot/summary sheets are never accidentally sliced.
+  let dataSheetClaimed = false
 
   for (const filename of tabularFiles) {
     const filePath = path.join(contextDir, filename)
@@ -352,8 +358,8 @@ export async function extractGroupedSlices(contextDir, column, groupValues, allF
 
       const colKey = headers.find(h => h.trim().toLowerCase() === column.trim().toLowerCase())
 
-      if (!colKey) {
-        // This sheet doesn't have the grouping column — add all rows to blocks
+      if (!colKey || dataSheetClaimed) {
+        // No grouping column, or the data sheet was already claimed — all rows go to shared reference data
         const lines = [`=== ${filename} / ${sheetName} ===`]
         lines.push(headers.join(' | '))
         rows.forEach(row => lines.push(headers.map(h => String(row[h] ?? '')).join(' | ')))
@@ -361,6 +367,8 @@ export async function extractGroupedSlices(contextDir, column, groupValues, allF
         continue
       }
 
+      // First sheet with the grouping column — claim it as the data sheet to slice
+      dataSheetClaimed = true
       matched = true
       const sliceKey = `${filename} / ${sheetName}`
 
@@ -373,6 +381,7 @@ export async function extractGroupedSlices(contextDir, column, groupValues, allF
           buckets[idx][sliceKey] ??= []
           const line = headers.map(h => `${h}: ${String(row[h] ?? '')}`).join(' | ')
           buckets[idx][sliceKey].push(line)
+          rawBuckets[idx].push(row)
         }
       })
     }
@@ -381,13 +390,17 @@ export async function extractGroupedSlices(contextDir, column, groupValues, allF
   const slices = {}
   if (matched) {
     groupValues.forEach((gv, i) => {
-      const sheetMap = buckets[i]
+      const sheetMap  = buckets[i]
+      const rawRows   = rawBuckets[i]
+
       const parts = Object.entries(sheetMap).map(([sheetLabel, rows]) =>
         `[Sheet: ${sheetLabel}] (${rows.length} rows)\n${rows.join('\n')}`
       )
-      slices[i.toString()] = parts.length > 0
+      const sliceBody = parts.length > 0
         ? parts.join('\n\n')
         : `[No rows found for group: ${gv}]`
+
+      slices[i.toString()] = sliceBody
     })
   }
 
