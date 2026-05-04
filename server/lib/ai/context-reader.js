@@ -309,9 +309,10 @@ export async function readContextFilesCompact(projectDir, { selectedFiles = [], 
  * @param {string}   column       Column name to group by (exact match)
  * @param {string[]} groupValues  Ordered list of group values (one per slide instance)
  * @param {string[]} allFilenames All supported filenames in contextDir
- * @returns {{ slices: Object, blocksText: string, matched: boolean }}
+ * @returns {{ slices: Object, sharedText: string, matched: boolean }}
  *   slices:     { "0": "rows...", "1": "rows...", ... }
- *   blocksText: rows from files that don't contain the grouping column
+ *   sharedText: full content of sheets that do NOT contain the grouping column — sent
+ *               to every agent as shared reference data (pivot tables, lookup sheets, etc.)
  *   matched:    true if the column was found in at least one file
  */
 export async function extractGroupedSlices(contextDir, column, groupValues, allFilenames, rowFilter = null) {
@@ -392,7 +393,7 @@ export async function extractGroupedSlices(contextDir, column, groupValues, allF
 
   return {
     slices,
-    blocksText: blocksParts.join('\n\n'),
+    sharedText: blocksParts.join('\n\n'),
     matched,
   }
 }

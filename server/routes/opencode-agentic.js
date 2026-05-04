@@ -425,8 +425,8 @@ router.post('/agentic/plan', async (req, res) => {
         const debugDir = path.join(RESOLVED_PROJECTS_DIR, projectName, 'flows', flowId, 'debug')
         try {
           await fsp.mkdir(debugDir, { recursive: true })
-          await fsp.writeFile(path.join(debugDir, 'ai-slice-blocks.txt'), fullContext.text || '', 'utf8')
-          log(`Saved full context as debug/ai-slice-blocks.txt`)
+          await fsp.writeFile(path.join(debugDir, 'ai-slice-shared.txt'), fullContext.text || '', 'utf8')
+          log(`Saved full context as debug/ai-slice-shared.txt`)
         } catch (err) {
           console.error(`[agentic/plan] Failed to save context: ${err.message}`)
           log(`Warning: Failed to save context to disk: ${err.message}`)
@@ -455,7 +455,7 @@ router.post('/agentic/plan', async (req, res) => {
     let instanceNames = []
     let remappedInstances = {}
     let rationale = ''
-    let blocksText = ''
+    let sharedText = ''
     let slices = {}
     let contextFileCount = 0
     let orchestratorPrompt = ''
@@ -496,7 +496,7 @@ router.post('/agentic/plan', async (req, res) => {
       log(`Extracting slices deterministically...`)
       const det = await extractGroupedSlices(contextDir, groupingColumn, groupValues, fullContext.files || [], rowFilter)
       slices = det.slices
-      blocksText = det.blocksText
+      sharedText = det.sharedText
       log(`Deterministic slicing complete: ${Object.keys(slices).length} instance slice(s)`)
 
     } else {
@@ -569,7 +569,7 @@ router.post('/agentic/plan', async (req, res) => {
       console.log('[agentic/plan] instances:', JSON.stringify(rawInstances))
 
       // ── Per-instance AI slicer calls (parallel) ───────────────────────────
-      blocksText = fullContext.text
+      sharedText = fullContext.text
 
       if (instanceNames.length > 0) {
         const cappedRaw = fullContext.text.length > 300_000
@@ -615,7 +615,7 @@ router.post('/agentic/plan', async (req, res) => {
 
          const writeOps = [
            fsp.writeFile(path.join(debugDir, 'ai-orchestrator-prompt.txt'), orchestratorPrompt || `[deterministic path — grouped by "${groupingColumn}"]`, 'utf8'),
-           fsp.writeFile(path.join(debugDir, 'ai-slice-blocks.txt'), blocksText || '', 'utf8'),
+           fsp.writeFile(path.join(debugDir, 'ai-slice-shared.txt'), sharedText || '', 'utf8'),
          ]
 
          // Write one named slice file per instance
@@ -716,13 +716,13 @@ router.post('/agentic/run', async (req, res) => {
        try {
          const debugFiles = await fsp.readdir(debugDir)
 
-         // Read blocks slice
-         const blocksFile = debugFiles.find(f => f === 'ai-slice-blocks.txt')
-         if (blocksFile) {
-           resolvedSlices['blocks'] = await fsp.readFile(path.join(debugDir, blocksFile), 'utf8')
-           log(`Read blocks slice: ${resolvedSlices['blocks'].length} chars`)
+         // Read shared reference data (sheets that don't contain the grouping column)
+         const sharedFile = debugFiles.find(f => f === 'ai-slice-shared.txt')
+         if (sharedFile) {
+           resolvedSlices['shared'] = await fsp.readFile(path.join(debugDir, sharedFile), 'utf8')
+           log(`Read shared reference data: ${resolvedSlices['shared'].length} chars`)
          } else {
-           log('Warning: ai-slice-blocks.txt not found — blocks agent will have no context')
+           log('Warning: ai-slice-shared.txt not found — agents will have no shared reference data')
          }
 
          // Read instance slices by index prefix
@@ -776,10 +776,18 @@ router.post('/agentic/run', async (req, res) => {
 
         let agentContext = ''
 
+        const sharedSlice = resolvedSlices['shared'] || ''
         if (agent.type === 'blocks') {
-          agentContext = resolvedSlices['blocks'] || ''
+          agentContext = sharedSlice
         } else {
-          agentContext = resolvedSlices[agent.globalIndex.toString()] || ''
+          // Instance agents receive their per-group rows plus the full shared reference
+          // data (any sheets that don't contain the grouping column — pivot tables,
+          // lookup sheets, etc.) so the AI reads pre-computed totals directly rather
+          // than summing raw rows.
+          const instanceSlice = resolvedSlices[agent.globalIndex.toString()] || ''
+          agentContext = sharedSlice
+            ? `${instanceSlice}\n\n=== Shared Reference Data ===\n${sharedSlice}`
+            : instanceSlice
         }
 
          console.log(`[agentic/run][${agent.label}] Context slice length: ${agentContext.length} chars`)
@@ -935,11 +943,19 @@ router.post('/agentic/retry-agent', async (req, res) => {
     try {
       const debugFiles = await fsp.readdir(debugDir)
       const sliceFile  = debugFiles.find(f => new RegExp(`^ai-slice-instance-${globalIndex}-`).test(f))
-      if (sliceFile) {
-        agentContext = await fsp.readFile(path.join(debugDir, sliceFile), 'utf8')
-      } else {
-        console.warn(`[retry-agent] No slice file found for globalIndex ${globalIndex} in ${debugDir}`)
-      }
+      const instanceSlice = sliceFile
+        ? await fsp.readFile(path.join(debugDir, sliceFile), 'utf8')
+        : ''
+      if (!sliceFile) console.warn(`[retry-agent] No slice file found for globalIndex ${globalIndex} in ${debugDir}`)
+
+      const sharedFile = debugFiles.find(f => f === 'ai-slice-shared.txt')
+      const sharedSlice = sharedFile
+        ? await fsp.readFile(path.join(debugDir, sharedFile), 'utf8')
+        : ''
+
+      agentContext = sharedSlice
+        ? `${instanceSlice}\n\n=== Shared Reference Data ===\n${sharedSlice}`
+        : instanceSlice
     } catch (err) {
       console.warn(`[retry-agent] Could not read debug dir: ${err.message}`)
     }
