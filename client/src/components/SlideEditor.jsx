@@ -370,7 +370,7 @@ export default function SlideEditor({ projectName, initialExports, setToast, onE
     setLoadingSlide(true)
     try {
       const res = await fetch(
-        `/api/projects/${projectName}/flows/${flowId}/exports/${exportId}/slides/${slideFile}`,
+        `/api/projects/${projectName}/flows/${flowId}/exports/${exportId}/slides/${encodeURIComponent(slideFile)}`,
         { headers: { Accept: 'text/html' } }
       )
       if (!res.ok) return
@@ -390,7 +390,7 @@ export default function SlideEditor({ projectName, initialExports, setToast, onE
     setSaving(true)
     try {
       const res = await fetch(
-        `/api/projects/${projectName}/flows/${flowId}/exports/${exportId}/slides/${slideFile}`,
+        `/api/projects/${projectName}/flows/${flowId}/exports/${exportId}/slides/${encodeURIComponent(slideFile)}`,
         { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ html }) }
       )
       if (res.ok) {
@@ -497,8 +497,8 @@ export default function SlideEditor({ projectName, initialExports, setToast, onE
 
      try {
        const res = await fetch(
-         `/api/projects/${projectName}/flows/${flowId}/exports/${exportId}/slides/${slideFile}`,
-         { method: 'DELETE' }
+         `/api/projects/${projectName}/flows/${flowId}/exports/${exportId}/slides/${encodeURIComponent(slideFile)}`,
+          { method: 'DELETE' }
        )
        if (!res.ok) throw new Error('Failed to delete slide')
 

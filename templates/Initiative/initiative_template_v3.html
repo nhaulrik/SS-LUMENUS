@@ -439,6 +439,83 @@
 </section>
 
 <script>
+  // Generate deterministic hex color from PI number
+  function generateColorFromPI(piString) {
+    // Extract numeric part from PI string (e.g., "PI 28" -> 28)
+    const match = piString.match(/\d+/);
+    const piNumber = match ? parseInt(match[0], 10) : 0;
+
+    // PI28 must map to #FF6359 (original coral)
+    // #FF6359 = hue 3.5°, saturation 100%, lightness 59.4%
+    const baseHue = 3.5; // Hue for #FF6359 (slightly more orange)
+    const hue = (baseHue + (piNumber - 28) * 15) % 360; // 15° offset per PI increment
+    const saturation = 100; // Keep vibrant
+    const lightness = 59.4; // Exact lightness for #FF6359
+
+    // Convert HSL to RGB
+    const h = hue / 360;
+    const s = saturation / 100;
+    const l = lightness / 100;
+
+    let r, g, b;
+    if (s === 0) {
+      r = g = b = l;
+    } else {
+      const hue2rgb = (p, q, t) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1/6) return p + (q - p) * 6 * t;
+        if (t < 1/2) return q;
+        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+        return p;
+      };
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      r = hue2rgb(p, q, h + 1/3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1/3);
+    }
+
+    // Convert to hex
+    const toHex = (x) => {
+      const hex = Math.round(x * 255).toString(16);
+      return hex.length === 1 ? '0' + hex : hex;
+    };
+
+    return '#' + toHex(r) + toHex(g) + toHex(b);
+  }
+
+  // Apply PI-based color to header elements only
+  function applyPIColor() {
+    const piBadge = document.querySelector('.pi-badge');
+    if (!piBadge) return;
+
+    const piText = piBadge.textContent.trim();
+    const coralColor = generateColorFromPI(piText);
+
+    // Create style element for CSS color overrides (header elements only)
+    const styleEl = document.createElement('style');
+    styleEl.textContent = `
+      .top-bar { background: ${coralColor} !important; }
+      .pi-badge { background: ${coralColor} !important; }
+      .header-label { color: ${coralColor} !important; }
+      .header-stat-value { color: ${coralColor} !important; }
+      .sp-label { color: ${coralColor} !important; }
+      .reason-num { color: ${coralColor} !important; }
+      .strategic-panel { border-right-color: ${coralColor} !important; }
+      .ep-label-rule { background: ${coralColor} !important; }
+    `;
+    document.head.appendChild(styleEl);
+  }
+
+  // Apply PI color on page load
+  document.addEventListener('DOMContentLoaded', applyPIColor);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyPIColor);
+  } else {
+    applyPIColor();
+  }
+
   (function () {
     var slide = document.querySelector('.slide');
     var PAD = 20;

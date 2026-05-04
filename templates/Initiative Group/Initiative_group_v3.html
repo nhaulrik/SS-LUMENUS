@@ -226,6 +226,11 @@
     white-space: nowrap;
     border: 1px solid #d0e5e2;
   }
+  .effort-pill.tbd {
+    background: transparent;
+    border: 1px solid #CCCCCC;
+    color: #888;
+  }
   .pi-text {
     font-size: 11px;
     color: #444;
@@ -263,6 +268,12 @@
     color: #2C4A48;
     text-align: center;
     display: block;
+  }
+  /* Center content in Features, Priority, and Effort columns */
+  tbody td:nth-child(3),
+  tbody td:nth-child(4),
+  tbody td:nth-child(5) {
+    text-align: center;
   }
 
   /* ── RIGHT: VALUE PANELS ── */
@@ -433,12 +444,11 @@
       <table>
         <thead>
           <tr>
-            <th style="width:32%">Initiative</th>
-            <th style="width:13%" class="sortable" data-col="1" data-type="effort">Effort</th>
-            <th style="width:17%" class="sortable" data-col="2" data-type="pi">PI</th>
-            <th style="width:20%" class="sortable" data-col="3" data-type="status">Status</th>
-            <th style="width:10%" class="sortable" data-col="4" data-type="priority">Priority</th>
-            <th style="width:8%"  class="sortable" data-col="5" data-type="number">Features</th>
+            <th style="width:49%">Initiative</th>
+            <th style="width:20%" class="sortable" data-col="1" data-type="status">Status</th>
+            <th style="width:8%"  class="sortable" data-col="2" data-type="number">Features</th>
+            <th style="width:10%" class="sortable" data-col="3" data-type="priority">Priority</th>
+            <th style="width:13%" class="sortable" data-col="4" data-type="effort">Effort</th>
           </tr>
         </thead>
         <tbody>
@@ -447,162 +457,152 @@
               <div class="init-name">Registration</div>
               <div class="init-desc">Party identifiers, org hierarchy, search enhancements</div>
             </td>
-            <td><span class="effort-pill">11,866h</span></td>
-            <td><span class="pi-text">PI 28</span></td>
             <td>
               <span class="status-badge">
                 <span class="status-dot" style="background:#F0A500;"></span>
                 In Progress
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
             <td><span class="feat-count">14</span></td>
+            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
+            <td><span class="effort-pill">11,866h</span></td>
           </tr>
           <tr>
             <td>
               <div class="init-name">Taxpayer Accounting</div>
               <div class="init-desc">General ledger core, reconciliation &amp; balance management</div>
             </td>
-            <td><span class="effort-pill">8,064h</span></td>
-            <td><span class="pi-text">PI28</span></td>
             <td>
               <span class="status-badge">
                 <span class="status-dot" style="background:#4A90D9;"></span>
                 In Analysis
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
             <td><span class="feat-count">9</span></td>
+            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
+            <td><span class="effort-pill">8,064h</span></td>
           </tr>
           <tr>
             <td>
               <div class="init-name">Returns Processing</div>
               <div class="init-desc">Filing workflows, validation rules, submission tracking &amp; acknowledgements</div>
             </td>
-            <td><span class="effort-pill">4,320h</span></td>
-            <td><span class="pi-text">PI28</span></td>
             <td>
               <span class="status-badge">
                 <span class="status-dot" style="background:#4A90D9;"></span>
                 In Analysis
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
             <td><span class="feat-count">7</span></td>
+            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
+            <td><span class="effort-pill">4,320h</span></td>
           </tr>
           <tr>
             <td>
               <div class="init-name">Payment Processing</div>
               <div class="init-desc">Multi-channel payments, allocation rules &amp; reconciliation engine</div>
             </td>
-            <td><span class="effort-pill">3,200h</span></td>
-            <td><span class="pi-text">PI29</span></td>
             <td>
               <span class="status-badge">
                 <span class="status-dot" style="background:#4A90D9;"></span>
                 In Analysis
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
             <td><span class="feat-count">6</span></td>
+            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
+            <td><span class="effort-pill">3,200h</span></td>
           </tr>
           <tr>
             <td>
               <div class="init-name">Billing &amp; Assessments</div>
               <div class="init-desc">Instalment plans, assessment automation, billing cycles</div>
             </td>
-            <td><span class="effort-pill">2,880h</span></td>
-            <td><span class="pi-text">PI27</span></td>
             <td>
               <span class="status-badge">
                 <span class="status-dot" style="background:#F0A500;"></span>
                 In Progress
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
             <td><span class="feat-count">6</span></td>
+            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
+            <td><span class="effort-pill">2,880h</span></td>
           </tr>
           <tr>
             <td>
               <div class="init-name">Reporting &amp; Analytics</div>
               <div class="init-desc">Management dashboards, statutory reports, KPI tracking &amp; exports</div>
             </td>
-            <td><span class="effort-pill">1,760h</span></td>
-            <td><span class="pi-text">PI29</span></td>
             <td>
               <span class="status-badge">
                 <span class="status-dot" style="background:#F0A500;"></span>
                 In Progress
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
             <td><span class="feat-count">3</span></td>
-          </tr>
-          <tr>
-            <td>
-              <div class="init-name">Penalty &amp; Interest</div>
-              <div class="init-desc">Interest calculation, credit unallocated payment segments</div>
-            </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI29</span></td>
-            <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
-                To Do
-              </span>
-            </td>
             <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">4</span></td>
+            <td><span class="effort-pill">1,760h</span></td>
           </tr>
-          <tr>
-            <td>
-              <div class="init-name">Tax Accounts</div>
+           <tr>
+             <td>
+               <div class="init-name">Penalty &amp; Interest</div>
+               <div class="init-desc">Interest calculation, credit unallocated payment segments</div>
+             </td>
+             <td>
+               <span class="status-badge">
+                 <span class="status-dot" style="background:#CCCCCC;"></span>
+                 To Do
+               </span>
+             </td>
+             <td><span class="feat-count">4</span></td>
+             <td><span class="prio-badge prio-na" style="background:transparent; border:1px solid #CCCCCC; color:#888;">N/A</span></td>
+             <td><span class="effort-pill tbd">TBD</span></td>
+           </tr>
+           <tr>
+             <td>
+               <div class="init-name">Tax Accounts</div>
               <div class="init-desc">Tax account setup, configurable thresholds, notifications</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI29</span></td>
             <td>
               <span class="status-badge">
                 <span class="status-dot" style="background:#CCCCCC;"></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
             <td><span class="feat-count">2</span></td>
-          </tr>
-          <tr>
-            <td>
-              <div class="init-name">Debt Management</div>
+            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
+             <td><span class="effort-pill tbd">TBD</span></td>
+           </tr>
+           <tr>
+             <td>
+               <div class="init-name">Debt Management</div>
               <div class="init-desc">Debt recovery workflows, write-off management, enforcement actions</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI30</span></td>
             <td>
               <span class="status-badge">
                 <span class="status-dot" style="background:#CCCCCC;"></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
             <td><span class="feat-count">5</span></td>
-          </tr>
-          <tr>
-            <td>
-              <div class="init-name">Audit &amp; Compliance</div>
-              <div class="init-desc">Case management, audit trail logging, compliance monitoring &amp; alerts</div>
-            </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI30</span></td>
-            <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
-                To Do
-              </span>
-            </td>
             <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">4</span></td>
-          </tr>
-        </tbody>
+             <td><span class="effort-pill tbd">TBD</span></td>
+           </tr>
+           <tr>
+             <td>
+               <div class="init-name">Audit &amp; Compliance</div>
+               <div class="init-desc">Case management, audit trail logging, compliance monitoring &amp; alerts</div>
+             </td>
+             <td>
+               <span class="status-badge">
+                 <span class="status-dot" style="background:#CCCCCC;"></span>
+                 To Do
+               </span>
+             </td>
+             <td><span class="feat-count">4</span></td>
+             <td><span class="prio-badge" style="background:#CCCCCC;">P3</span></td>
+             <td><span class="effort-pill tbd">TBD</span></td>
+           </tr>
+         </tbody>
       </table>
     </div>
     </div>
@@ -659,16 +659,87 @@
 <script>
   const STATUS_ORDER = { 'In Progress': 0, 'In Analysis': 1, 'To Do': 2 };
 
+  // Generate deterministic hex color from PI number
+  function generateColorFromPI(piString) {
+    // Extract numeric part from PI string (e.g., "PI 28" -> 28)
+    const match = piString.match(/\d+/);
+    const piNumber = match ? parseInt(match[0], 10) : 0;
+
+    // PI28 must map to #FF6359 (original coral)
+    // #FF6359 = hue 3.5°, saturation 100%, lightness 59.4%
+    const baseHue = 3.5; // Hue for #FF6359 (slightly more orange)
+    const hue = (baseHue + (piNumber - 28) * 15) % 360; // 15° offset per PI increment
+    const saturation = 100; // Keep vibrant
+    const lightness = 59.4; // Exact lightness for #FF6359
+
+    // Convert HSL to RGB
+    const h = hue / 360;
+    const s = saturation / 100;
+    const l = lightness / 100;
+
+    let r, g, b;
+    if (s === 0) {
+      r = g = b = l;
+    } else {
+      const hue2rgb = (p, q, t) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1/6) return p + (q - p) * 6 * t;
+        if (t < 1/2) return q;
+        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+        return p;
+      };
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      r = hue2rgb(p, q, h + 1/3);
+      g = hue2rgb(p, q, h);
+      b = hue2rgb(p, q, h - 1/3);
+    }
+
+    // Convert to hex
+    const toHex = (x) => {
+      const hex = Math.round(x * 255).toString(16);
+      return hex.length === 1 ? '0' + hex : hex;
+    };
+
+    return '#' + toHex(r) + toHex(g) + toHex(b);
+  }
+
+  // Apply PI-based color to header elements only
+  function applyPIColor() {
+    const piBadge = document.querySelector('.pi-badge');
+    if (!piBadge) return;
+
+    const piText = piBadge.textContent.trim();
+    const coralColor = generateColorFromPI(piText);
+
+    // Create style element for CSS color overrides (header elements only)
+    const styleEl = document.createElement('style');
+    styleEl.textContent = `
+      .top-bar { background: ${coralColor} !important; }
+      .pi-badge { background: ${coralColor} !important; }
+      .header-label { color: ${coralColor} !important; }
+      .header-stat-value { color: ${coralColor} !important; }
+      thead th.sort-asc::after { color: ${coralColor} !important; }
+      thead th.sort-desc::after { color: ${coralColor} !important; }
+    `;
+    document.head.appendChild(styleEl);
+  }
+
+  // Apply PI color on page load
+  document.addEventListener('DOMContentLoaded', applyPIColor);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', applyPIColor);
+  } else {
+    applyPIColor();
+  }
+
   function getCellValue(row, col, type) {
     const td = row.querySelectorAll('td')[col];
-    if (type === 'pi') {
-      const text = td.querySelector('.pi-text').textContent.trim();
-      return parseInt(text.replace(/\D/g, ''), 10);
-    }
     if (type === 'effort') {
       const text = td.querySelector('.effort-pill').textContent.trim();
-      if (text === 'TBD') return Infinity;
-      return parseInt(text.replace(/[^0-9]/g, ''), 10);
+      if (text === 'TBD') return { isTBD: true, value: 0 };
+      return { isTBD: false, value: parseInt(text.replace(/[^0-9]/g, ''), 10) };
     }
     if (type === 'status') {
       const text = td.querySelector('.status-badge').textContent.trim();
@@ -696,6 +767,24 @@
     rows.sort((a, b) => {
       const va = getCellValue(a, col, type);
       const vb = getCellValue(b, col, type);
+      
+      // Special handling for effort column with TBD values
+      if (type === 'effort') {
+        const aTBD = va.isTBD;
+        const bTBD = vb.isTBD;
+        
+        // Both TBD: maintain order
+        if (aTBD && bTBD) return 0;
+        // Only a is TBD: a goes to bottom
+        if (aTBD) return 1;
+        // Only b is TBD: b goes to bottom
+        if (bTBD) return -1;
+        
+        // Neither is TBD: compare values
+        if (va.value === vb.value) return 0;
+        return (va.value < vb.value ? -1 : 1) * (ascending ? 1 : -1);
+      }
+      
       if (va === vb) return 0;
       return (va < vb ? -1 : 1) * (ascending ? 1 : -1);
     });
@@ -733,7 +822,7 @@
   });
 
   // Default: sort by Effort descending (no animation on load)
-  const effortTh = document.querySelector('thead th[data-type="effort"]');
+  const effortTh = document.querySelector('thead th[data-col="4"]');
   sortBy(effortTh, false, false);
 
   // Scale slide to fit viewport

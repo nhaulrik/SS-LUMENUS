@@ -131,7 +131,7 @@ Every innerHTML value you return MUST mirror the TEMPLATE shown for each key:
 - Only data-driven text content (values, names, descriptions, metrics) and src/href values may differ from the template.
 - Fixed UI labels already present in the template — such as card titles, section headings, column headers, category names, and any other structural text — MUST be copied verbatim. Never rename, rephrase, or replace them, even if a different label seems more appropriate for the data.
 - Populate every data element with real values from SOURCE DATA only — do not invent or estimate.
-- Never invent labels, categories, statuses, groupings, or concepts not present verbatim in the SOURCE DATA — if the data does not contain it, write [DATA MISSING] for that element.
+- Never invent labels, categories, statuses, groupings, or concepts not present verbatim in the SOURCE DATA — if the data does not contain it, write n/a for that element.
 Violating this breaks the slide layout irreparably.
 
 SOURCE DATA (verbatim rows from context files — your content must be based on these):
@@ -141,7 +141,7 @@ YOUR ROLE:
 - You are a content generator. Transform the SOURCE DATA above into polished HTML presentation content.
 - Every fact, number, name, metric, label, category, and status in your output MUST come from the SOURCE DATA.
 - Do not invent, estimate, or add data not present in the SOURCE DATA — this includes inventing plausible-sounding labels or categories that are not in the data.
-- If data for a zone element is missing from the SOURCE DATA, write [DATA MISSING] for that element — never substitute with invented content.
+- If data for a zone element is missing from the SOURCE DATA, write n/a for that element — never substitute with invented content.
 - ZONE INSTRUCTIONS per key are authoritative directives — follow them precisely and completely. They may specify expectation, tone, formatting, style or anything the user specifies in addition to data queries. These always take priority over defaults.
 ${instructionsBlock}
 ⚠️ OUTPUT FORMAT — CRITICAL:
@@ -208,7 +208,7 @@ Every innerHTML value you return MUST mirror the TEMPLATE shown for each key:
 - Only data-driven text content (values, names, descriptions, metrics) and src/href values may differ from the template.
 - Fixed UI labels already present in the template — such as card titles, section headings, column headers, category names, and any other structural text — MUST be copied verbatim. Never rename, rephrase, or replace them, even if a different label seems more appropriate for the data.
 - Populate every data element with real values from SOURCE DATA only — do not invent or estimate.
-- Never invent labels, categories, statuses, groupings, or concepts not present verbatim in the SOURCE DATA — if the data does not contain it, write [DATA MISSING] for that element.
+- Never invent labels, categories, statuses, groupings, or concepts not present verbatim in the SOURCE DATA — if the data does not contain it, write n/a for that element.
 Violating this breaks the slide layout irreparably.
 
 SOURCE DATA FOR THIS SLIDE INSTANCE (verbatim rows from context files):
@@ -218,7 +218,7 @@ YOUR ROLE:
 - You are a content generator. Transform the SOURCE DATA above into polished HTML presentation content for this specific slide instance.
 - Every fact, number, name, metric, label, category, and status in your output MUST come from the SOURCE DATA above.
 - Do not invent, estimate, or add data not present in the SOURCE DATA — this includes inventing plausible-sounding labels or categories that are not in the data.
-- If data for a zone element is missing from the SOURCE DATA, write [DATA MISSING] for that element — never substitute with invented content.
+- If data for a zone element is missing from the SOURCE DATA, write n/a for that element — never substitute with invented content.
 - ZONE INSTRUCTIONS per key are authoritative directives — follow them precisely and completely. They may specify expectations, tone, formatting, style or anything the user specifies in addition to data queries. These always take priority over defaults.
 
   Task: generate HTML content for slide instance ${instanceIndex + 1} of ${instanceCount} using the SOURCE DATA above.${rsConfig?.prompt ? `\nSlide guidance: ${rsConfig.prompt}` : ''}${contentPrompt ? `\nUser instructions: ${contentPrompt}` : ''}

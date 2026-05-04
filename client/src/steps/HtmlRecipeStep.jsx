@@ -228,7 +228,7 @@ export default function HtmlRecipeStep({
       const res = await fetch('/api/html-flow/apply-content', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectName, flowId, jsonString: jsonInput }),
+        body: JSON.stringify({ projectName, flowId, jsonString: jsonInput, instanceNames: agenticPlanLocal?.instanceNames }),
       })
       if (!res.ok) throw new Error(`Server error ${res.status}`)
       const data = await res.json()
@@ -240,7 +240,7 @@ export default function HtmlRecipeStep({
     } finally {
       setApplying(false)
     }
-  }, [applying, flowId, jsonInput, onApplied, projectName, setToast, validation?.valid])
+  }, [agenticPlanLocal, applying, flowId, jsonInput, onApplied, projectName, setToast, validation?.valid])
 
   const readSSE = async function* (response) {
     const reader = response.body.getReader()
