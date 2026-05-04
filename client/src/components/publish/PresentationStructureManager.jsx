@@ -297,29 +297,27 @@ export default function PresentationStructureManager({ projectName, setToast }) 
                onSave={handleSaveTree}
                onAddSection={handleAddSection}
                 onExternalDrop={(droppedSlides, targetId, zone) => {
-                  const merged = mergeSlides(activeStructure.slides || [], droppedSlides)
-                  const slideIds = droppedSlides.map(s => s.id)
-                  
-                  let newTree = activeStructure.tree || []
-                  
-                  if (!targetId) {
-                    // No target: append to root
-                    newTree = appendToTree(newTree, slideIds)
-                  } else if (droppedSlides.length === 1) {
-                    // Single slide: insert at position
-                    const node = { slideRefId: slideIds[0], children: [] }
-                    newTree = insertNodeAtPosition(newTree, [node], targetId, zone)
-                  } else {
-                    // Group drop: nest as a group (first slide is parent, rest are children)
-                    const parentNode = {
-                      slideRefId: slideIds[0],
-                      children: slideIds.slice(1).map(id => ({ slideRefId: id, children: [] }))
-                    }
-                    newTree = insertNodeAtPosition(newTree, [parentNode], targetId, zone)
-                  }
-                  
-                  handleUpdateTree(merged, newTree)
-                }}
+                   console.log('[onExternalDrop]', { droppedSlides, targetId, zone, currentTree: activeStructure.tree })
+                   const merged = mergeSlides(activeStructure.slides || [], droppedSlides)
+                   const slideIds = droppedSlides.map(s => s.id)
+                   
+                   let newTree = activeStructure.tree || []
+                   
+                   if (!targetId) {
+                     // No target: append to root
+                     console.log('[onExternalDrop] No target, appending to root')
+                     newTree = appendToTree(newTree, slideIds)
+                   } else {
+                     // Insert each dropped slide as an individual node at the target position
+                     console.log('[onExternalDrop] Inserting at position with targetId:', targetId, 'zone:', zone)
+                     const nodes = slideIds.map(id => ({ slideRefId: id, children: [] }))
+                     console.log('[onExternalDrop] Nodes to insert:', nodes)
+                     newTree = insertNodeAtPosition(newTree, nodes, targetId, zone)
+                     console.log('[onExternalDrop] New tree after insertion:', newTree)
+                   }
+                   
+                   handleUpdateTree(merged, newTree)
+                 }}
              />
            </div>
         </div>
@@ -369,34 +367,68 @@ function insertNodeAtPosition(tree, nodesToInsert, targetId, zone) {
   // Insert nodes at a position relative to targetId
   // zone: 'before', 'after', or 'into'
   // Match nodes by slideRefId or id (for section nodes)
+  // Returns { tree, found } to track if target was found
   
-  if (zone === 'into') {
-    // Insert as children of targetId
-    return tree.map(node => {
-      const nodeId = node.slideRefId || node.id
-      if (nodeId === targetId) {
-        return { ...node, children: [...(node.children || []), ...nodesToInsert] }
-      }
-      return { ...node, children: insertNodeAtPosition(node.children || [], nodesToInsert, targetId, zone) }
-    })
-  } else {
-    // Insert as sibling before or after targetId
-    const result = []
-    for (const node of tree) {
-      const nodeId = node.slideRefId || node.id
-      if (nodeId === targetId) {
-        if (zone === 'before') {
-          result.push(...nodesToInsert, node)
-        } else {
-          result.push(node, ...nodesToInsert)
+  function insertIntoTree(nodes, toInsert, targetId, zone, depth = 0) {
+    let found = false
+    const indent = '  '.repeat(depth)
+    console.log(`${indent}[insertIntoTree] depth=${depth}, zone=${zone}, targetId=${targetId}, nodes.length=${nodes.length}`)
+    
+    if (zone === 'into') {
+      // Insert as children of targetId
+      const result = nodes.map(node => {
+        const nodeId = node.slideRefId || node.id
+        console.log(`${indent}  Checking node: ${nodeId} against target: ${targetId}`)
+        if (nodeId === targetId) {
+          console.log(`${indent}  ✓ FOUND TARGET! Inserting ${toInsert.length} nodes as children`)
+          found = true
+          return { ...node, children: [...(node.children || []), ...toInsert] }
         }
-      } else {
-        result.push({
-          ...node,
-          children: insertNodeAtPosition(node.children || [], nodesToInsert, targetId, zone)
-        })
+        // Recurse into children
+        if (node.children && node.children.length > 0) {
+          const { tree: updatedChildren, found: childFound } = insertIntoTree(node.children, toInsert, targetId, zone, depth + 1)
+          if (childFound) {
+            found = true
+            return { ...node, children: updatedChildren }
+          }
+        }
+        return node
+      })
+      return { tree: result, found }
+    } else {
+      // Insert as sibling before or after targetId
+      const result = []
+      for (const node of nodes) {
+        const nodeId = node.slideRefId || node.id
+        console.log(`${indent}  Checking node: ${nodeId} against target: ${targetId}`)
+        if (nodeId === targetId) {
+          console.log(`${indent}  ✓ FOUND TARGET! Inserting ${toInsert.length} nodes as ${zone}`)
+          found = true
+          if (zone === 'before') {
+            result.push(...toInsert, node)
+          } else {
+            result.push(node, ...toInsert)
+          }
+        } else {
+          if (node.children && node.children.length > 0) {
+            const { tree: updatedChildren, found: childFound } = insertIntoTree(node.children, toInsert, targetId, zone, depth + 1)
+            if (childFound) {
+              found = true
+              result.push({ ...node, children: updatedChildren })
+            } else {
+              result.push(node)
+            }
+          } else {
+            result.push(node)
+          }
+        }
       }
+      return { tree: result, found }
     }
-    return result
   }
+  
+  console.log('[insertNodeAtPosition] Starting insertion', { targetId, zone, nodesToInsertCount: nodesToInsert.length })
+  const { tree: result, found } = insertIntoTree(tree, nodesToInsert, targetId, zone)
+  console.log('[insertNodeAtPosition] Insertion complete', { found, resultLength: result.length })
+  return result
 }

@@ -431,7 +431,14 @@ export default function PublishTreeWorkspace({
     e.stopPropagation()
     
     const isCatalog = e.dataTransfer.types.includes('application/x-solon-catalog')
+    console.log('[handleNodeDragOver] isCatalog:', isCatalog, 'targetId:', targetId, 'dragSourceType:', dragSourceType.current)
     setIsCatalogDrag(isCatalog)
+    
+    // Set dragSourceType if it's a catalog drag
+    if (isCatalog && dragSourceType.current !== 'internal') {
+      dragSourceType.current = 'external'
+      console.log('[handleNodeDragOver] Set dragSourceType to external')
+    }
     
     if (dragSourceId.current === targetId) return
 
@@ -444,6 +451,7 @@ export default function PublishTreeWorkspace({
     else if (pct > 0.70) zone = 'after'
     else zone = 'into'
 
+    console.log('[handleNodeDragOver] zone:', zone, 'pct:', pct)
     e.dataTransfer.dropEffect = dragSourceType.current === 'internal' ? 'move' : 'copy'
     setDragOverId(targetId)
     setDragOverZone(zone)
@@ -462,6 +470,7 @@ export default function PublishTreeWorkspace({
   }, [])
 
   const handleDrop = useCallback((e, targetId) => {
+    console.log('[handleDrop] targetId:', targetId, 'dragSourceType:', dragSourceType.current, 'dragOverZone:', dragOverZone)
     e.preventDefault()
     e.stopPropagation()
 
@@ -479,15 +488,19 @@ export default function PublishTreeWorkspace({
       const newTree = moveNodes(tree, [sourceId], targetId, zone)
       onChange(slides, newTree)
     } else if (dragSourceType.current === 'external') {
+      console.log('[handleDrop] External drop detected')
       // Try catalog drop first (application/x-solon-catalog)
       const catalogData = e.dataTransfer.getData('application/x-solon-catalog')
+      console.log('[handleDrop] catalogData:', catalogData)
       if (catalogData) {
         try {
           const payload = JSON.parse(catalogData)
+          console.log('[handleDrop] Parsed payload:', payload)
           if (onExternalDrop) {
             // Convert catalog payload to slides array
             let droppedSlides = []
             if (payload.type === 'group' && payload.slides) {
+              console.log('[handleDrop] Processing group with', payload.slides.length, 'slides')
               droppedSlides = payload.slides.map(s => ({
                 id: `sr-${globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)}`,
                 flowId: s.flowId,
@@ -496,6 +509,7 @@ export default function PublishTreeWorkspace({
                 title: s.title,
               }))
             } else if (payload.type === 'slide') {
+              console.log('[handleDrop] Processing single slide')
               droppedSlides = [{
                 id: `sr-${globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)}`,
                 flowId: payload.flowId,
@@ -504,22 +518,32 @@ export default function PublishTreeWorkspace({
                 title: payload.title,
               }]
             }
+            console.log('[handleDrop] droppedSlides:', droppedSlides)
             if (droppedSlides.length > 0) {
+              console.log('[handleDrop] Calling onExternalDrop')
               onExternalDrop(droppedSlides, targetId, zone)
             }
           }
-        } catch { /* ignore */ }
+        } catch (err) { 
+          console.error('[handleDrop] Error parsing catalog data:', err)
+        }
       } else {
+        console.log('[handleDrop] No catalogData, trying application/json')
         // Fallback to application/json for backward compatibility
         try {
           const dataStr = e.dataTransfer.getData('application/json')
+          console.log('[handleDrop] dataStr:', dataStr)
           if (dataStr && onExternalDrop) {
             const droppedSlides = JSON.parse(dataStr)
+            console.log('[handleDrop] Parsed droppedSlides from json:', droppedSlides)
             if (Array.isArray(droppedSlides)) {
+              console.log('[handleDrop] Calling onExternalDrop with json data')
               onExternalDrop(droppedSlides, targetId, zone)
             }
           }
-        } catch { /* ignore */ }
+        } catch (err) { 
+          console.error('[handleDrop] Error with json fallback:', err)
+        }
       }
     }
 

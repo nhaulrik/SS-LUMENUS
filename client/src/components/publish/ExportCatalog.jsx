@@ -106,13 +106,23 @@ export default function ExportCatalog({ exports, loading, activeSlides, onAddSli
     e.dataTransfer.effectAllowed = 'copy'
     // Set both MIME types for compatibility
     e.dataTransfer.setData('application/json', JSON.stringify(slidesToDrag))
-    e.dataTransfer.setData('application/x-solon-catalog', JSON.stringify({
-      type: 'slide',
-      flowId: exp.flowId,
-      exportId: exp.exportId,
-      slideIndex: slide.slideIndex,
-      title: slide.title,
-    }))
+    
+    // Set application/x-solon-catalog with proper format
+    if (slidesToDrag.length === 1) {
+      e.dataTransfer.setData('application/x-solon-catalog', JSON.stringify({
+        type: 'slide',
+        flowId: slidesToDrag[0].flowId,
+        exportId: slidesToDrag[0].exportId,
+        slideIndex: slidesToDrag[0].slideIndex,
+        title: slidesToDrag[0].title,
+      }))
+    } else {
+      // Multiple slides: send as group
+      e.dataTransfer.setData('application/x-solon-catalog', JSON.stringify({
+        type: 'group',
+        slides: slidesToDrag,
+      }))
+    }
   }
 
   const handleGroupDragStart = (e, exp) => {
