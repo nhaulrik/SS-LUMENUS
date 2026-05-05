@@ -132,8 +132,17 @@ export function resolveConflicts(selections) {
  * for all interesting, non-leaf nodes that aren't already assigned a zone.
  * This enables content generation for the entire slide structure without
  * requiring explicit manual zone definition.
+ *
+ * If templateHtml is provided, scans for elements with data-block attributes
+ * and creates zones from those instead of using tree-walking logic.
+ *
+ * @param {Object[]} trees - DOM tree nodes
+ * @param {number[]} fullSlideGeneration - slide indices marked for full generation
+ * @param {Object[]} existingSelections - existing zone selections
+ * @param {string} [templateHtml] - optional template HTML to scan for data-block elements
+ * @returns {Object[]} updated selections array
  */
-export function autoDiscoverZonesForFullSlide(trees, fullSlideGeneration, existingSelections) {
+export function autoDiscoverZonesForFullSlide(trees, fullSlideGeneration, existingSelections, templateHtml) {
   if (!Array.isArray(fullSlideGeneration) || fullSlideGeneration.length === 0) {
     return existingSelections;
   }
@@ -141,6 +150,59 @@ export function autoDiscoverZonesForFullSlide(trees, fullSlideGeneration, existi
   const result = [...existingSelections];
   const existingNodeIds = new Set(existingSelections.map(s => s.nodeId));
 
+  // If templateHtml is provided, scan for data-block elements
+  if (templateHtml && typeof templateHtml === 'string') {
+    try {
+      const { parse } = require('node-html-parser');
+      const root = parse(templateHtml);
+      const dataBlockElements = root.querySelectorAll('[data-block]');
+
+      if (dataBlockElements && dataBlockElements.length > 0) {
+        // Process each data-block element
+        for (const element of dataBlockElements) {
+          const blockKey = element.getAttribute('data-block');
+          if (!blockKey) continue;
+
+          // Use element's ID if available, otherwise generate a unique one
+          let nodeId = element.getAttribute('id');
+          if (!nodeId) {
+            nodeId = `generated_${blockKey}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          }
+
+          // Skip if this nodeId already exists
+          if (existingNodeIds.has(nodeId)) continue;
+
+          const exampleHtml = element.innerHTML || '';
+
+          // Add zone for each slide in fullSlideGeneration
+          for (const slideIdx of fullSlideGeneration) {
+            result.push({
+              nodeId,
+              slideIndex:    slideIdx,
+              zoneType:      'block',
+              key:           blockKey,
+              prompt:        '',
+              autoGenerate:  true,
+              autoDiscovered: true,
+              type:          'block',
+              exampleHtml,
+            });
+            existingNodeIds.add(nodeId);
+          }
+        }
+
+        // If data-block elements were found, return early (skip tree-walking)
+        if (dataBlockElements.length > 0) {
+          return result;
+        }
+      }
+    } catch (err) {
+      // If parsing fails, fall through to tree-walking logic
+      console.warn('Failed to parse templateHtml for data-block elements:', err.message);
+    }
+  }
+
+  // Fallback: tree-walking logic for templates without data-block marks
   function flattenTree(nodes) {
     const flat = [];
     function visit(arr) {

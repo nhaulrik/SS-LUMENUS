@@ -55,10 +55,12 @@ ACTIVE PI: {{PI_VALUE}}
 === Header ===
 
 Roadmap Initiative: {{INITIATIVE_NAME}}
-- Read verbatim from the "Roadmap Initiative" column of any raw feature row in this slice.
+- Read the value that follows "Roadmap Initiative:" in the raw feature row (e.g. "APPLICATION PROCESSES"). Do NOT use the value that follows "Roadmap Feature:".
+- Output this value verbatim as the text content of the `.header-title` div.
 
 Initiative Group: {{INITIATIVE_GROUP_NAME}}
-- Read verbatim from the "Roadmap Initiative Group" column of any raw feature row in this slice.
+- Read the value that follows "Roadmap Initiative Group:" in the raw feature row (e.g. "REFERENCE IMPLEMENTATIONS").
+- Output this value verbatim as the start of the `.header-subtitle` div.
 
 Total Effort: {{TOTAL_HOURS}} hours
   CRITICAL: This value MUST come from the "Initiative Stats" sheet in the Shared Reference Data.
@@ -133,43 +135,12 @@ Reason 03 Title: {{REASON_03_TITLE}}
 Reason 03 Text: {{REASON_03_TEXT}}
 [MAX 20 words — one tight sentence. Hard limit. No padding.]
 
-=== Key Features === [ordered by Estimate descending, blank/TBD last, maximum 6]
+=== Key Features === [ordered by Estimate descending, blank/TBD last — ALL features]
 
-[Sort raw feature rows for this initiative by the "Estimate" column descending. Only include rows where "Roadmap Initiative" is an EXACT string match to {{INITIATIVE_NAME}} — no partial or fuzzy matches. Features with blank or TBD estimates go last. Output at most 6 features. If fewer than 6 exist, list only those that are present — NEVER invent features to reach 6.]
+[Sort raw feature rows for this initiative by the "Estimate" column descending. Only include rows where "Roadmap Initiative" is an EXACT string match to {{INITIATIVE_NAME}} — no partial or fuzzy matches. Features with blank or TBD estimates go last. Output ALL matching features — do NOT cap or truncate the list. NEVER invent features that are not in the raw data. Output as JSON array with 10-element subarrays: [irm, effort, name, description, dotColor, textColor, statusLabel, reqClass, reqLabel, barPct]]
 
+[
 {{#EACH_FEATURE}}
-
-Feature Index: {{FEATURE_INDEX}}
-[Sequential number: "01", "02", etc.]
-
-Feature IRM: {{FEATURE_IRM}}
-[Read from the "IRM" or "Jira ID" column of the raw feature row. Format as "IRM-NNNNN". If blank write "TBD".]
-
-Feature Name: {{FEATURE_NAME}}
-[Read verbatim from the "Roadmap Feature" column.]
-
-Feature Description: {{FEATURE_DESCRIPTION}}
-[~25 words — one concise sentence stating what this feature delivers. Strip all Jira markup completely. Plain English only.]
-
-Feature Status: {{FEATURE_STATUS}}
-[Read verbatim from "Feature Status". If blank write "To Do".]
-
-Feature Status Dot Color: {{FEATURE_STATUS_DOT_COLOR}}
-[Hex color for the status indicator dot per STATUS COLOR RULE above.]
-
-Feature Status Text Color: {{FEATURE_STATUS_TEXT_COLOR}}
-[Darker hex color for the status label text per STATUS COLOR RULE above.]
-
-Feature Effort: {{FEATURE_EFFORT}}
-[Read from the "Estimate" column. Format as comma-separated integer with NO suffix (e.g. "1,200"). If blank or zero write "TBD".]
-
-Feature Bar Pct: {{FEATURE_BAR_PCT}}
-[Percentage of the highest-effort feature in this initiative, per BAR PERCENTAGE RULE above. Format as "NN.N%" (e.g. "53.3%"). TBD effort → "0%".]
-
-Feature Requester Class: {{FEATURE_REQUESTER_CLASS}}
-[CSS class per REQUESTER CLASS RULE above: "req-grc", "req-gtm", or "req-other".]
-
-Feature Requester Label: {{FEATURE_REQUESTER_LABEL}}
-[Display label per REQUESTER CLASS RULE above: "GRC", "GTM", or "Other".]
-
+  ["{{FEATURE_IRM}}","{{FEATURE_EFFORT}}","{{FEATURE_NAME}}","{{FEATURE_DESCRIPTION}}","{{FEATURE_STATUS_DOT_COLOR}}","{{FEATURE_STATUS_TEXT_COLOR}}","{{FEATURE_STATUS}}","{{FEATURE_REQUESTER_CLASS}}","{{FEATURE_REQUESTER_LABEL}}","{{FEATURE_BAR_PCT}}"]{{#NOT_LAST}},{{/NOT_LAST}}
 {{/EACH_FEATURE}}
+]

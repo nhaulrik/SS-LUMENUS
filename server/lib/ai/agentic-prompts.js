@@ -208,9 +208,46 @@ export function buildInstancePrompt(zones, repeatableSlides, slideKey, instanceI
   // Cap context to prevent oversized prompts per instance
   const contextBlock = capContext(contextSummary, MAX_ORCHESTRATOR_CONTEXT_CHARS)
 
+  // Separate JSON zones from HTML zones
+  const jsonZones = uniqueZones.filter(z => z.key?.includes('_json_'))
+  const htmlZones = uniqueZones.filter(z => !z.key?.includes('_json_'))
+
   let prompt = `You populate one slide instance in a presentation template with real content.
 
-STRUCTURAL CONTRACT (read before anything else):
+SOURCE DATA FOR THIS SLIDE INSTANCE (verbatim rows from context files):
+${contextBlock}
+
+YOUR ROLE:
+- You are a content generator. Transform the SOURCE DATA above into polished presentation content for this specific slide instance.
+- Every fact, number, name, metric, label, category, and status in your output MUST come from the SOURCE DATA above.
+- Do not invent, estimate, or add data not present in the SOURCE DATA — this includes inventing plausible-sounding labels or categories that are not in the data.
+- If data for a zone element is missing from the SOURCE DATA, write n/a for that element — never substitute with invented content.
+- ZONE INSTRUCTIONS per key are authoritative directives — follow them precisely and completely. They may specify expectations, tone, formatting, style or anything the user specifies in addition to data queries. These always take priority over defaults.
+
+  Task: generate content for slide instance ${instanceIndex + 1} of ${instanceCount} using the SOURCE DATA above.${rsConfig?.prompt ? `\nSlide guidance: ${rsConfig.prompt}` : ''}${contentPrompt ? `\nUser instructions: ${contentPrompt}` : ''}
+
+⚠️ OUTPUT FORMAT — CRITICAL:
+Your entire response MUST be a single valid JSON object.
+Do NOT write any explanation, reasoning, preamble, or commentary — before or after the JSON.
+Do NOT wrap the JSON in markdown fences (\`\`\`json ... \`\`\`).
+Start your response with { and end it with }.
+
+The object MUST have EXACTLY these keys:
+{
+`
+  uniqueZones.forEach(z => { prompt += `  "${z.key}": ${z.key?.includes('_json_') ? '[...]' : '"<innerHTML matching template structure>"'},\n` })
+  prompt += `}
+
+`
+
+  // HTML Zones Section
+  if (htmlZones.length > 0) {
+    prompt += `HTML INSIDE JSON — MANDATORY RULES (for HTML zones):
+- ALL HTML attribute values MUST use single quotes (e.g. class='foo', href='...', src='...')
+- NEVER use double quotes inside HTML — they break JSON string parsing
+- Escape any literal backslashes in HTML as \\
+
+STRUCTURAL CONTRACT FOR HTML ZONES (read before anything else):
 Every innerHTML value you return MUST mirror the TEMPLATE shown for each key:
 - Keep the exact same HTML element types, class names, attributes, and nesting structure.
 - Do NOT add new sections, new structural blocks, new headings, or new layout elements that are not present in the template.
@@ -219,45 +256,57 @@ Every innerHTML value you return MUST mirror the TEMPLATE shown for each key:
 - Text content must be concise — match the approximate text density of the template. Do not write paragraphs where the template shows short labels or values.
 - Only data-driven text content (values, names, descriptions, metrics) and src/href values may differ from the template.
 - Fixed UI labels already present in the template — such as card titles, section headings, column headers, category names, and any other structural text — MUST be copied verbatim. Never rename, rephrase, or replace them, even if a different label seems more appropriate for the data.
-- Populate every data element with real values from SOURCE DATA only — do not invent or estimate.
-- Never invent labels, categories, statuses, groupings, or concepts not present verbatim in the SOURCE DATA — if the data does not contain it, write n/a for that element.
 Violating this breaks the slide layout irreparably.
 
-SOURCE DATA FOR THIS SLIDE INSTANCE (verbatim rows from context files):
-${contextBlock}
+HTML ZONES (TEMPLATES PER KEY — structure is a contract, fill with data, do not alter structure):\n`
+    htmlZones.forEach(z => {
+      prompt += `\nKEY "${z.key}":\n`
+      if (z.prompt) prompt += `ZONE INSTRUCTIONS:\n${z.prompt}\n`
+      prompt += z.exampleHtml ? `TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):\n${toSingleQuotedHtml(z.exampleHtml)}\n↑ Use this structure as a pattern only. Output exactly one repeating item (card, row, list item) per data record — never match the template's item count.\n` : `(no template — generate appropriate innerHTML)\n`
+    })
+  }
 
-YOUR ROLE:
-- You are a content generator. Transform the SOURCE DATA above into polished HTML presentation content for this specific slide instance.
-- Every fact, number, name, metric, label, category, and status in your output MUST come from the SOURCE DATA above.
-- Do not invent, estimate, or add data not present in the SOURCE DATA — this includes inventing plausible-sounding labels or categories that are not in the data.
-- If data for a zone element is missing from the SOURCE DATA, write n/a for that element — never substitute with invented content.
-- ZONE INSTRUCTIONS per key are authoritative directives — follow them precisely and completely. They may specify expectations, tone, formatting, style or anything the user specifies in addition to data queries. These always take priority over defaults.
+  // JSON Zones Section
+  if (jsonZones.length > 0) {
+    prompt += `\n\nJSON ZONES (SCHEMA-BASED OUTPUT — no HTML templates):\n`
+    jsonZones.forEach(z => {
+      prompt += `\nKEY "${z.key}":\n`
+      if (z.prompt) prompt += `ZONE INSTRUCTIONS:\n${z.prompt}\n`
+      prompt += `OUTPUT: A JSON array — one row per feature.
 
-  Task: generate HTML content for slide instance ${instanceIndex + 1} of ${instanceCount} using the SOURCE DATA above.${rsConfig?.prompt ? `\nSlide guidance: ${rsConfig.prompt}` : ''}${contentPrompt ? `\nUser instructions: ${contentPrompt}` : ''}
+ARRAY SCHEMA (field order MUST be preserved):
+[irm, effort, name, description, dotColor, textColor, statusText, reqClass, reqLabel, barPct]
 
-⚠️ OUTPUT FORMAT — CRITICAL:
-Your entire response MUST be a single valid JSON object.
-Do NOT write any explanation, reasoning, preamble, or commentary — before or after the JSON.
-Do NOT wrap the JSON in markdown fences (\`\`\`json ... \`\`\`).
-Start your response with { and end it with }.
+FIELD DEFINITIONS:
+- irm: Internal requirement/item ID (string)
+- effort: Effort estimate (number)
+- name: Feature name (string)
+- description: Feature description (string)
+- dotColor: Dot color for status indicator (hex color or color name)
+- textColor: Text color for status (hex color or color name)
+- statusText: Status label text (string)
+- reqClass: CSS class for requester styling (string)
+- reqLabel: Requester label (string)
+- barPct: Bar percentage value 0-100 (number)
 
-HTML INSIDE JSON — MANDATORY RULES:
-- ALL HTML attribute values MUST use single quotes (e.g. class='foo', href='...', src='...')
-- NEVER use double quotes inside HTML — they break JSON string parsing
-- Escape any literal backslashes in HTML as \\
+RULES & CONSTRAINTS:
+- STATUS COLOR RULE: Assign dotColor and statusText based on feature status from SOURCE DATA. Use consistent color mappings (e.g. green for complete, yellow for in-progress, red for blocked).
+- REQUESTER CLASS RULE: Assign reqClass based on requester type or category from SOURCE DATA (e.g. 'internal', 'external', 'partner').
+- BAR PERCENTAGE RULE: Calculate barPct as the completion or progress percentage from SOURCE DATA. Use 0-100 scale.
+- Sort the array by effort (effort field) in descending order.
+- Do NOT output HTML. Do NOT wrap in markdown fences.
+- If any field is missing from SOURCE DATA, use n/a for strings or 0 for numbers.
+- Output ONLY the JSON array — no explanation, preamble, or commentary.
 
-The object MUST have EXACTLY these keys:
-{
+EXAMPLE FORMAT (structure only — use actual data from SOURCE DATA):
+[
+  ["REQ-001", 13, "Feature A", "Description of feature A", "#22c55e", "#ffffff", "Complete", "internal", "Alice", 100],
+  ["REQ-002", 8, "Feature B", "Description of feature B", "#eab308", "#000000", "In Progress", "external", "Bob", 65],
+  ["REQ-003", 5, "Feature C", "Description of feature C", "#ef4444", "#ffffff", "Blocked", "internal", "Charlie", 20]
+]
 `
-  uniqueZones.forEach(z => { prompt += `  "${z.key}": "<innerHTML matching template structure>",\n` })
-  prompt += `}
-
-TEMPLATES PER KEY (structure is a contract — fill with data, do not alter structure):\n`
-  uniqueZones.forEach(z => {
-    prompt += `\nKEY "${z.key}":\n`
-    if (z.prompt) prompt += `ZONE INSTRUCTIONS:\n${z.prompt}\n`
-     prompt += z.exampleHtml ? `TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):\n${toSingleQuotedHtml(z.exampleHtml)}\n↑ Use this structure as a pattern only. Output exactly one repeating item (card, row, list item) per data record — never match the template's item count.\n` : `(no template — generate appropriate innerHTML)\n`
-   })
+    })
+  }
 
    return prompt
 }
@@ -301,3 +350,25 @@ ${templateBlock}
 Produce output for all ${instanceNames.length} instance(s). Each section MUST begin with [SLIDE_INSTANCE_N].`
 }
 
+export function buildCompletionPrompt(missingKeys, zones, agentContext, customPrompt = '') {
+  const relevantZones = zones.filter(z => missingKeys.includes(z.key))
+  const zoneBlock = relevantZones.length > 0
+    ? relevantZones.map(z => {
+        const instructions = z.prompt ? `\nZONE INSTRUCTIONS:\n${z.prompt}` : ''
+        const template = z.exampleHtml ? `\nTEMPLATE:\n${toSingleQuotedHtml(z.exampleHtml)}` : ''
+        return `KEY "${z.key}"${instructions}${template}`
+      }).join('\n\n')
+    : '(no matching zones found)'
+
+  const customBlock = customPrompt ? `\nUSER INSTRUCTIONS:\n${customPrompt}` : ''
+
+  return `You are completing missing fields in a slide JSON object.
+
+SOURCE DATA:
+${agentContext || 'No source data provided.'}${customBlock}
+
+FIELDS TO COMPLETE:
+${zoneBlock}
+
+Return a single valid JSON object containing only the missing keys. Do not include any extra keys, explanation, markdown fences, or commentary.`
+}

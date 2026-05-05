@@ -179,21 +179,29 @@ router.patch('/:projectName/flows/:flowId', (req, res) => {
       flow._metadata.fullSlideGeneration = fullSlideGeneration;
     }
 
+    const flowDir = resolveFlowDir(req.params.projectName, req.params.flowId);
+    if (!flowDir) return res.status(400).json({ error: 'Invalid flow path' });
+
     if (selectionsChanged || fullSlideGenChanged) {
       flow._metadata = flow._metadata || {};
       const fullSlideGen = fullSlideGenChanged ? fullSlideGeneration : (flow._metadata?.fullSlideGeneration || []);
       const currentSelections = selectionsChanged ? selections : (flow._metadata?.selections || []);
       const trees = flow._metadata?.trees || [];
-      const selectionsWithAutoDiscovered = autoDiscoverZonesForFullSlide(trees, fullSlideGen, currentSelections);
+      
+      // Load template HTML for auto-discovery
+      let templateHtml = '';
+      const templatePath = path.join(flowDir, 'template.html');
+      if (fs.existsSync(templatePath)) {
+        templateHtml = fs.readFileSync(templatePath, 'utf8');
+      }
+      
+      const selectionsWithAutoDiscovered = autoDiscoverZonesForFullSlide(trees, fullSlideGen, currentSelections, templateHtml);
       flow._metadata.selections = selectionsWithAutoDiscovered;
       const repSlides = flow._metadata.repeatableSlides || [];
       const { resolved } = resolveConflicts(selectionsWithAutoDiscovered);
       flow._metadata.zones = selectionsToZones(resolved, repSlides);
     }
     flow.updatedAt = new Date().toISOString();
-
-    const flowDir = resolveFlowDir(req.params.projectName, req.params.flowId);
-    if (!flowDir) return res.status(400).json({ error: 'Invalid flow path' });
 
     fs.writeFileSync(path.join(flowDir, 'flow.json'), JSON.stringify(flow, null, 2));
     res.json({ flow });

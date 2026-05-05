@@ -36,6 +36,7 @@ import {
   buildBlocksPrompt,
   buildInstancePrompt,
   buildSlicerPrompt,
+  buildCompletionPrompt,
 } from '../lib/ai/agentic-prompts.js'
 import { RESOLVED_PROJECTS_DIR, SLICE_TEMPLATES_DIR } from '../config.js'
 
@@ -160,28 +161,30 @@ async function callAiJson(prompt, options = {}, logFn = null) {
    const result = await callAi(prompt, options)
    let parseResult
 
-   // Check for truncated response
-   if (result.finishReason === 'length') {
-     warn(`Response truncated by max_tokens limit — JSON may be incomplete`)
-   } else if (result.finishReason !== 'stop') {
-     warn(`Unexpected finish_reason: ${result.finishReason}`)
-   }
+    // Check for truncated response — skip parse attempt if truncated, go straight to repair
+    if (result.finishReason === 'length') {
+      warn(`Response truncated by max_tokens limit — skipping parse, going straight to repair`)
+    } else if (result.finishReason !== 'stop') {
+      warn(`Unexpected finish_reason: ${result.finishReason}`)
+    }
 
-   // Attempt 1: Try enhanced parsing on raw response
-   try {
-     parseResult = parseJson(result.response)
-     console.log(`[callAiJson] Parse succeeded on attempt 1 using strategy: ${parseResult.strategy}`)
-     return {
-       parsed: parseResult.parsed,
-       raw: result.response,
-       strategy: parseResult.strategy,
-       wasRepaired: false,
-       repairAttempts: 0,
-       finishReason: result.finishReason,
-     }
-   } catch (firstErr) {
-     console.warn('[callAiJson] Parse attempt 1 failed:', firstErr.message)
-   }
+    // Attempt 1: Try enhanced parsing on raw response (skip if truncated)
+    if (result.finishReason !== 'length') {
+      try {
+        parseResult = parseJson(result.response)
+        console.log(`[callAiJson] Parse succeeded on attempt 1 using strategy: ${parseResult.strategy}`)
+        return {
+          parsed: parseResult.parsed,
+          raw: result.response,
+          strategy: parseResult.strategy,
+          wasRepaired: false,
+          repairAttempts: 0,
+          finishReason: result.finishReason,
+        }
+      } catch (firstErr) {
+        console.warn('[callAiJson] Parse attempt 1 failed:', firstErr.message)
+      }
+    }
 
     // Repair attempt 1: Ask for strict JSON-only response
     logFn?.(`JSON parse failed — attempting repair 1 (strict JSON-only format)...`)
@@ -198,10 +201,10 @@ async function callAiJson(prompt, options = {}, logFn = null) {
       `- Ensure all braces and brackets are balanced\n\n` +
       `Original response to repair:\n${result.response}`
 
-    const retry1 = await callAi(repairPrompt1, {
-      maxTokens: options.maxTokens ?? 3000,
-      temperature: 0,
-    })
+     const retry1 = await callAi(repairPrompt1, {
+       maxTokens: options.maxTokens ?? 64000,
+       temperature: 0,
+     })
 
     if (retry1.finishReason === 'length') {
       warn(`Repair 1 response also truncated by max_tokens limit`)
@@ -237,10 +240,10 @@ async function callAiJson(prompt, options = {}, logFn = null) {
       `- Ensure valid JSON syntax\n\n` +
       `Text:\n${repair2Source}`
 
-    const retry2 = await callAi(extractPrompt, {
-      maxTokens: options.maxTokens ?? 3000,
-      temperature: 0,
-    })
+     const retry2 = await callAi(extractPrompt, {
+       maxTokens: options.maxTokens ?? 64000,
+       temperature: 0,
+     })
 
    if (retry2.finishReason === 'length') {
      warn(`Repair 2 response also truncated by max_tokens limit`)
@@ -870,7 +873,7 @@ router.post('/agentic/run', async (req, res) => {
        log(`[${agent.label}] Sending prompt (${prompt.length} chars)...`)
        let parsed
        try {
-         const agentAi = await callAiJson(prompt, { maxTokens: 20000, temperature: 0.4 }, (msg) => log(`[${agent.label}] ${msg}`))
+         const agentAi = await callAiJson(prompt, { maxTokens: 64000, temperature: 0.4 }, (msg) => log(`[${agent.label}] ${msg}`))
          const repairInfo = agentAi.wasRepaired ? ` [repaired in ${agentAi.repairAttempts} attempt(s), strategy: ${agentAi.strategy}]` : ` [strategy: ${agentAi.strategy}]`
          log(`[${agent.label}] Response received (${agentAi.raw.length} chars)${repairInfo}`)
          console.log(`[agentic/run][${agent.label}] Raw response (${agentAi.raw.length} chars):\n${agentAi.raw}`)
@@ -920,14 +923,125 @@ router.post('/agentic/run', async (req, res) => {
     phase('assembling')
     log('Assembling final JSON...')
 
-    const assembled  = assembleResults(agentResults)
-    const jsonString = JSON.stringify(assembled)
+    let assembled  = assembleResults(agentResults)
+    let jsonString = JSON.stringify(assembled)
     log(`Assembled JSON: ${jsonString.length} chars`)
 
-    const vResult = validateHtmlJson(jsonString, zones, repeatableSlides)
+    let vResult = validateHtmlJson(jsonString, zones, repeatableSlides)
     if (vResult.missingFields?.length > 0) {
       log(`Warning: ${vResult.missingFields.length} missing field(s):`)
       vResult.missingFields.forEach(field => log(`  Missing: ${field}`))
+
+      // ── Missing-field completion pass ──────────────────────────────────────
+      log('Attempting to fill missing fields...')
+
+      // Parse missing fields into groups by (slideKey, instanceIndex)
+      const completionMap = {} // key: "slideKey:instanceIndex", value: { slideKey, instanceIndex, missingKeys }
+      const warnings = []
+
+      for (const field of vResult.missingFields) {
+        // Pattern: slideKey[N].fieldKey (N is 1-based) or slideKey.shared.fieldKey or slideKey (missing...)
+        const instanceMatch = field.match(/^([^\[.]+)\[(\d+)\]\.(.+)$/)
+        const sharedMatch = field.match(/^([^.]+)\.shared\.(.+)$/)
+        const missingMatch = field.match(/^([^\s]+)\s*\(missing/)
+
+        if (instanceMatch) {
+          const [, slideKey, instanceNum, fieldKey] = instanceMatch
+          const instanceIndex = parseInt(instanceNum, 10) - 1 // Convert 1-based to 0-based
+          const mapKey = `${slideKey}:${instanceIndex}`
+          if (!completionMap[mapKey]) {
+            completionMap[mapKey] = { slideKey, instanceIndex, missingKeys: [] }
+          }
+          completionMap[mapKey].missingKeys.push(fieldKey)
+        } else if (sharedMatch) {
+          warnings.push(`Skipping shared zone field: ${field}`)
+        } else if (missingMatch) {
+          warnings.push(`Skipping non-instance field: ${field}`)
+        } else {
+          warnings.push(`Could not parse missing field format: ${field}`)
+        }
+      }
+
+      if (warnings.length > 0) {
+        warnings.forEach(w => log(`  ⚠️  ${w}`))
+      }
+
+      const completionEntries = Object.values(completionMap)
+      if (completionEntries.length === 0) {
+        log('No instance fields to complete.')
+      } else {
+        log(`Completing ${completionEntries.length} instance(s) with missing field(s)...`)
+
+        // Run completion calls in parallel
+        const completionPromises = completionEntries.map(async (entry) => {
+          const { slideKey, instanceIndex, missingKeys } = entry
+          const agent = agentResults.find(
+            r => r.agent.slideKey === slideKey && r.agent.instanceIndex === instanceIndex
+          )
+
+          if (!agent) {
+            log(`  [${slideKey}[${instanceIndex + 1}]] No agent result found — skipping`)
+            return null
+          }
+
+          // Re-derive agentContext from resolvedSlices using the same logic as generation
+          let agentContext = ''
+          const sharedSlice = resolvedSlices['shared'] || ''
+          if (agent.agent.type === 'blocks') {
+            agentContext = sharedSlice
+          } else {
+            const instanceSlice = resolvedSlices[agent.agent.globalIndex.toString()] || ''
+            agentContext = sharedSlice
+              ? `${instanceSlice}\n\n=== Shared Reference Data ===\n${sharedSlice}`
+              : instanceSlice
+          }
+
+          const completionPrompt = buildCompletionPrompt(
+            missingKeys,
+            zones,
+            agentContext,
+            customInput || contentPrompt
+          )
+
+          try {
+            log(`  [${slideKey}[${instanceIndex + 1}]] Completing: ${missingKeys.join(', ')}`)
+            const completionAi = await callAiJson(
+              completionPrompt,
+              { maxTokens: 16000, temperature: 0.2 },
+              (msg) => log(`    [${slideKey}[${instanceIndex + 1}]] ${msg}`)
+            )
+            log(`  [${slideKey}[${instanceIndex + 1}]] Completion received (${completionAi.raw.length} chars)`)
+            return { slideKey, instanceIndex, parsed: completionAi.parsed }
+          } catch (err) {
+            log(`  [${slideKey}[${instanceIndex + 1}]] Completion failed: ${err.message.split('\n')[0]}`)
+            return null
+          }
+        })
+
+        const completionResults = await Promise.all(completionPromises)
+
+        // Merge completion results into assembled
+        for (const result of completionResults) {
+          if (!result) continue
+          const { slideKey, instanceIndex, parsed } = result
+          if (!assembled.slides?.[slideKey]?.instances?.[instanceIndex]) continue
+
+          // Merge parsed fields into the existing instance
+          Object.assign(assembled.slides[slideKey].instances[instanceIndex], parsed)
+          log(`  [${slideKey}[${instanceIndex + 1}]] Merged completion result`)
+        }
+
+        // Re-validate
+        jsonString = JSON.stringify(assembled)
+        vResult = validateHtmlJson(jsonString, zones, repeatableSlides)
+        if (vResult.missingFields?.length > 0) {
+          log(`After completion: still ${vResult.missingFields.length} missing field(s)`)
+          vResult.missingFields.slice(0, 5).forEach(field => log(`  Missing: ${field}`))
+          if (vResult.missingFields.length > 5) log(`  ... and ${vResult.missingFields.length - 5} more`)
+        } else {
+          log(`Completion successful — all fields populated (${vResult.foundFields?.length ?? 0} fields)`)
+        }
+      }
     } else {
       log(`All fields populated (${vResult.foundFields?.length ?? 0} fields)`)
     }
@@ -1032,7 +1146,7 @@ router.post('/agentic/retry-agent', async (req, res) => {
 
     let parsed
     try {
-      const agentAi = await callAiJson(prompt, { maxTokens: 16000, temperature: 0.4 })
+      const agentAi = await callAiJson(prompt, { maxTokens: 64000, temperature: 0.4 })
       parsed = agentAi.parsed
     } catch (parseErr) {
       return res.status(422).json({ ok: false, error: `Agent returned invalid JSON: ${parseErr.message.split('\n')[0]}` })

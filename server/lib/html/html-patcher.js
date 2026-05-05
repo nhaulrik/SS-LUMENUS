@@ -170,7 +170,12 @@ function patchSection(section, zones, valueMap, inst, blocksData) {
       const block = blocksData[key] ?? valueMap[key];
       html = block?.value ?? (typeof block === 'string' ? block : null);
     }
-    if (html !== undefined && html !== null) node.set_content(String(html));
+    if (html !== undefined && html !== null) {
+      // Parse HTML and set as child nodes (innerHTML replacement)
+      const htmlStr = String(html);
+      const parsed = parse(htmlStr, { comment: true });
+      node.childNodes = parsed.childNodes;
+    }
   });
 
   // Block zones: nodeId path (user-assigned block zones with no data-block attr).
@@ -196,7 +201,12 @@ function patchSection(section, zones, valueMap, inst, blocksData) {
     if (html === undefined || html === null) return;
 
     const el = findElementByNodeId(section, zone.nodeId);
-    if (el) el.set_content(String(html));
+    if (el) {
+      // Parse HTML and set as child nodes (innerHTML replacement)
+      const htmlStr = String(html);
+      const parsed = parse(htmlStr, { comment: true });
+      el.childNodes = parsed.childNodes;
+    }
   });
 }
 

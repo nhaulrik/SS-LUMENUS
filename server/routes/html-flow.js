@@ -279,7 +279,7 @@ router.post('/html-flow/create-project', (req, res) => {
     const fullSlideGen  = Array.isArray(fullSlideGeneration) ? fullSlideGeneration : [];
     const rawSelections = Array.isArray(selections) ? selections : (session.selections ?? []);
 
-    const selectionsWithAutoDiscovered = autoDiscoverZonesForFullSlide(session.trees ?? [], fullSlideGen, rawSelections);
+    const selectionsWithAutoDiscovered = autoDiscoverZonesForFullSlide(session.trees ?? [], fullSlideGen, rawSelections, session.html);
     const { resolved, removed } = resolveConflicts(selectionsWithAutoDiscovered);
     const zones = selectionsToZones(resolved, repeatableSlides);
 
@@ -436,10 +436,26 @@ router.post('/html-flow/apply-content', (req, res) => {
        slideNames = extractSlideNamesFromHtml(patchedHtml);
      }
 
-     const roundId    = randomUUID();
-     const outputFile = `output-${roundId}.html`;
-     const outputPath = path.join(flowDir, outputFile);
-     fs.writeFileSync(outputPath, patchedHtml, 'utf8');
+      const roundId    = randomUUID();
+      const outputFile = `output-${roundId}.html`;
+      const outputPath = path.join(flowDir, outputFile);
+      const featureArray = (() => {
+        try {
+          const parsed = JSON.parse(jsonString);
+          const slideKeys = Object.keys(parsed?.slides || {});
+          const firstSlide = slideKeys.length > 0 ? parsed.slides[slideKeys[0]] : null;
+          if (Array.isArray(firstSlide)) return firstSlide;
+          if (Array.isArray(firstSlide?.instances)) return firstSlide.instances;
+        } catch {
+          // Fall through and keep the original payload if parsing fails.
+        }
+        return jsonString;
+      })();
+      const outputHtml = patchedHtml.replace(
+        /(<script\s+type="application\/json"\s+id="featureDataSource"[^>]*>)[\s\S]*?(<\/script>)/i,
+        `$1\n${typeof featureArray === 'string' ? featureArray : JSON.stringify(featureArray)}\n$2`
+      );
+      fs.writeFileSync(outputPath, outputHtml, 'utf8');
 
      flow.generations = [...(flow.generations || []), {
        id:         roundId,
@@ -451,8 +467,8 @@ router.post('/html-flow/apply-content', (req, res) => {
      flow.updatedAt = new Date().toISOString();
      fs.writeFileSync(flowPath, JSON.stringify(flow, null, 2), 'utf8');
 
-     const previewHtml = buildOutputPreviewHtml(patchedHtml);
-     const slideCount  = (patchedHtml.match(/<section/g) || []).length;
+      const previewHtml = buildOutputPreviewHtml(outputHtml);
+      const slideCount  = (outputHtml.match(/<section/g) || []).length;
 
      return res.json({ ok: true, roundId, outputFile, previewHtml, slideCount, slideNames });
   } catch (err) {
