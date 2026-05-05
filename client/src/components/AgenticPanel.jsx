@@ -86,19 +86,18 @@ export default function AgenticPanel({
   // Plan returned by /agentic/plan, held during confirming state
   // { instances, contextSummary, rationale, agentPlan, contextFiles }
 
-  const logEndRef = useRef(null)
-  const timerRef  = useRef(null)
-  const abortRef  = useRef(null)
+  const logEndRef  = useRef(null)
+  const timerRef   = useRef(null)
+  const abortRef   = useRef(null)
+  const [copiedId, setCopiedId] = useState(null)
 
-  const [availableColumns, setAvailableColumns]         = useState([])
-  const [groupingColumn, setGroupingColumn]             = useState('')
-  const [columnsLoading, setColumnsLoading]             = useState(false)
-  const [filterColumn, setFilterColumn]                 = useState('')
-  const [filterValues, setFilterValues]                 = useState([])
-  const [availableFilterValues, setAvailableFilterValues] = useState([])
-  const [filterValuesLoading, setFilterValuesLoading]   = useState(false)
-
-  const filterValuesSet = useMemo(() => new Set(filterValues), [filterValues])
+   const [availableColumns, setAvailableColumns]         = useState([])
+   const [groupingColumn, setGroupingColumn]             = useState('')
+   const [columnsLoading, setColumnsLoading]             = useState(false)
+   const [filters, setFilters]                           = useState([])
+   const [expandedFilterId, setExpandedFilterId]         = useState(null)
+   const [filterValuesLoading, setFilterValuesLoading]   = useState(false)
+   const [filterColumnValues, setFilterColumnValues]     = useState({})
   const hasRecipe = Boolean(recipe?.trim())
   const isActive  = status === 'planning' || status === 'running'
 
@@ -115,28 +114,29 @@ export default function AgenticPanel({
     return () => { cancelled = true }
   }, [projectName])
 
-  // Fetch unique values when filter column changes
-  useEffect(() => {
-    if (!filterColumn || !projectName) {
-      setAvailableFilterValues([])
-      setFilterValues([])
-      return
-    }
-    let cancelled = false
-    setFilterValuesLoading(true)
-    fetch(`/api/opencode/agentic/context-column-values?projectName=${encodeURIComponent(projectName)}&column=${encodeURIComponent(filterColumn)}`)
-      .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
-      .then(data => {
-        if (!cancelled) {
-          const vals = data.values || []
-          setAvailableFilterValues(vals)
-          setFilterValues(vals) // all selected by default
-        }
-      })
-      .catch(() => { if (!cancelled) { setAvailableFilterValues([]); setFilterValues([]) } })
-      .finally(() => { if (!cancelled) setFilterValuesLoading(false) })
-    return () => { cancelled = true }
-  }, [filterColumn, projectName])
+   // Fetch unique values when expanded filter column changes
+   useEffect(() => {
+     if (!expandedFilterId || !projectName) {
+       setFilterValuesLoading(false)
+       return
+     }
+     const filter = filters.find(f => f.id === expandedFilterId)
+     if (!filter || !filter.column) return
+     
+     let cancelled = false
+     setFilterValuesLoading(true)
+     fetch(`/api/opencode/agentic/context-column-values?projectName=${encodeURIComponent(projectName)}&column=${encodeURIComponent(filter.column)}`)
+       .then(r => r.ok ? r.json() : Promise.reject(r.statusText))
+       .then(data => {
+         if (!cancelled) {
+           const vals = data.values || []
+           setFilterColumnValues(prev => ({ ...prev, [filter.column]: vals }))
+         }
+       })
+       .catch(() => { if (!cancelled) setFilterColumnValues(prev => ({ ...prev, [filter.column]: [] })) })
+       .finally(() => { if (!cancelled) setFilterValuesLoading(false) })
+     return () => { cancelled = true }
+   }, [expandedFilterId, filters, projectName])
 
   // Auto-scroll log
   useEffect(() => {
@@ -153,13 +153,38 @@ export default function AgenticPanel({
     return () => clearInterval(timerRef.current)
   }, [status])
 
-  const appendLog    = (msg) => setLogs(prev => [...prev, msg])
-  const updateAgent  = (id, state) =>
-    setAgents(prev => prev.map(a => a.id === id ? { ...a, state } : a))
+   const appendLog    = (msg) => setLogs(prev => [...prev, msg])
+   const updateAgent  = (id, state, extra = {}) =>
+     setAgents(prev => prev.map(a => a.id === id ? { ...a, state, ...extra } : a))
 
-  // ── Phase 1: call /plan, pause for confirmation ────────────────────────────
+   const addFilter = useCallback(() => {
+     const newId = `filter-${Date.now()}`
+     const newFilter = { id: newId, column: '', values: [] }
+     setFilters(prev => [...prev, newFilter])
+     setExpandedFilterId(newId)
+   }, [])
 
-  const handleGenerate = useCallback(async () => {
+   const removeFilter = useCallback((id) => {
+     setFilters(prev => prev.filter(f => f.id !== id))
+     if (expandedFilterId === id) setExpandedFilterId(null)
+   }, [expandedFilterId])
+
+   const updateFilterColumn = useCallback((id, column) => {
+     setFilters(prev => prev.map(f => 
+       f.id === id ? { ...f, column, values: [] } : f
+     ))
+     setFilterColumnValues(prev => ({ ...prev, [column]: [] }))
+   }, [])
+
+   const updateFilterValues = useCallback((id, values) => {
+     setFilters(prev => prev.map(f => 
+       f.id === id ? { ...f, values } : f
+     ))
+   }, [])
+
+   // ── Phase 1: call /plan, pause for confirmation ────────────────────────────
+
+   const handleGenerate = useCallback(async () => {
     if (!hasRecipe || isActive) return
 
     setStatus('planning')
@@ -171,16 +196,15 @@ export default function AgenticPanel({
     setElapsed(0)
 
     try {
-      const response = await fetch('/api/opencode/agentic/plan', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({
-          projectName, recipe, zones, repeatableSlides, contentPrompt,
-          groupingColumn: groupingColumn || null,
-          filterColumn:   filterColumn   || null,
-          filterValues:   filterColumn ? filterValues : [],
-        }),
-      })
+       const response = await fetch('/api/opencode/agentic/plan', {
+         method:  'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body:    JSON.stringify({
+           projectName, recipe, zones, repeatableSlides, contentPrompt,
+           groupingColumn: groupingColumn || null,
+           filters: filters.filter(f => f.column && f.values.length > 0),
+         }),
+       })
       if (!response.ok) throw new Error(`Server error ${response.status}`)
 
       for await (const { type, data } of readSSE(response)) {
@@ -201,7 +225,7 @@ export default function AgenticPanel({
       setStatus('error')
       setErrorMsg(err.message)
     }
-  }, [hasRecipe, isActive, projectName, recipe, zones, repeatableSlides, contentPrompt, groupingColumn, filterColumn, filterValues, setStatus, setPhase, setLogs, setAgents, setErrorMsg, setElapsed, setPlan])
+   }, [hasRecipe, isActive, projectName, recipe, zones, repeatableSlides, contentPrompt, groupingColumn, filters, setStatus, setPhase, setLogs, setAgents, setErrorMsg, setElapsed, setPlan])
 
   // ── Phase 2: user accepted — call /run SSE stream ─────────────────────────
 
@@ -241,7 +265,7 @@ export default function AgenticPanel({
           case 'phase':        setPhase(data); break
           case 'log':          appendLog(data); break
           case 'agents':       setAgents(JSON.parse(data)); break
-          case 'agent_update': { const u = JSON.parse(data); updateAgent(u.id, u.state); break }
+          case 'agent_update': { const u = JSON.parse(data); updateAgent(u.id, u.state, { output: u.output, errorDetail: u.errorDetail }); break }
           case 'done':         setStatus('done'); onJsonReady?.(data); break
           case 'error':        setStatus('error'); setErrorMsg(JSON.parse(data)); break
         }
@@ -253,6 +277,17 @@ export default function AgenticPanel({
       }
     }
   }, [plan, projectName, recipe, zones, repeatableSlides, onJsonReady, setStatus, setPhase, setLogs, setAgents, setErrorMsg, setElapsed])
+
+  const handleCopyAgent = useCallback((agent) => {
+    const text = agent.state === 'error'
+      ? (agent.errorDetail ?? `Agent "${agent.label}" failed with no detail`)
+      : (agent.output ?? '')
+    if (!text) return
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedId(agent.id)
+      setTimeout(() => setCopiedId(id => id === agent.id ? null : id), 1500)
+    })
+  }, [])
 
   const handleCancel = () => {
     abortRef.current?.abort()
@@ -335,91 +370,146 @@ export default function AgenticPanel({
         <p className={css.columnsLoadingHint}>Loading columns…</p>
       )}
 
-      {/* ── Filter column picker ─────────────────────────────────────────── */}
-      {availableColumns.length > 0 && (
-        <div className={css.columnPickerSection}>
-          <label className={css.columnPickerLabel}>
-            Filter data
-            <span className={css.columnPickerHint}>Limit which rows the AI receives · leave blank for no filter</span>
-          </label>
-          <div className={css.columnPickerRow}>
-            <select
-              className={css.columnSelect}
-              value={filterColumn}
-              onChange={e => setFilterColumn(e.target.value)}
-              disabled={isActive || status === 'confirming'}
-            >
-              <option value="">No filter</option>
-              {availableColumns.map(col => (
-                <option key={col} value={col}>{col}</option>
-              ))}
-            </select>
-            {filterColumn && (
-              <button
-                className={css.columnClearBtn}
-                onClick={() => { setFilterColumn(''); setFilterValues([]) }}
-                disabled={isActive || status === 'confirming'}
-                title="Clear filter"
-              >×</button>
-            )}
-          </div>
+       {/* ── Filter data ─────────────────────────────────────────────────── */}
+       {availableColumns.length > 0 && (
+         <div className={css.columnPickerSection}>
+           <label className={css.columnPickerLabel}>
+             Filter data
+             <span className={css.columnPickerHint}>Add filters to limit which rows the AI receives</span>
+           </label>
 
-          {filterValuesLoading && (
-            <p className={css.columnsLoadingHint}>Loading values…</p>
-          )}
+           {/* Active filters list */}
+           {filters.length > 0 && (
+             <div className={css.filterChipsList}>
+               {filters.map(filter => (
+                 <div key={filter.id} className={css.filterChip}>
+                   <div className={css.filterChipContent}>
+                     <span className={css.filterChipLabel}>
+                       {filter.column || 'Select column'}
+                       {filter.column && filter.values.length > 0 && (
+                         <span className={css.filterChipCount}>{filter.values.length}</span>
+                       )}
+                     </span>
+                   </div>
+                   <button
+                     className={css.filterChipRemoveBtn}
+                     onClick={() => removeFilter(filter.id)}
+                     disabled={isActive || status === 'confirming'}
+                     title="Remove filter"
+                   >×</button>
+                 </div>
+               ))}
+             </div>
+           )}
 
-          {filterColumn && !filterValuesLoading && availableFilterValues.length > 0 && (
-            <div className={css.filterValuesList}>
-              <div className={css.filterValuesHeader}>
-                <span className={css.filterValuesCount}>
-                  {filterValues.length} of {availableFilterValues.length} selected
-                </span>
-                <button
-                  className={css.filterToggleBtn}
-                  onClick={() => setFilterValues([...availableFilterValues])}
-                  disabled={isActive || status === 'confirming'}
-                >All</button>
-                <button
-                  className={css.filterToggleBtn}
-                  onClick={() => setFilterValues([])}
-                  disabled={isActive || status === 'confirming'}
-                >None</button>
-              </div>
-              <div className={css.filterCheckboxList}>
-                {availableFilterValues.map(val => (
-                  <label key={val} className={css.filterCheckboxItem}>
-                    <input
-                      type="checkbox"
-                      checked={filterValuesSet.has(val)}
-                      onChange={e => {
-                        if (e.target.checked) setFilterValues(prev => [...prev, val])
-                        else setFilterValues(prev => prev.filter(v => v !== val))
-                      }}
-                      disabled={isActive || status === 'confirming'}
-                    />
-                    <span className={css.filterCheckboxLabel}>{val}</span>
-                  </label>
-                ))}
-              </div>
-              {filterValues.length === 0 && (
-                <p className={css.filterWarning}>No values selected — all rows will be excluded</p>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+           {/* Expanded filter editor */}
+           {expandedFilterId && (
+             <div className={css.filterEditor}>
+               {(() => {
+                 const filter = filters.find(f => f.id === expandedFilterId)
+                 if (!filter) return null
+                 const availableValues = filter.column ? (filterColumnValues[filter.column] || []) : []
+                 const selectedValuesSet = new Set(filter.values)
+                 
+                 return (
+                   <>
+                     <div className={css.filterEditorHeader}>
+                       <span className={css.filterEditorTitle}>Edit filter</span>
+                       <button
+                         className={css.filterEditorCloseBtn}
+                         onClick={() => setExpandedFilterId(null)}
+                         title="Close"
+                       >×</button>
+                     </div>
 
-      {/* ── Trigger row ─────────────────────────────────────────────────── */}
-      <div className={css.triggerRow}>
-        <button
-          className={`${css.generateBtn} ${isActive ? css.running : ''}`}
-          onClick={isActive ? undefined : handleGenerate}
-          disabled={!hasRecipe || isActive || status === 'confirming' || (filterColumn && filterValues.length === 0)}
-        >
-          {status === 'planning'  ? 'Analysing…'     :
-           status === 'running'   ? 'Generating…'    :
-                                    '✦ Generate with AI'}
-        </button>
+                     <div className={css.filterEditorSection}>
+                       <label className={css.filterEditorLabel}>Column</label>
+                       <select
+                         className={css.columnSelect}
+                         value={filter.column}
+                         onChange={e => updateFilterColumn(filter.id, e.target.value)}
+                         disabled={isActive || status === 'confirming'}
+                       >
+                         <option value="">Select a column</option>
+                         {availableColumns.map(col => (
+                           <option key={col} value={col}>{col}</option>
+                         ))}
+                       </select>
+                     </div>
+
+                     {filterValuesLoading && (
+                       <p className={css.columnsLoadingHint}>Loading values…</p>
+                     )}
+
+                     {filter.column && !filterValuesLoading && availableValues.length > 0 && (
+                       <div className={css.filterEditorSection}>
+                         <div className={css.filterValuesHeader}>
+                           <span className={css.filterValuesCount}>
+                             {filter.values.length} of {availableValues.length} selected
+                           </span>
+                           <button
+                             className={css.filterToggleBtn}
+                             onClick={() => updateFilterValues(filter.id, [...availableValues])}
+                             disabled={isActive || status === 'confirming'}
+                           >All</button>
+                           <button
+                             className={css.filterToggleBtn}
+                             onClick={() => updateFilterValues(filter.id, [])}
+                             disabled={isActive || status === 'confirming'}
+                           >None</button>
+                         </div>
+                         <div className={css.filterCheckboxList}>
+                           {availableValues.map(val => (
+                             <label key={val} className={css.filterCheckboxItem}>
+                               <input
+                                 type="checkbox"
+                                 checked={selectedValuesSet.has(val)}
+                                 onChange={e => {
+                                   if (e.target.checked) updateFilterValues(filter.id, [...filter.values, val])
+                                   else updateFilterValues(filter.id, filter.values.filter(v => v !== val))
+                                 }}
+                                 disabled={isActive || status === 'confirming'}
+                               />
+                               <span className={css.filterCheckboxLabel}>{val}</span>
+                             </label>
+                           ))}
+                         </div>
+                         {filter.values.length === 0 && (
+                           <p className={css.filterWarning}>No values selected for this filter</p>
+                         )}
+                       </div>
+                     )}
+                   </>
+                 )
+               })()}
+             </div>
+           )}
+
+           {/* Add filter button */}
+           <button
+             className={css.addFilterBtn}
+             onClick={addFilter}
+             disabled={isActive || status === 'confirming'}
+           >+ Add filter</button>
+         </div>
+       )}
+
+       {/* ── Trigger row ─────────────────────────────────────────────────── */}
+       <div className={css.triggerRow}>
+         {(() => {
+           const hasInvalidFilters = filters.some(f => f.column && f.values.length === 0)
+           return (
+             <button
+               className={`${css.generateBtn} ${isActive ? css.running : ''}`}
+               onClick={isActive ? undefined : handleGenerate}
+               disabled={!hasRecipe || isActive || status === 'confirming' || hasInvalidFilters}
+             >
+               {status === 'planning'  ? 'Analysing…'     :
+                status === 'running'   ? 'Generating…'    :
+                                         '✦ Generate with AI'}
+             </button>
+           )
+         })()}
 
         {status === 'running' && <span className={css.timer}>{elapsed}s</span>}
 
@@ -498,14 +588,29 @@ export default function AgenticPanel({
         <div className={css.chipsSection}>
           <div className={css.chipsLabel}>Agents</div>
           <div className={css.chips}>
-            {agents.map(agent => (
-              <div key={agent.id} className={`${css.chip} ${css[agent.state]}`}>
-                {agent.state === 'running' && <div className={css.chipSpinner} />}
-                {agent.state === 'done'    && '✓ '}
-                {agent.state === 'error'   && '✕ '}
-                {agent.label}
-              </div>
-            ))}
+            {agents.map(agent => {
+              const isCopyable = agent.state === 'done' || agent.state === 'error'
+              const isCopied   = copiedId === agent.id
+              const Tag        = isCopyable ? 'button' : 'div'
+              return (
+                <Tag
+                  key={agent.id}
+                  className={`${css.chip} ${css[agent.state]} ${isCopyable ? css.chipCopyable : ''} ${isCopied ? css.chipCopied : ''}`}
+                  {...(isCopyable ? { onClick: () => handleCopyAgent(agent), title: 'Click to copy output' } : {})}
+                >
+                  {agent.state === 'running' && <div className={css.chipSpinner} />}
+                  {isCopied
+                    ? 'Copied ✓'
+                    : <>
+                        {agent.state === 'done'  && '✓ '}
+                        {agent.state === 'error' && '✕ '}
+                        {agent.label}
+                        {isCopyable && <span className={css.chipCopyIcon}>⧉</span>}
+                      </>
+                  }
+                </Tag>
+              )
+            })}
           </div>
         </div>
       )}

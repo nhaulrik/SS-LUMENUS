@@ -21,6 +21,7 @@ export default function HtmlMetadataStep({
   onFinish,
   setToast,
   debugContext,
+  skippedSlides = [],
 }) {
   const { outputFile, roundId, slideCount = 1 } = applied
 
@@ -102,8 +103,28 @@ export default function HtmlMetadataStep({
       <Breadcrumbs step={step} canNavigateTo={canNavigateTo} navigateTo={navigateTo} flow="html" />
 
       <div className="html-metadata-panel">
-        {/* Export Name Field */}
-        <div className="html-metadata-export-name">
+         {/* Skipped Slides Warning */}
+         {skippedSlides.length > 0 && (
+           <div style={{
+             backgroundColor: '#fff3cd',
+             border: '1px solid #ffeaa7',
+             borderRadius: '4px',
+             padding: '12px 16px',
+             marginBottom: '20px',
+             color: '#856404',
+           }}>
+             <strong>⚠️ {skippedSlides.length} slide(s) were skipped due to generation errors:</strong>
+             <ul style={{ marginTop: '8px', marginBottom: 0, paddingLeft: '20px' }}>
+               {skippedSlides.map((slide, i) => (
+                 <li key={i}>{slide}</li>
+               ))}
+             </ul>
+             <small style={{ display: 'block', marginTop: '8px' }}>These slides will not be included in the export. You can go back to retry them if needed.</small>
+           </div>
+         )}
+
+         {/* Export Name Field */}
+         <div className="html-metadata-export-name">
           <label htmlFor="export-name">Export Name</label>
           <input
             id="export-name"

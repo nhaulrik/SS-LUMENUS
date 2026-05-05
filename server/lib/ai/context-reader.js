@@ -29,22 +29,27 @@ const SUMMARY_SUFFIX = '.summary.md'
  * @param {string} sheetName   Name of the sheet.
  * @param {boolean} [fullMode=false] When true, output all rows with full cell content (no row cap, no cell truncation).
  */
-function summariseSheet(sheet, XLSX, sheetName, fullMode = false, rowFilter = null) {
-  // Parse to array-of-arrays, skip completely blank rows
-  const rows     = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' })
-  const dataRows = rows.filter(row => row.some(cell => String(cell).trim() !== ''))
+function summariseSheet(sheet, XLSX, sheetName, fullMode = false, filters = []) {
+   // Parse to array-of-arrays, skip completely blank rows
+   const rows     = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' })
+   const dataRows = rows.filter(row => row.some(cell => String(cell).trim() !== ''))
 
-  if (dataRows.length === 0) return `[Sheet: ${sheetName}]\n(empty)\n`
+   if (dataRows.length === 0) return `[Sheet: ${sheetName}]\n(empty)\n`
 
-  const allHeaders = dataRows[0].map(h => String(h).trim())
-  let allBody      = dataRows.slice(1)
+   const allHeaders = dataRows[0].map(h => String(h).trim())
+   let allBody      = dataRows.slice(1)
 
-  if (rowFilter) {
-    const filterIdx = allHeaders.findIndex(h => h.toLowerCase() === rowFilter.column.toLowerCase())
-    if (filterIdx >= 0) {
-      allBody = allBody.filter(row => rowFilter.values.has(String(row[filterIdx] ?? '').trim().toLowerCase()))
-    }
-  }
+   // Apply all filters with AND logic
+   if (filters && filters.length > 0) {
+     allBody = allBody.filter(row => {
+       // All filters must match (AND logic)
+       return filters.every(filter => {
+         const filterIdx = allHeaders.findIndex(h => h.toLowerCase() === filter.column.toLowerCase())
+         if (filterIdx < 0) return true // Column not found, skip this filter
+         return filter.values.has(String(row[filterIdx] ?? '').trim().toLowerCase())
+       })
+     })
+   }
 
   // Keep only columns that have a non-empty header AND at least one data value
   const activeColIdxs = [...allHeaders.keys()]
@@ -108,34 +113,36 @@ async function readDocx(filePath) {
   return result.value ?? ''
 }
 
-async function readXlsx(filePath, compact = false, rowFilter = null) {
-  const { default: XLSX } = await import('xlsx')
-  const workbook = XLSX.readFile(filePath)
-  return workbook.SheetNames
-    .map(name => summariseSheet(workbook.Sheets[name], XLSX, name, !compact, rowFilter))
-    .join('\n\n')
-}
-
-async function readCsv(filePath, compact = false, rowFilter = null) {
+async function readXlsx(filePath, compact = false, filters = []) {
    const { default: XLSX } = await import('xlsx')
    const workbook = XLSX.readFile(filePath)
-   return summariseSheet(workbook.Sheets[workbook.SheetNames[0]], XLSX, path.basename(filePath), !compact, rowFilter)
-}
+   return workbook.SheetNames
+     .map(name => summariseSheet(workbook.Sheets[name], XLSX, name, !compact, filters))
+     .join('\n\n')
+ }
+
+ async function readCsv(filePath, compact = false, filters = []) {
+    const { default: XLSX } = await import('xlsx')
+    const workbook = XLSX.readFile(filePath)
+    return summariseSheet(workbook.Sheets[workbook.SheetNames[0]], XLSX, path.basename(filePath), !compact, filters)
+ }
 
 async function readTextFile(filePath) {
   return fs.readFile(filePath, 'utf-8')
 }
 
 async function extractText(filePath, compact = false, rowFilter = null) {
-  const ext = path.extname(filePath).toLowerCase()
-  switch (ext) {
-    case '.pdf':  return readPdf(filePath)
-    case '.docx': return readDocx(filePath)
-    case '.xlsx':
-    case '.xls':  return readXlsx(filePath, compact, rowFilter)
-    case '.csv':  return readCsv(filePath, compact, rowFilter)
-    default:      return readTextFile(filePath)
-  }
+   const ext = path.extname(filePath).toLowerCase()
+   // Support both single filter and array of filters
+   const filters = Array.isArray(rowFilter) ? rowFilter : (rowFilter ? [rowFilter] : [])
+   switch (ext) {
+     case '.pdf':  return readPdf(filePath)
+     case '.docx': return readDocx(filePath)
+     case '.xlsx':
+     case '.xls':  return readXlsx(filePath, compact, filters)
+     case '.csv':  return readCsv(filePath, compact, filters)
+     default:      return readTextFile(filePath)
+   }
 }
 
 // ── Public API ─────────────────────────────────────────────────────────────────
@@ -316,45 +323,51 @@ export async function readContextFilesCompact(projectDir, { selectedFiles = [], 
  *   matched:    true if the column was found in at least one file
  */
 export async function extractGroupedSlices(contextDir, column, groupValues, allFilenames, rowFilter = null) {
-  const { default: XLSX } = await import('xlsx')
+   const { default: XLSX } = await import('xlsx')
 
-  const TABULAR_EXT = new Set(['.xlsx', '.xls', '.csv'])
-  const tabularFiles = allFilenames.filter(f => TABULAR_EXT.has(path.extname(f).toLowerCase()))
+   const TABULAR_EXT = new Set(['.xlsx', '.xls', '.csv'])
+   const tabularFiles = allFilenames.filter(f => TABULAR_EXT.has(path.extname(f).toLowerCase()))
 
-  // Build per-group row buckets, keyed by sheet
-  const buckets    = groupValues.map(() => ({})) // [{ "filename / sheetName": ["row...", ...] }]
-  const rawBuckets = groupValues.map(() => [])   // flat raw row objects per group (for metadata)
-  const blocksParts = []
-  let matched = false
+   // Build per-group row buckets, keyed by sheet
+   const buckets    = groupValues.map(() => ({})) // [{ "filename / sheetName": ["row...", ...] }]
+   const rawBuckets = groupValues.map(() => [])   // flat raw row objects per group (for metadata)
+   const blocksParts = []
+   let matched = false
 
-  // Only the FIRST sheet that contains the grouping column is used for slicing.
-  // All other sheets — even if they also contain the grouping column — go to shared
-  // reference data. This ensures pivot/summary sheets are never accidentally sliced.
-  let dataSheetClaimed = false
+   // Only the FIRST sheet that contains the grouping column is used for slicing.
+   // All other sheets — even if they also contain the grouping column — go to shared
+   // reference data. This ensures pivot/summary sheets are never accidentally sliced.
+   let dataSheetClaimed = false
+   
+   // Support both single filter and array of filters
+   const filters = Array.isArray(rowFilter) ? rowFilter : (rowFilter ? [rowFilter] : [])
 
-  for (const filename of tabularFiles) {
-    const filePath = path.join(contextDir, filename)
-    let workbook
-    try {
-      workbook = XLSX.readFile(filePath)
-    } catch {
-      continue
-    }
+   for (const filename of tabularFiles) {
+     const filePath = path.join(contextDir, filename)
+     let workbook
+     try {
+       workbook = XLSX.readFile(filePath)
+     } catch {
+       continue
+     }
 
-    for (const sheetName of workbook.SheetNames) {
-      const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' })
-      if (rawRows.length === 0) continue
+     for (const sheetName of workbook.SheetNames) {
+       const rawRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' })
+       if (rawRows.length === 0) continue
 
-      const headers = Object.keys(rawRows[0])
+       const headers = Object.keys(rawRows[0])
 
-      // Apply row filter before any grouping
-      let rows = rawRows
-      if (rowFilter) {
-        const filterColKey = headers.find(h => h.trim().toLowerCase() === rowFilter.column.toLowerCase())
-        if (filterColKey) {
-          rows = rawRows.filter(row => rowFilter.values.has(String(row[filterColKey] ?? '').trim().toLowerCase()))
-        }
-      }
+       // Apply all filters before any grouping (AND logic)
+       let rows = rawRows
+       if (filters.length > 0) {
+         rows = rawRows.filter(row => {
+           return filters.every(filter => {
+             const filterColKey = headers.find(h => h.trim().toLowerCase() === filter.column.toLowerCase())
+             if (!filterColKey) return true // Column not found, skip this filter
+             return filter.values.has(String(row[filterColKey] ?? '').trim().toLowerCase())
+           })
+         })
+       }
 
       const colKey = headers.find(h => h.trim().toLowerCase() === column.trim().toLowerCase())
 
@@ -484,11 +497,13 @@ export async function readColumnUniqueValues(contextDir, columnName, filenames, 
         const headers = Object.keys(rawRows[0])
 
         let rows = rawRows
-        if (rowFilter) {
-          const filterColKey = headers.find(h => h.trim().toLowerCase() === rowFilter.column.toLowerCase())
-          if (filterColKey) {
-            rows = rawRows.filter(row => rowFilter.values.has(String(row[filterColKey] ?? '').trim().toLowerCase()))
-          }
+        const filters = Array.isArray(rowFilter) ? rowFilter : (rowFilter ? [rowFilter] : [])
+        if (filters.length > 0) {
+          rows = rawRows.filter(row => filters.every(filter => {
+            const filterColKey = headers.find(h => h.trim().toLowerCase() === filter.column.toLowerCase())
+            if (!filterColKey) return true
+            return filter.values.has(String(row[filterColKey] ?? '').trim().toLowerCase())
+          }))
         }
 
         const colKey = headers.find(h => h.trim().toLowerCase() === columnName.trim().toLowerCase())

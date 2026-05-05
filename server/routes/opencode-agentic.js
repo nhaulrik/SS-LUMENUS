@@ -106,6 +106,42 @@ function parseJson(text) {
   // Strategy 4: full text
   try { return { parsed: JSON.parse(text.trim()), strategy: 'full-text' } } catch {}
 
+  // Strategy 5: structural repair — close unclosed braces/brackets
+  // Useful when the AI response was truncated mid-JSON
+  try {
+    const start = text.indexOf('{') !== -1 ? text.indexOf('{') : text.indexOf('[')
+    if (start !== -1) {
+      let fragment = text.substring(start)
+      // Remove trailing incomplete string (last unmatched quote)
+      const stack = []
+      let inStr = false, esc = false, lastValidEnd = 0
+      for (let i = 0; i < fragment.length; i++) {
+        const c = fragment[i]
+        if (esc) { esc = false; continue }
+        if (c === '\\') { esc = true; continue }
+        if (c === '"') { inStr = !inStr; continue }
+        if (inStr) continue
+        if (c === '{' || c === '[') stack.push(c)
+        else if (c === '}' || c === ']') {
+          stack.pop()
+          if (stack.length === 0) { lastValidEnd = i + 1; break }
+        }
+      }
+      // If stack is not empty, the JSON is unclosed — try to close it
+      if (stack.length > 0) {
+        // Strip any trailing incomplete property or comma
+        let repaired = fragment.replace(/,\s*$/, '').replace(/,\s*\}/, '}').replace(/,\s*\]/, ']')
+        // If we're mid-string, close the string first
+        if (inStr) repaired += '"'
+        // Close all open structures in reverse order
+        for (let i = stack.length - 1; i >= 0; i--) {
+          repaired += stack[i] === '{' ? '}' : ']'
+        }
+        try { return { parsed: JSON.parse(repaired), strategy: 'structural-repair' } } catch {}
+      }
+    }
+  } catch {}
+
   throw new Error(
     `All JSON extraction strategies failed.\n` +
     `Text length: ${text.length} chars\n` +
@@ -147,60 +183,64 @@ async function callAiJson(prompt, options = {}, logFn = null) {
      console.warn('[callAiJson] Parse attempt 1 failed:', firstErr.message)
    }
 
-   // Repair attempt 1: Ask for strict JSON-only response
-   logFn?.(`JSON parse failed — attempting repair 1 (strict JSON-only format)...`)
-   console.log('[callAiJson] Attempting repair 1: strict JSON-only format')
-   const repairPrompt1 =
-     `You previously returned text that contains JSON but is not valid. ` +
-     `Extract and return ONLY the raw JSON object or array — nothing else.\n` +
-     `- Do not include markdown code fences\n` +
-     `- Do not include explanatory text before or after\n` +
-     `- Do not include comments\n` +
-     `- Start with { or [ and end with } or ]\n` +
-     `- Ensure all strings are properly quoted\n` +
-     `- Ensure all braces and brackets are balanced\n\n` +
-     `Original response to repair:\n${result.response}`
+    // Repair attempt 1: Ask for strict JSON-only response
+    logFn?.(`JSON parse failed — attempting repair 1 (strict JSON-only format)...`)
+    console.log('[callAiJson] Attempting repair 1: strict JSON-only format')
+    const repairPrompt1 =
+      `You previously returned text that contains JSON but is not valid. ` +
+      `Extract and return ONLY the raw JSON object or array — nothing else.\n` +
+      `- Do not include markdown code fences\n` +
+      `- Do not include explanatory text before or after\n` +
+      `- Do not include comments\n` +
+      `- Start with { or [ and end with } or ]\n` +
+      `- Ensure all strings are properly quoted and escaped\n` +
+      `- Within string values, escape all double quotes as \\", all backslashes as \\\\, and all newlines as \\n\n` +
+      `- Ensure all braces and brackets are balanced\n\n` +
+      `Original response to repair:\n${result.response}`
 
-   const retry1 = await callAi(repairPrompt1, {
-     maxTokens: options.maxTokens ?? 3000,
-     temperature: 0,
-   })
+    const retry1 = await callAi(repairPrompt1, {
+      maxTokens: options.maxTokens ?? 3000,
+      temperature: 0,
+    })
 
-   if (retry1.finishReason === 'length') {
-     warn(`Repair 1 response also truncated by max_tokens limit`)
-   }
+    if (retry1.finishReason === 'length') {
+      warn(`Repair 1 response also truncated by max_tokens limit`)
+    }
 
-   try {
-     parseResult = parseJson(retry1.response)
-     console.log(`[callAiJson] Parse succeeded on repair 1 using strategy: ${parseResult.strategy}`)
-     return {
-       parsed: parseResult.parsed,
-       raw: retry1.response,
-       strategy: parseResult.strategy,
-       wasRepaired: true,
-       repairAttempts: 1,
-       finishReason: retry1.finishReason,
-     }
-   } catch (secondErr) {
-     console.warn('[callAiJson] Repair 1 failed:', secondErr.message)
-   }
+    try {
+      parseResult = parseJson(retry1.response)
+      console.log(`[callAiJson] Parse succeeded on repair 1 using strategy: ${parseResult.strategy}`)
+      return {
+        parsed: parseResult.parsed,
+        raw: retry1.response,
+        strategy: parseResult.strategy,
+        wasRepaired: true,
+        repairAttempts: 1,
+        finishReason: retry1.finishReason,
+      }
+    } catch (secondErr) {
+      console.warn('[callAiJson] Repair 1 failed:', secondErr.message)
+    }
 
-   // Repair attempt 2: Extract the JSON object/array and ask to fix it
-   logFn?.(`Repair 1 failed — attempting repair 2 (JSON fragment extraction)...`)
-   console.log('[callAiJson] Attempting repair 2: JSON fragment extraction and validation')
-   const extractPrompt =
-     `Extract the JSON object or array from this text (even if incomplete or malformed).\n` +
-     `Return ONLY the JSON, fixing any obvious issues:\n` +
-     `- Add missing closing braces/brackets\n` +
-     `- Fix unescaped quotes in strings\n` +
-     `- Fix trailing commas\n` +
-     `- Ensure valid JSON syntax\n\n` +
-     `Text:\n${result.response}`
+    // Repair attempt 2: Extract the JSON object/array and ask to fix it
+    // Use retry1.response if it looks more complete than the original, otherwise fall back to original
+    logFn?.(`Repair 1 failed — attempting repair 2 (JSON fragment extraction)...`)
+    console.log('[callAiJson] Attempting repair 2: JSON fragment extraction and validation')
+    const repair2Source = retry1.response.length > 0 ? retry1.response : result.response
+    const extractPrompt =
+      `Extract the JSON object or array from this text (even if incomplete or malformed).\n` +
+      `Return ONLY the JSON, fixing any obvious issues:\n` +
+      `- Add missing closing braces/brackets\n` +
+      `- Escape all unescaped double quotes inside string values as \\"\n` +
+      `- Escape all literal newlines inside string values as \\n\n` +
+      `- Fix trailing commas\n` +
+      `- Ensure valid JSON syntax\n\n` +
+      `Text:\n${repair2Source}`
 
-   const retry2 = await callAi(extractPrompt, {
-     maxTokens: options.maxTokens ?? 3000,
-     temperature: 0,
-   })
+    const retry2 = await callAi(extractPrompt, {
+      maxTokens: options.maxTokens ?? 3000,
+      temperature: 0,
+    })
 
    if (retry2.finishReason === 'length') {
      warn(`Repair 2 response also truncated by max_tokens limit`)
@@ -348,25 +388,44 @@ router.post('/agentic/plan', async (req, res) => {
   const phase = (p)   => emit(res, 'phase', p)
   const error = (msg) => { emit(res, 'error', msg); res.end() }
 
-   try {
-      const {
-        projectName,
-        flowId,
-        recipe              = '',
-        zones               = [],
-        repeatableSlides    = [],
-        contentPrompt       = '',
-        customInput         = '',
-        selectedFiles       = [],
-        sliceOutputTemplate = null,
-        groupingColumn      = null,
-        filterColumn        = null,
-        filterValues        = [],
-      } = req.body
+    try {
+       const {
+         projectName,
+         flowId,
+         recipe              = '',
+         zones               = [],
+         repeatableSlides    = [],
+         contentPrompt       = '',
+         customInput         = '',
+         selectedFiles       = [],
+         sliceOutputTemplate = null,
+         groupingColumn      = null,
+         filters             = [],
+         // Legacy support
+         filterColumn        = null,
+         filterValues        = [],
+       } = req.body
 
-      const rowFilter = (filterColumn && filterValues.length > 0)
-        ? { column: filterColumn, values: new Set(filterValues.map(v => String(v).toLowerCase())) }
-        : null
+       // Convert new filters format to internal rowFilters format
+       // Support multiple filters with AND logic
+       let rowFilters = []
+       if (filters && filters.length > 0) {
+         rowFilters = filters
+           .filter(f => f.column && f.values && f.values.length > 0)
+           .map(f => ({
+             column: f.column,
+             values: new Set(f.values.map(v => String(v).toLowerCase()))
+           }))
+       } else if (filterColumn && filterValues.length > 0) {
+         // Legacy support for old format
+         rowFilters = [{
+           column: filterColumn,
+           values: new Set(filterValues.map(v => String(v).toLowerCase()))
+         }]
+       }
+       
+       // For backward compatibility, also create single rowFilter for old code paths
+       const rowFilter = rowFilters.length > 0 ? rowFilters[0] : null
 
       if (!projectName) return error('projectName is required')
       if (!sliceOutputTemplate) return error('sliceOutputTemplate is required — select a slice output template before generating.')
@@ -406,12 +465,14 @@ router.post('/agentic/plan', async (req, res) => {
 
        log(`Custom input received: ${customInput ? `"${customInput.substring(0, 50)}..."` : '(empty)'}`)
 
-    if (rowFilter) log(`Row filter: "${rowFilter.column}" in [${[...rowFilter.values].join(', ')}]`)
+    if (rowFilters.length > 0) {
+      log(`Row filters: ${rowFilters.map(f => `"${f.column}" in [${[...f.values].join(', ')}]`).join(' AND ')}`)
+    }
 
     // ── Fast path: no repeatable slides — skip orchestrator entirely ──────────
     if (repeatableSlides.length === 0) {
       log('No repeatable slides — skipping orchestrator, reading full context directly...')
-      const fullContext = await readContextFiles(projectDir, { selectedFiles, rowFilter })
+      const fullContext = await readContextFiles(projectDir, { selectedFiles, rowFilter: rowFilters })
 
       if (fullContext.fileCount === 0) {
         log('No context files found — proceeding without context')
@@ -465,18 +526,18 @@ router.post('/agentic/plan', async (req, res) => {
       phase('planning')
       log(`Grouping column selected: "${groupingColumn}" — skipping orchestrator`)
 
-      const fullContext = await readContextFiles(projectDir, { selectedFiles, rowFilter })
-      contextFileCount = fullContext.fileCount
+       const fullContext = await readContextFiles(projectDir, { selectedFiles, rowFilter: rowFilters })
+       contextFileCount = fullContext.fileCount
 
-      if (fullContext.fileCount === 0) {
-        log('No context files found — proceeding without context')
-      } else {
-        log(`Context files: ${fullContext.files?.join(', ') || '(none)'}`)
-        log(`Full context: ${(fullContext.totalChars / 1000).toFixed(1)}k chars`)
-      }
+       if (fullContext.fileCount === 0) {
+         log('No context files found — proceeding without context')
+       } else {
+         log(`Context files: ${fullContext.files?.join(', ') || '(none)'}`)
+         log(`Full context: ${(fullContext.totalChars / 1000).toFixed(1)}k chars`)
+       }
 
-      const contextDir = path.join(projectDir, 'AI Context')
-      const groupValues = await readColumnUniqueValues(contextDir, groupingColumn, fullContext.files || [], rowFilter)
+       const contextDir = path.join(projectDir, 'AI Context')
+       const groupValues = await readColumnUniqueValues(contextDir, groupingColumn, fullContext.files || [], rowFilters)
 
       if (groupValues.length === 0) {
         return error(`Column "${groupingColumn}" not found or has no values in context files`)
@@ -493,18 +554,18 @@ router.post('/agentic/plan', async (req, res) => {
         remappedInstances[key] = i === 0 ? groupValues.length : 0
       })
 
-      log(`Extracting slices deterministically...`)
-      const det = await extractGroupedSlices(contextDir, groupingColumn, groupValues, fullContext.files || [], rowFilter)
+       log(`Extracting slices deterministically...`)
+       const det = await extractGroupedSlices(contextDir, groupingColumn, groupValues, fullContext.files || [], rowFilters)
       slices = det.slices
       sharedText = det.sharedText
       log(`Deterministic slicing complete: ${Object.keys(slices).length} instance slice(s)`)
 
     } else {
       // ── Orchestrator + AI-slicer path ──────────────────────────────────────
-      const [compactContext, fullContext] = await Promise.all([
-        readContextFilesCompact(projectDir, { selectedFiles, rowFilter }),
-        readContextFiles(projectDir, { selectedFiles, rowFilter }),
-      ])
+       const [compactContext, fullContext] = await Promise.all([
+         readContextFilesCompact(projectDir, { selectedFiles, rowFilter: rowFilters }),
+         readContextFiles(projectDir, { selectedFiles, rowFilter: rowFilters }),
+       ])
       contextFileCount = compactContext.fileCount
 
       if (compactContext.fileCount === 0) {
@@ -695,9 +756,9 @@ router.post('/agentic/run', async (req, res) => {
           customInput      = '',
         } = req.body
 
-     if (!projectName) return error('projectName is required')
+      if (!projectName) return error('projectName is required')
 
-     const remappedInstances = {}
+      const remappedInstances = {}
      const expectedKeys = repeatableSlides.map(rs => rs.key)
      const returnedKeys = Object.keys(instances)
      expectedKeys.forEach((key, i) => {
@@ -809,21 +870,22 @@ router.post('/agentic/run', async (req, res) => {
        log(`[${agent.label}] Sending prompt (${prompt.length} chars)...`)
        let parsed
        try {
-         const agentAi = await callAiJson(prompt, { maxTokens: 3000, temperature: 0.4 }, (msg) => log(`[${agent.label}] ${msg}`))
+         const agentAi = await callAiJson(prompt, { maxTokens: 20000, temperature: 0.4 }, (msg) => log(`[${agent.label}] ${msg}`))
          const repairInfo = agentAi.wasRepaired ? ` [repaired in ${agentAi.repairAttempts} attempt(s), strategy: ${agentAi.strategy}]` : ` [strategy: ${agentAi.strategy}]`
          log(`[${agent.label}] Response received (${agentAi.raw.length} chars)${repairInfo}`)
          console.log(`[agentic/run][${agent.label}] Raw response (${agentAi.raw.length} chars):\n${agentAi.raw}`)
          console.log(`[agentic/run][${agent.label}] Parse strategy: ${agentAi.strategy}, repairs: ${agentAi.repairAttempts}`)
          parsed = agentAi.parsed
        } catch (parseErr) {
-         emit(res, 'agent_update', { id: agent.id, state: 'error' })
          const isApiError = parseErr.message.startsWith('Cortex API error')
          if (isApiError) {
+           emit(res, 'agent_update', { id: agent.id, state: 'error', errorDetail: parseErr.message })
            log(`[${agent.label}] Cortex API error — ${parseErr.message.split('\n')[0]}`)
            log(`[${agent.label}] This is an upstream API failure. Check Cortex service health.`)
            console.error(`[agentic/run][${agent.label}] Cortex API error:\n${parseErr.message}`)
            throw new Error(`Agent "${agent.label}" failed: ${parseErr.message.split('\n')[0]}`)
          }
+         emit(res, 'agent_update', { id: agent.id, state: 'error', errorDetail: parseErr.message })
          log(`[${agent.label}] PARSE ERROR (exhausted all repair strategies)`)
          log(`[${agent.label}] Error details: ${parseErr.message.split('\n')[0]}`)
          console.error(`[agentic/run][${agent.label}] JSON parse FAILED after all repair attempts:\n${parseErr.message}`)
@@ -832,7 +894,7 @@ router.post('/agentic/run', async (req, res) => {
 
        log(`[${agent.label}] Parsed OK — ${Object.keys(parsed).length} top-level keys`)
        console.log(`[agentic/run][${agent.label}] Parsed top-level keys: ${Object.keys(parsed).join(', ')}`)
-       emit(res, 'agent_update', { id: agent.id, state: 'done' })
+       emit(res, 'agent_update', { id: agent.id, state: 'done', output: JSON.stringify(parsed, null, 2) })
        log(`${agent.label} done (${((Date.now() - t0) / 1000).toFixed(1)}s)`)
 
       return { agent, parsed, prompt }
@@ -970,7 +1032,7 @@ router.post('/agentic/retry-agent', async (req, res) => {
 
     let parsed
     try {
-      const agentAi = await callAiJson(prompt, { maxTokens: 3000, temperature: 0.4 })
+      const agentAi = await callAiJson(prompt, { maxTokens: 16000, temperature: 0.4 })
       parsed = agentAi.parsed
     } catch (parseErr) {
       return res.status(422).json({ ok: false, error: `Agent returned invalid JSON: ${parseErr.message.split('\n')[0]}` })

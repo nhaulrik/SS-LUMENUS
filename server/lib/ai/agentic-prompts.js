@@ -14,6 +14,13 @@ function capContext(text, maxChars) {
     : content
 }
 
+function toSingleQuotedHtml(html) {
+  if (!html) return html
+  // Convert double-quoted HTML attributes to single-quoted so the template
+  // does not teach the model to use double quotes inside JSON strings.
+  return html.replace(/=\s*"([^"]*)"/g, "='$1'")
+}
+
 export function buildSummaryPrompt(filename, fileText, summaryPrompt, zones) {
   let fieldHint = ''
   if (zones?.length > 0) {
@@ -150,6 +157,11 @@ Do NOT write any explanation, reasoning, preamble, or commentary — before or a
 Do NOT wrap the JSON in markdown fences (\`\`\`json ... \`\`\`).
 Start your response with { and end it with }.
 
+HTML INSIDE JSON — MANDATORY RULES:
+- ALL HTML attribute values MUST use single quotes (e.g. class='foo', href='...', src='...')
+- NEVER use double quotes inside HTML — they break JSON string parsing
+- Escape any literal backslashes in HTML as \\
+
 {
   "blocks": { "<key>": { "value": "<innerHTML matching template structure>" } },
   "slides": { "<slideKey>": { "shared": { "<key>": "<innerHTML matching template structure>" } } }
@@ -163,7 +175,7 @@ ZONES TO FILL:\n`
     blockZones.forEach(z => {
       prompt += `\nKEY "${z.key}"\n`
       if (z.prompt) prompt += `ZONE INSTRUCTIONS:\n${z.prompt}\n`
-      if (z.exampleHtml) prompt += `TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):\n${z.exampleHtml}\n↑ Use this structure as a pattern only. Output exactly one repeating item (card, row, list item) per data record — never match the template's item count.\n`
+      if (z.exampleHtml) prompt += `TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):\n${toSingleQuotedHtml(z.exampleHtml)}\n↑ Use this structure as a pattern only. Output exactly one repeating item (card, row, list item) per data record — never match the template's item count.\n`
     })
   }
 
@@ -179,7 +191,7 @@ ZONES TO FILL:\n`
       slideZones.forEach(z => {
         prompt += `\nKEY "${z.key}"\n`
         if (z.prompt) prompt += `ZONE INSTRUCTIONS:\n${z.prompt}\n`
-        if (z.exampleHtml) prompt += `TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):\n${z.exampleHtml}\n↑ Use this structure as a pattern only. Output exactly one repeating item (card, row, list item) per data record — never match the template's item count.\n`
+        if (z.exampleHtml) prompt += `TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):\n${toSingleQuotedHtml(z.exampleHtml)}\n↑ Use this structure as a pattern only. Output exactly one repeating item (card, row, list item) per data record — never match the template's item count.\n`
       })
     }
   }
@@ -229,6 +241,11 @@ Do NOT write any explanation, reasoning, preamble, or commentary — before or a
 Do NOT wrap the JSON in markdown fences (\`\`\`json ... \`\`\`).
 Start your response with { and end it with }.
 
+HTML INSIDE JSON — MANDATORY RULES:
+- ALL HTML attribute values MUST use single quotes (e.g. class='foo', href='...', src='...')
+- NEVER use double quotes inside HTML — they break JSON string parsing
+- Escape any literal backslashes in HTML as \\
+
 The object MUST have EXACTLY these keys:
 {
 `
@@ -239,7 +256,7 @@ TEMPLATES PER KEY (structure is a contract — fill with data, do not alter stru
   uniqueZones.forEach(z => {
     prompt += `\nKEY "${z.key}":\n`
     if (z.prompt) prompt += `ZONE INSTRUCTIONS:\n${z.prompt}\n`
-     prompt += z.exampleHtml ? `TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):\n${z.exampleHtml}\n↑ Use this structure as a pattern only. Output exactly one repeating item (card, row, list item) per data record — never match the template's item count.\n` : `(no template — generate appropriate innerHTML)\n`
+     prompt += z.exampleHtml ? `TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):\n${toSingleQuotedHtml(z.exampleHtml)}\n↑ Use this structure as a pattern only. Output exactly one repeating item (card, row, list item) per data record — never match the template's item count.\n` : `(no template — generate appropriate innerHTML)\n`
    })
 
    return prompt

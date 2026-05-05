@@ -66,6 +66,8 @@ export default function App() {
   const [htmlApplied, setHtmlApplied] = useState(null)
   // { outputFile, previewHtml, roundId, slideCount }
 
+  const [skippedSlides, setSkippedSlides] = useState([])
+
   // ── AI response tracking (for debug context) ────────────────────
   const [htmlAiResponse, setHtmlAiResponse] = useState(null)
 
@@ -99,8 +101,10 @@ export default function App() {
       slideCount:  result.slideCount,
       slideNames:  result.slideNames ?? [],
     })
+    // Load skipped slides from project metadata
+    setSkippedSlides(htmlProject?._metadata?.skippedSlides ?? [])
     navigateTo('html-preview')
-  }, [navigateTo])
+  }, [navigateTo, htmlProject])
 
   const handlePreviewHtmlChange = useCallback((newHtml) => {
     setHtmlApplied(prev => ({
@@ -293,26 +297,27 @@ export default function App() {
      )
    }
 
-  if (step === 'html-metadata' && htmlProject && htmlApplied) {
-    return (
-      <>
-        <Toast toast={toast} onDismiss={() => setToast(null)} />
-        <HtmlMetadataStep
-          projectName={currentProjectName}
-          flowId={currentFlowId}
-          applied={htmlApplied}
-          slideNames={htmlApplied?.slideNames ?? []}
-          step={step}
-          canNavigateTo={canNavigateTo}
-          navigateTo={navigateTo}
-          onBack={() => navigateTo('html-preview')}
-          onFinish={handleMetadataFinish}
-          setToast={setToast}
-          debugContext={debugContext}
-        />
-      </>
-    )
-  }
+   if (step === 'html-metadata' && htmlProject && htmlApplied) {
+     return (
+       <>
+         <Toast toast={toast} onDismiss={() => setToast(null)} />
+         <HtmlMetadataStep
+           projectName={currentProjectName}
+           flowId={currentFlowId}
+           applied={htmlApplied}
+           slideNames={htmlApplied?.slideNames ?? []}
+           step={step}
+           canNavigateTo={canNavigateTo}
+           navigateTo={navigateTo}
+           onBack={() => navigateTo('html-preview')}
+           onFinish={handleMetadataFinish}
+           setToast={setToast}
+           debugContext={debugContext}
+           skippedSlides={skippedSlides}
+         />
+       </>
+     )
+   }
 
   return null
 }
