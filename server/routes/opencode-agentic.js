@@ -53,6 +53,18 @@ function emit(res, type, data) {
   res.write(`event: ${type}\ndata: ${payload}\n\n`)
 }
 
+function buildAgentsFromInstances(remappedInstances) {
+  const agents = []
+  let globalIdx = 0
+  for (const [slideKey, count] of Object.entries(remappedInstances)) {
+    for (let i = 0; i < count; i++) {
+      agents.push({ id: `${slideKey}_${i}`, type: 'instance', slideKey, instanceIndex: i, instanceCount: count, globalIndex: globalIdx, label: `${slideKey} — #${i + 1}` })
+      globalIdx++
+    }
+  }
+  return agents
+}
+
 // Walk text from `start` and return the index after the matching closeChar.
 // Respects string literals and escape sequences. Returns -1 if unbalanced.
 function findBalancedEnd(text, start, openChar, closeChar) {
@@ -325,6 +337,24 @@ function assembleResults(agentResults) {
   }
 
   return assembled
+}
+
+async function runAgentsWithConcurrency(agents, limit, runAgent) {
+  const agentResults = new Array(agents.length)
+  let nextIndex = 0
+
+  async function worker() {
+    while (true) {
+      const currentIndex = nextIndex++
+      if (currentIndex >= agents.length) return
+      const result = await runAgent(agents[currentIndex], currentIndex)
+      agentResults[currentIndex] = result
+    }
+  }
+
+  const workerCount = Math.min(limit, agents.length)
+  await Promise.all(Array.from({ length: workerCount }, () => worker()))
+  return agentResults
 }
 
 // ── GET /agentic/context-column-values — return unique values for a specific column ──
@@ -813,28 +843,19 @@ router.post('/agentic/run', async (req, res) => {
     if (hasBlocks || hasShared) {
       agents.push({ id: 'blocks', type: 'blocks', label: 'Blocks & Shared' })
     }
-    let globalIdx = 0
-    for (const [slideKey, count] of Object.entries(remappedInstances)) {
-      for (let i = 0; i < count; i++) {
-        agents.push({ id: `${slideKey}_${i}`, type: 'instance', slideKey, instanceIndex: i, instanceCount: count, globalIndex: globalIdx, label: `${slideKey} — #${i + 1}` })
-        globalIdx++
-      }
-    }
+    agents.push(...buildAgentsFromInstances(remappedInstances))
 
     if (agents.length === 0) return error('Nothing to generate — no block zones and no instances')
 
     emit(res, 'agents', agents.map(a => ({ id: a.id, label: a.label, state: 'pending' })))
     phase('generating')
-      // ── Batched generation ────────────────────────────────────────────────────
-      const AGENT_BATCH_SIZE = 3
-    log(`Starting ${agents.length} agent${agents.length !== 1 ? 's' : ''} in batches of ${AGENT_BATCH_SIZE}...`)
+      // ── Constrained parallel generation ───────────────────────────────────────
+      const AGENT_BATCH_SIZE = 5
+    log(`Starting ${agents.length} agent${agents.length !== 1 ? 's' : ''} with max ${AGENT_BATCH_SIZE} running at a time...`)
     console.log(`[agentic/run] Agents: ${agents.map(a => a.label).join(', ')}`)
     console.log(`[agentic/run] Context slice keys: ${Object.keys(resolvedSlices).join(', ') || '(none)'}`)
     console.log(`[agentic/run] Zones: ${zones.length}, RepeatableSlides: ${repeatableSlides.length}`)
-      const agentResults = []
-      for (let b = 0; b < agents.length; b += AGENT_BATCH_SIZE) {
-        const batch = agents.slice(b, b + AGENT_BATCH_SIZE)
-        const batchRes = await Promise.all(batch.map(async (agent) => {
+      const agentResults = await runAgentsWithConcurrency(agents, AGENT_BATCH_SIZE, async (agent) => {
         emit(res, 'agent_update', { id: agent.id, state: 'running' })
         const t0 = Date.now()
 
@@ -900,10 +921,8 @@ router.post('/agentic/run', async (req, res) => {
        emit(res, 'agent_update', { id: agent.id, state: 'done', output: JSON.stringify(parsed, null, 2) })
        log(`${agent.label} done (${((Date.now() - t0) / 1000).toFixed(1)}s)`)
 
-      return { agent, parsed, prompt }
-        }))
-        agentResults.push(...batchRes)
-      }
+       return { agent, parsed, prompt }
+      })
 
     // Save agent prompts for debugging
     if (flowId) {
@@ -1113,6 +1132,8 @@ router.post('/agentic/retry-agent', async (req, res) => {
       return res.status(400).json({ ok: false, error: `Agent "${agentId}" not found in instances map` })
     }
 
+    const agentIds = buildAgentsFromInstances(remappedInstances)
+
     // Read the pre-computed slice from disk.
     const debugDir = path.join(RESOLVED_PROJECTS_DIR, projectName, 'flows', flowId, 'debug')
     let agentContext = ''
@@ -1160,11 +1181,89 @@ router.post('/agentic/retry-agent', async (req, res) => {
     current.slides[slideKey].instances                    ??= []
     current.slides[slideKey].instances[instanceIndex]       = parsed
 
-    return res.json({ ok: true, json: JSON.stringify(current) })
+    const remainingAgentIds = agentIds.filter(a => a.id !== agentId)
+    const resumeStartFrom = globalIndex + 1
+    return res.json({ ok: true, json: JSON.stringify(current), agentIds: remainingAgentIds, resume: remainingAgentIds.length > 0, resumeStartFrom })
 
   } catch (err) {
     console.error('[agentic/retry-agent]', err)
     return res.status(500).json({ ok: false, error: err.message })
+  }
+})
+
+router.post('/agentic/resume', async (req, res) => {
+  initSse(res)
+
+  const log = (msg) => emit(res, 'log', `${ts()}  ${msg}`)
+  const phase = (p) => emit(res, 'phase', p)
+  const done = (json) => emit(res, 'done', json)
+  const error = (msg) => { emit(res, 'error', msg); res.end() }
+
+  try {
+    const { projectName, flowId, zones = [], repeatableSlides = [], instances = {}, contentPrompt = '', customInput = '', currentJson = '{}', startFrom = 0 } = req.body
+    if (!projectName || !flowId) return error('projectName and flowId are required')
+
+    const remappedInstances = {}
+    const expectedKeys = repeatableSlides.map(rs => rs.key)
+    const returnedKeys = Object.keys(instances)
+    expectedKeys.forEach((key, i) => {
+      const aiKey = returnedKeys[i] ?? returnedKeys[0]
+      remappedInstances[key] = instances[key] ?? instances[aiKey] ?? 1
+    })
+    if (repeatableSlides.length === 0) Object.assign(remappedInstances, instances)
+
+    const allAgents = buildAgentsFromInstances(remappedInstances)
+    const resumeIndex = Math.max(0, Math.min(startFrom, allAgents.length))
+    const agents = allAgents.slice(resumeIndex)
+    if (agents.length === 0) return done(currentJson)
+
+    const resolvedSlices = {}
+    try {
+      const debugDir = path.join(RESOLVED_PROJECTS_DIR, projectName, 'flows', flowId, 'debug')
+      const debugFiles = await fsp.readdir(debugDir)
+      const sharedFile = debugFiles.find(f => f === 'ai-slice-shared.txt')
+      if (sharedFile) resolvedSlices.shared = await fsp.readFile(path.join(debugDir, sharedFile), 'utf8')
+      const instanceFiles = debugFiles.filter(f => /^ai-slice-instance-\d+-.+\.txt$/.test(f))
+      await Promise.all(instanceFiles.map(async (filename) => {
+        const idxMatch = filename.match(/^ai-slice-instance-(\d+)-/)
+        if (idxMatch) resolvedSlices[idxMatch[1]] = await fsp.readFile(path.join(debugDir, filename), 'utf8')
+      }))
+    } catch (err) {
+      log(`Warning: failed to read slice files from disk: ${err.message}`)
+    }
+
+    if (resumeIndex > 0) {
+      const skipped = allAgents.slice(0, resumeIndex).map(a => a.id)
+      log(`Resume starting at agent index ${resumeIndex} [0m(${skipped.join(', ') || 'none'} already completed)`)
+    }
+
+    phase('generating')
+    const AGENT_BATCH_SIZE = 5
+    const agentResults = await runAgentsWithConcurrency(agents, AGENT_BATCH_SIZE, async (agent) => {
+        emit(res, 'agent_update', { id: agent.id, state: 'running' })
+        const sharedSlice = resolvedSlices.shared || ''
+        const instanceSlice = resolvedSlices[agent.globalIndex.toString()] || ''
+        const agentContext = sharedSlice ? `${instanceSlice}\n\n=== Shared Reference Data ===\n${sharedSlice}` : instanceSlice
+        const prompt = buildInstancePrompt(zones, repeatableSlides, agent.slideKey, agent.instanceIndex, agent.instanceCount, agentContext, customInput || contentPrompt)
+        const agentAi = await callAiJson(prompt, { maxTokens: 64000, temperature: 0.4 })
+        emit(res, 'agent_update', { id: agent.id, state: 'done', output: JSON.stringify(agentAi.parsed, null, 2) })
+        return { agent, parsed: agentAi.parsed }
+    })
+
+    let current = {}
+    try { current = JSON.parse(currentJson) } catch {}
+    current.slides ??= {}
+    for (const result of agentResults) {
+      const { slideKey, instanceIndex } = result.agent
+      current.slides[slideKey] ??= { instances: [] }
+      current.slides[slideKey].instances ??= []
+      current.slides[slideKey].instances[instanceIndex] = result.parsed
+    }
+
+    done(JSON.stringify(current))
+    res.end()
+  } catch (err) {
+    error(err.message)
   }
 })
 

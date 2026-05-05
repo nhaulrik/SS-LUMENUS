@@ -422,6 +422,35 @@ export default function HtmlRecipeStep({
       setAgenticAgentsLocal(prev => prev.map(a => a.id === agentId ? { ...a, state: 'done' } : a))
       handleJsonChange(data.json)
       saveAgenticJsonResponseToFlow(data.json)
+      if (data.resume) {
+        const resumeRes = await fetch('/api/opencode/agentic/resume', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            projectName,
+            flowId,
+            zones,
+            repeatableSlides: project.repeatableSlides || [],
+            instances: agenticPlanLocal?.instances || {},
+            contentPrompt: agenticContentPrompt,
+            customInput: agenticCustomInput,
+            currentJson: data.json,
+            startFrom: data.resumeStartFrom ?? 0,
+          }),
+        })
+        if (!resumeRes.ok) throw new Error(`Resume failed ${resumeRes.status}`)
+        for await (const { type, data: resumeData } of readSSE(resumeRes)) {
+          if (type === 'agent_update') {
+            const u = JSON.parse(resumeData)
+            setAgenticAgentsLocal(prev => prev.map(a => a.id === u.id ? { ...a, state: u.state } : a))
+          }
+          if (type === 'done') {
+            setJsonInput(resumeData)
+            handleJsonChange(resumeData)
+            saveAgenticJsonResponseToFlow(resumeData)
+          }
+        }
+      }
       setToast({ message: 'Agent retried successfully', type: 'success' })
     } catch (err) {
       setAgenticAgentsLocal(prev => prev.map(a => a.id === agentId ? { ...a, state: 'error' } : a))

@@ -170,7 +170,12 @@ router.get('/html-flow/load-flow', (req, res) => {
        agenticJsonResponse:  flow.agenticJsonResponse     || null,
        groupingColumn:       flow.groupingColumn          || null,
        previewHtml,
-       slideNames:          latestGeneration?.slideNames || [],
+        slideNames:          (latestGeneration?.slideNames || []).map(slide => ({
+          ...slide,
+          groupingColumn: flow.groupingColumn || null,
+          filters: flow.agenticFilters || flow.filters || [],
+          filterSummary: Array.isArray(flow.agenticFilters || flow.filters) ? (flow.agenticFilters || flow.filters) : [],
+        })),
        violations: violations.length ? violations : undefined,
        isExistingFlow: true,
      });
@@ -546,7 +551,7 @@ router.patch('/html-flow/update-preview-html', (req, res) => {
 router.post('/projects/:projectName/flows/:flowId/exports', (req, res) => {
   try {
     const { projectName, flowId } = req.params;
-    const { roundId, outputFile, slideMetadata, exportName } = req.body;
+    const { roundId, outputFile, slideMetadata, exportName, slideIndices } = req.body;
 
     if (!roundId || !outputFile) {
       return res.status(400).json({ ok: false, error: 'roundId and outputFile are required.' });
@@ -556,7 +561,11 @@ router.post('/projects/:projectName/flows/:flowId/exports', (req, res) => {
       return res.status(400).json({ ok: false, error: 'slideMetadata must be an array.' });
     }
 
-    const result = createExport(projectName, flowId, roundId, outputFile, slideMetadata || [], exportName);
+    if (slideIndices !== undefined && !Array.isArray(slideIndices)) {
+      return res.status(400).json({ ok: false, error: 'slideIndices must be an array.' });
+    }
+
+    const result = createExport(projectName, flowId, roundId, outputFile, slideMetadata || [], exportName, slideIndices || null);
     if (!result) {
       return res.status(500).json({ ok: false, error: 'Failed to create export.' });
     }

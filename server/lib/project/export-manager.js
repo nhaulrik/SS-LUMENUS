@@ -140,9 +140,10 @@ function sanitizeFilename(title, maxLen = MAX_EXPORT_FILENAME_LENGTH) {
  * @param {string} outputFile    - The output HTML file name (e.g. "output-<uuid>.html")
  * @param {Array}  slideMetadata - Optional array of { slideId, name, type } per slide
  * @param {string} exportName    - Optional custom export name
+ * @param {number[] | null} [slideIndices]
  * @returns {{ exportId, exportNumber, slideCount, exportDir } | null}
  */
-export function createExport(projectName, flowId, roundId, outputFile, slideMetadata = [], exportName = '') {
+export function createExport(projectName, flowId, roundId, outputFile, slideMetadata = [], exportName = '', slideIndices = null) {
   try {
     if (!projectName || !flowId || !roundId || !outputFile) {
       throw new Error('projectName, flowId, roundId, and outputFile are required');
@@ -198,13 +199,23 @@ export function createExport(projectName, flowId, roundId, outputFile, slideMeta
     const exportDir = path.join(exportsBaseDir, exportId);
     fs.mkdirSync(exportDir, { recursive: true });
 
+    const selectedIndices = Array.isArray(slideIndices) && slideIndices.length > 0
+      ? new Set(slideIndices.map(n => Number(n)).filter(n => Number.isInteger(n) && n > 0))
+      : null;
+    const slideMetadataByIndex = new Map(
+      slideMetadata
+        .map(meta => [Number(meta?.index), meta])
+        .filter(([index]) => Number.isInteger(index) && index > 0)
+    );
+
     // Write individual slide files
     const slideFiles = [];
     const usedFileNames = new Set();
 
     for (let i = 0; i < sections.length; i++) {
       const slideNumber = i + 1;
-      const userMeta = slideMetadata[i] || {};
+      if (selectedIndices && !selectedIndices.has(slideNumber)) continue;
+      const userMeta = slideMetadataByIndex.get(slideNumber) || slideMetadata[i] || {};
       const slideTitle = userMeta.name || extractSlideTitle(sections[i], slideNumber);
 
       // Generate filename from slide title, with number suffix to ensure uniqueness
@@ -249,9 +260,9 @@ export function createExport(projectName, flowId, roundId, outputFile, slideMeta
         outputFile,
       },
       content: {
-        slideCount: sections.length,
-        totalSize,
-        slides: slideFiles,
+      slideCount: slideFiles.length,
+      totalSize,
+      slides: slideFiles,
       },
       metadata: {
         projectName,
@@ -271,7 +282,7 @@ export function createExport(projectName, flowId, roundId, outputFile, slideMeta
        exportId,
        exportNumber,
        exportedAt: createdAt,
-       slideCount: sections.length,
+        slideCount: slideFiles.length,
        slides: slideFiles.map(s => ({
          index: s.index,
          file: s.file,
@@ -302,7 +313,7 @@ export function createExport(projectName, flowId, roundId, outputFile, slideMeta
     return {
       exportId,
       exportNumber,
-      slideCount: sections.length,
+      slideCount: slideFiles.length,
       exportDir,
       createdAt,
     };

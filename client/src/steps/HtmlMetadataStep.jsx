@@ -5,7 +5,7 @@
  * and finish back to the project dashboard.
  */
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import AppHeader   from '../components/AppHeader.jsx'
 import Breadcrumbs from '../components/Breadcrumbs.jsx'
 
@@ -24,12 +24,16 @@ export default function HtmlMetadataStep({
   skippedSlides = [],
 }) {
   const { outputFile, roundId, slideCount = 1 } = applied
+  const generationContext = debugContext?.project || {}
 
   const [exportName, setExportName] = useState('')
+  const [bulkGroupValue, setBulkGroupValue] = useState('')
+  const [selectedSlides, setSelectedSlides] = useState([])
 
   const [metadata, setMetadata] = useState(
     Array.from({ length: slideCount }, (_, i) => ({
       name: `Slide ${i + 1}`,
+      exportGroup: '',
     }))
   )
 
@@ -43,6 +47,7 @@ export default function HtmlMetadataStep({
           const found = slideNames.find(s => s.index === i + 1)
           return {
             name: found?.name ?? `Slide ${i + 1}`,
+            exportGroup: found?.exportGroup ?? '',
           }
         })
       )
@@ -54,42 +59,111 @@ export default function HtmlMetadataStep({
     }
   }, [slideNames, slideCount])
 
-  const handleMetadataChange = useCallback((index, value) => {
+  const handleMetadataChange = useCallback((index, field, value) => {
     setMetadata(prev => {
       const updated = [...prev]
-      updated[index] = { ...updated[index], name: value }
+      updated[index] = { ...updated[index], [field]: value }
       return updated
     })
   }, [])
 
+  const toggleSlideSelection = useCallback((index) => {
+    setSelectedSlides(prev => (
+      prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
+    ))
+  }, [])
+
+  const applyBulkGroup = useCallback(() => {
+    const value = bulkGroupValue.trim()
+    if (!selectedSlides.length) return
+
+    setMetadata(prev => prev.map((slide, index) => (
+      selectedSlides.includes(index)
+        ? { ...slide, exportGroup: value }
+        : slide
+    )))
+    setSelectedSlides([])
+  }, [bulkGroupValue, selectedSlides])
+
+  const groupedSummary = useMemo(() => {
+    const counts = new Map()
+    metadata.forEach(slide => {
+      const key = slide.exportGroup?.trim() || 'default'
+      counts.set(key, (counts.get(key) || 0) + 1)
+    })
+    return Array.from(counts.entries()).sort((a, b) => a[0].localeCompare(b[0]))
+  }, [metadata])
+
+  const exportBuckets = useMemo(() => {
+    const buckets = new Map()
+    metadata.forEach((slide, index) => {
+      const group = slide.exportGroup?.trim() || 'default'
+      if (!buckets.has(group)) buckets.set(group, [])
+      buckets.get(group).push({ ...slide, index: index + 1 })
+    })
+    return Array.from(buckets.entries())
+  }, [metadata])
+
+  const contextSummary = useMemo(() => {
+    const items = []
+    if (generationContext.groupingColumn) {
+      items.push(`Grouping column: ${generationContext.groupingColumn}`)
+    }
+    if (Array.isArray(generationContext.selections) && generationContext.selections.length > 0) {
+      items.push(`Filters / selections: ${generationContext.selections.length}`)
+    }
+    if (Array.isArray(generationContext.repeatableSlides) && generationContext.repeatableSlides.length > 0) {
+      items.push(`Repeatable slides: ${generationContext.repeatableSlides.length}`)
+    }
+    if (Array.isArray(generationContext.zones) && generationContext.zones.length > 0) {
+      items.push(`Zones: ${generationContext.zones.length}`)
+    }
+    return items
+  }, [generationContext])
+
+  const exportGroupPreview = useMemo(() => {
+    return exportBuckets.map(([groupName, slides]) => `${groupName} (${slides.length})`).join(', ')
+  }, [exportBuckets])
+
   const handleExport = useCallback(async () => {
     setIsExporting(true)
     try {
-      const slideMetadata = metadata.map((m, i) => ({
-        slideId: `slide-${i + 1}`,
-        name: m.name,
-        type: 'content',
-      }))
+      const results = []
 
-      const res = await fetch(`/api/projects/${projectName}/flows/${flowId}/exports`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ 
-          roundId, 
-          outputFile, 
-          exportName: exportName.trim(),
-          slideMetadata 
-        }),
-      })
-      const data = await res.json()
-      if (!data.ok) throw new Error(data.error || 'Export failed')
-      setToast({ type: 'success', message: `Exported ${data.slideCount} slide${data.slideCount !== 1 ? 's' : ''}` })
+      for (const [groupName, slides] of exportBuckets) {
+        const slideMetadata = slides.map((slide) => ({
+          slideId: `slide-${slide.index}`,
+          name: slide.name,
+          type: 'content',
+          exportGroup: groupName,
+        }))
+        const slideIndices = slides.map(slide => slide.index)
+
+        const res = await fetch(`/api/projects/${projectName}/flows/${flowId}/exports`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ 
+            roundId, 
+            outputFile, 
+            exportName: groupName === 'default' ? exportName.trim() : groupName,
+            slideMetadata,
+            slideIndices,
+          }),
+        })
+        const data = await res.json()
+        if (!data.ok) throw new Error(data.error || 'Export failed')
+        results.push({ groupName, count: data.slideCount })
+      }
+
+      const totalSlides = results.reduce((sum, item) => sum + item.count, 0)
+      const groupSummary = results.map(r => `${r.groupName} (${r.count})`).join(', ')
+      setToast({ type: 'success', message: `Exported ${results.length} group${results.length !== 1 ? 's' : ''}: ${groupSummary}. Total ${totalSlides} slide${totalSlides !== 1 ? 's' : ''}.` })
     } catch (err) {
       setToast({ type: 'error', message: err.message })
     } finally {
       setIsExporting(false)
     }
-  }, [projectName, flowId, roundId, outputFile, metadata, exportName, setToast])
+  }, [projectName, flowId, roundId, outputFile, metadata, exportName, setToast, exportBuckets])
 
 
 
@@ -123,33 +197,106 @@ export default function HtmlMetadataStep({
            </div>
          )}
 
-         {/* Export Name Field */}
-         <div className="html-metadata-export-name">
-          <label htmlFor="export-name">Export Name</label>
-          <input
-            id="export-name"
-            type="text"
-            value={exportName}
+        {/* Export Name Field */}
+        <div className="html-metadata-export-name">
+           <label htmlFor="export-name">Export Name</label>
+           <input
+             id="export-name"
+             type="text"
+             value={exportName}
             onChange={e => setExportName(e.target.value)}
             placeholder="e.g., Q2 Product Launch"
-            disabled={isExporting}
-          />
-        </div>
+             disabled={isExporting}
+           />
+         </div>
 
-        {/* Slide List */}
-        <div className="html-metadata-slide-list">
-          {metadata.map((slide, i) => (
-            <div key={i} className="html-metadata-slide-row">
-              <span className="html-metadata-index">{i + 1}</span>
-              <input
-                className="html-metadata-input"
-                value={slide.name}
-                onChange={e => handleMetadataChange(i, e.target.value)}
-                placeholder={`Slide ${i + 1}`}
-                disabled={isExporting}
-              />
+          <div className="html-metadata-export-summary" aria-live="polite">
+            {groupedSummary.map(([groupName, count]) => (
+              <span key={groupName} className="html-metadata-export-badge">
+                {groupName}: {count}
+              </span>
+            ))}
+          </div>
+
+          {contextSummary.length > 0 && (
+            <div className="html-metadata-context-summary">
+              {contextSummary.map(item => (
+                <span key={item} className="html-metadata-context-chip">{item}</span>
+              ))}
             </div>
-          ))}
+          )}
+
+          <p className="html-metadata-panel-desc">
+            Blank export groups route to <code>default</code>. This export will create: {exportGroupPreview || 'default (1)'}
+          </p>
+
+         <div className="html-metadata-bulk-bar">
+           <label htmlFor="bulk-group-value">Set export group for selected slides</label>
+           <div className="html-metadata-bulk-controls">
+             <input
+               id="bulk-group-value"
+               type="text"
+               value={bulkGroupValue}
+               onChange={e => setBulkGroupValue(e.target.value)}
+               placeholder='e.g. Capability A'
+               disabled={isExporting}
+             />
+             <button
+               className="btn btn-secondary"
+               onClick={applyBulkGroup}
+               disabled={isExporting || selectedSlides.length === 0}
+             >
+               Apply to selected
+             </button>
+             <button
+               className="btn btn-link"
+               onClick={() => setSelectedSlides([])}
+               disabled={isExporting || selectedSlides.length === 0}
+             >
+               Clear selection
+             </button>
+           </div>
+           <small>Blank export groups will be exported to the <code>default</code> folder.</small>
+         </div>
+
+         {/* Slide List */}
+        <div className="html-metadata-slide-list">
+          {metadata.map((slide, i) => {
+            const selected = selectedSlides.includes(i)
+            return (
+              <div key={i} className={`html-metadata-slide-row${selected ? ' is-selected' : ''}`}>
+                <label className="html-metadata-select">
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    onChange={() => toggleSlideSelection(i)}
+                    disabled={isExporting}
+                  />
+                </label>
+                <span className="html-metadata-index">{i + 1}</span>
+                <div className="html-metadata-row-fields">
+                  <input
+                    className="html-metadata-input"
+                    value={slide.name}
+                    onChange={e => handleMetadataChange(i, 'name', e.target.value)}
+                    placeholder={`Slide ${i + 1}`}
+                    disabled={isExporting}
+                  />
+                  <input
+                    className="html-metadata-input html-metadata-export-group"
+                    value={slide.exportGroup}
+                    onChange={e => handleMetadataChange(i, 'exportGroup', e.target.value)}
+                    placeholder="Export group: default"
+                    disabled={isExporting}
+                  />
+                  <div className="html-metadata-row-context">
+                    <span>{slide.groupingColumn ? `Grouping: ${slide.groupingColumn}` : 'Grouping: AI decides'}</span>
+                    <span>{Array.isArray(slide.filters) && slide.filters.length ? `Filters: ${slide.filters.length}` : 'Filters: none'}</span>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
 
         {/* Actions */}
@@ -161,10 +308,10 @@ export default function HtmlMetadataStep({
             <button
               className="btn btn-secondary"
               onClick={handleExport}
-              disabled={isExporting || exportName.trim() === ''}
+              disabled={isExporting || exportBuckets.length === 0}
               data-testid="btn-export-slides"
             >
-              {isExporting ? 'Packaging…' : 'Package'}
+              {isExporting ? 'Packaging…' : `Package ${exportBuckets.length} export${exportBuckets.length !== 1 ? 's' : ''}`}
             </button>
             <button
               className="btn btn-primary"
