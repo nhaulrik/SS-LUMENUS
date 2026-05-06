@@ -47,10 +47,9 @@ def bundle(base: str, out_path: str | None = None):
     ]
     slide_map_js = "var __SLIDES__ = {\n" + ",\n".join(slide_map_parts) + "\n};"
 
-    # Replace iframe file-load with srcdoc injection
     patched = index_html.replace(
-        "frame.src = 'slides/' + id + '.html';",
-        "frame.srcdoc = __SLIDES__[id] || '<!-- slide not found: ' + id + ' -->';",
+        "slideFrame.src = 'slides/' + id + '.html';",
+        "slideFrame.srcdoc = __SLIDES__[id] || '<!-- slide not found: ' + id + ' -->';",
     )
 
     # Inject the slide map right before the IIFE in the last <script>

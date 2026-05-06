@@ -8,65 +8,55 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script type="application/json" id="__pdata__">{{PRESENTATION_DATA_JSON}}</script>
   <style>
-    /* ── Palette — exact match to slide templates ── */
     :root {
-      --dark:    #1a3c3a;
-      --mid:     #2C4A48;
-      --light:   #7fb3af;
-      --red:     #FF6359;
-      --amber:   #F0A500;
-      --bg:      #e8e8e4;
-      --nav-w:   224px;
+      --dark:  #1a3c3a;
+      --mid:   #2C4A48;
+      --light: #7fb3af;
+      --red:   #FF6359;
+      --amber: #F0A500;
+      --bg:    #e8e8e4;
+      --nav-w: 224px;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     html, body {
-      width: 100%; height: 100%;
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
       font-family: 'Inter', system-ui, sans-serif;
       background: var(--dark);
-      overflow: hidden;
     }
 
-    /* ── Red accent bar — mirrors the slides' top bar ── */
     #top-bar {
       height: 7px;
       background: var(--red);
       flex-shrink: 0;
     }
 
-    /* ── Shell ── */
     #shell {
       display: flex;
+      align-items: stretch;
       height: calc(100vh - 7px);
     }
 
     /* ── Sidebar ── */
     #sidebar {
       width: var(--nav-w);
+      min-width: var(--nav-w);
       background: var(--dark);
       display: flex;
       flex-direction: column;
       flex-shrink: 0;
-      overflow: hidden;
       border-right: 1px solid rgba(255,255,255,0.07);
-      transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-      position: relative;
-      z-index: 10;
+      overflow: hidden;
     }
-    #sidebar.collapsed { width: 0; }
 
-    /* ── Sidebar header (mirrors slide PI badge area) ── */
     .nav-head {
       padding: 18px 16px 14px;
       border-bottom: 1px solid rgba(255,255,255,0.07);
       flex-shrink: 0;
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 8px;
     }
-    .nav-head-text { flex: 1; min-width: 0; }
     .nav-pi {
       display: inline-flex;
       align-items: center;
@@ -99,40 +89,15 @@
       text-transform: uppercase;
     }
 
-    /* Collapse toggle — lives inside nav header */
-    .nav-toggle {
-      width: 22px;
-      height: 22px;
-      flex-shrink: 0;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 4px;
-      color: rgba(255,255,255,0.45);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 9px;
-      transition: background 0.15s, color 0.15s;
-      flex-shrink: 0;
-      align-self: flex-start;
-      margin-top: 2px;
-    }
-    .nav-toggle:hover { background: rgba(255,255,255,0.12); color: #fff; }
-
-    /* ── Nav scroll area ── */
     .nav-scroll {
       flex: 1;
       overflow-y: auto;
-      overflow-x: hidden;
       padding: 8px 0 20px;
     }
-    .nav-scroll::-webkit-scrollbar { width: 3px; }
+    .nav-scroll::-webkit-scrollbar { width: 4px; }
     .nav-scroll::-webkit-scrollbar-track { background: transparent; }
-    .nav-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 2px; }
-    .nav-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+    .nav-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 999px; }
 
-    /* ── Group toggle (parent nodes) ── */
     .nav-group {
       display: flex;
       align-items: center;
@@ -166,19 +131,17 @@
       text-overflow: ellipsis;
       transition: color 0.12s;
     }
-    .nav-group:hover .g-name { color: rgba(255,255,255,0.88); }
+    .nav-group:hover .g-name   { color: rgba(255,255,255,0.88); }
     .nav-group.has-active .g-name { color: rgba(255,255,255,0.85); }
-    .nav-group.open .g-name { color: rgba(255,255,255,0.9); }
+    .nav-group.open .g-name    { color: rgba(255,255,255,0.9); }
 
-    /* ── Children container ── */
     .nav-children {
       overflow: hidden;
       max-height: 0;
       transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    .nav-children.open { max-height: 800px; }
+    .nav-children.open { max-height: 9999px; }
 
-    /* ── Section header (top-level structural separator) ── */
     .nav-section-header {
       padding: 16px 14px 7px 12px;
       font-size: 12px;
@@ -192,13 +155,8 @@
       border-left: 3px solid var(--red);
       margin-top: 8px;
     }
-    .nav-section-header:first-child {
-      border-top: none;
-      margin-top: 0;
-      padding-top: 8px;
-    }
+    .nav-section-header:first-child { border-top: none; margin-top: 0; padding-top: 8px; }
 
-    /* ── Leaf nav item ── */
     .nav-item {
       display: flex;
       align-items: center;
@@ -219,8 +177,7 @@
     }
 
     .nav-item .dot {
-      width: 4px;
-      height: 4px;
+      width: 4px; height: 4px;
       border-radius: 50%;
       background: rgba(255,255,255,0.18);
       flex-shrink: 0;
@@ -237,10 +194,9 @@
       text-overflow: ellipsis;
       transition: color 0.12s;
     }
-    .nav-item:hover .item-label   { color: rgba(255,255,255,0.78); }
-    .nav-item.active .item-label  { color: #fff; font-weight: 500; }
+    .nav-item:hover .item-label  { color: rgba(255,255,255,0.78); }
+    .nav-item.active .item-label { color: #fff; font-weight: 500; }
 
-    /* Direct child of a section with no sub-items — same visual weight as a group row */
     .nav-item.section-leaf { padding: 7px 14px; }
     .nav-item.section-leaf .dot { width: 5px; height: 5px; background: rgba(255,99,89,0.4); }
     .nav-item.section-leaf.active .dot { background: var(--red); }
@@ -248,48 +204,6 @@
     .nav-item.section-leaf:hover .item-label { color: rgba(255,255,255,0.88); }
     .nav-item.section-leaf.active .item-label { color: #fff; font-weight: 600; }
 
-    /* ── Expand button when sidebar is collapsed ── */
-    #reveal-btn {
-      position: fixed;
-      top: 7px;
-      left: 0;
-      z-index: 100;
-      width: 28px;
-      height: 48px;
-      background: var(--dark);
-      border: none;
-      border-right: 1px solid rgba(255,255,255,0.1);
-      border-bottom: 1px solid rgba(255,255,255,0.07);
-      border-radius: 0 0 6px 0;
-      color: rgba(255,255,255,0.4);
-      cursor: pointer;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      font-size: 10px;
-      transition: background 0.15s, color 0.15s;
-    }
-    #reveal-btn:hover { background: var(--mid); color: #fff; }
-    #sidebar.collapsed ~ #content #reveal-btn,
-    body.nav-collapsed #reveal-btn { display: flex; }
-
-    /* ── Content / iframe ── */
-    #content {
-      flex: 1;
-      position: relative;
-      background: var(--bg);
-      overflow: hidden;
-      min-width: 0;
-    }
-
-    #slide-frame {
-      width: 100%;
-      height: 100%;
-      border: none;
-      display: block;
-    }
-
-    /* ── Slide count badge at bottom of sidebar ── */
     .nav-footer {
       padding: 10px 14px;
       border-top: 1px solid rgba(255,255,255,0.06);
@@ -298,12 +212,7 @@
       align-items: center;
       gap: 6px;
     }
-    .nav-footer-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--red);
-      opacity: 0.6;
-    }
+    .nav-footer-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); opacity: 0.6; }
     .nav-footer-text {
       font-size: 9.5px;
       font-weight: 500;
@@ -313,6 +222,82 @@
       white-space: nowrap;
       overflow: hidden;
     }
+
+    /* ── Main content ── */
+    #content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: #d0cfcb;
+    }
+
+    #slide-area {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 16px 20px;
+      background: #d0cfcb;
+      overflow: hidden;
+    }
+
+    #slide-frame {
+      width: 100%;
+      max-width: 1280px;
+      aspect-ratio: 16 / 9;
+      max-height: calc(100% - 36px);
+      border: 0;
+      display: block;
+      background: transparent;
+      flex-shrink: 0;
+      transition: opacity 0.16s ease-in;
+    }
+    #slide-frame.exit  { opacity: 0; }
+    #slide-frame.enter { opacity: 0; transition: none; }
+
+    /* ── Slide nav bar — floats below the slide ── */
+    #slide-nav-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .nav-btn {
+      background: rgba(26,60,58,0.12);
+      border: 1px solid rgba(26,60,58,0.18);
+      border-radius: 4px;
+      color: rgba(26,60,58,0.55);
+      font-size: 10px;
+      font-weight: 500;
+      font-family: inherit;
+      padding: 4px 12px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .nav-btn:hover:not(:disabled) {
+      background: rgba(26,60,58,0.2);
+      border-color: rgba(26,60,58,0.35);
+      color: var(--dark);
+    }
+    .nav-btn:disabled { opacity: 0.25; cursor: default; }
+
+    #slide-counter {
+      font-size: 10px;
+      font-weight: 500;
+      color: rgba(26,60,58,0.4);
+      min-width: 64px;
+      text-align: center;
+      letter-spacing: 0.5px;
+      font-family: inherit;
+    }
   </style>
 </head>
 <body>
@@ -321,12 +306,9 @@
 
     <aside id="sidebar">
       <div class="nav-head">
-        <div class="nav-head-text">
-          <div class="nav-pi" id="nav-pi">PI</div>
-          <div class="nav-title" id="nav-title">{{PRESENTATION_NAME}}</div>
-          <div class="nav-label">Feature Catalog</div>
-        </div>
-        <button class="nav-toggle" id="collapse-btn" aria-label="Collapse navigation" title="Collapse">◀</button>
+        <div class="nav-pi" id="nav-pi">PI</div>
+        <div class="nav-title" id="nav-title">{{PRESENTATION_NAME}}</div>
+        <div class="nav-label">Feature Catalog</div>
       </div>
       <div class="nav-scroll" id="nav-root"></div>
       <div class="nav-footer">
@@ -336,8 +318,14 @@
     </aside>
 
     <main id="content">
-      <button id="reveal-btn" aria-label="Expand navigation" title="Expand navigation">▶</button>
-      <iframe id="slide-frame" title="Slide content"></iframe>
+      <div id="slide-area">
+        <iframe id="slide-frame" title="Slide"></iframe>
+        <div id="slide-nav-bar">
+          <button type="button" class="nav-btn" id="btn-prev">&#9664; Prev</button>
+          <span id="slide-counter">– / –</span>
+          <button type="button" class="nav-btn" id="btn-next">Next &#9654;</button>
+        </div>
+      </div>
     </main>
 
   </div>
@@ -390,79 +378,158 @@
     try { return JSON.parse(raw); } catch { return _sample(); }
   }
 
-  const data      = loadData();
-  const meta      = data.meta || {};
-  const frame     = document.getElementById('slide-frame');
-  const sidebar   = document.getElementById('sidebar');
-  const navRoot   = document.getElementById('nav-root');
-  const collapseBtn = document.getElementById('collapse-btn');
-  const revealBtn   = document.getElementById('reveal-btn');
+  const data       = loadData();
+  const meta       = data.meta || {};
+  const navRoot    = document.getElementById('nav-root');
+  const slideFrame = document.getElementById('slide-frame');
+  const btnPrev    = document.getElementById('btn-prev');
+  const btnNext    = document.getElementById('btn-next');
+  const counterEl  = document.getElementById('slide-counter');
 
-  /* ── Populate header ── */
+  /* ── Header ── */
   const titleEl = document.getElementById('nav-title');
   if (meta.name) { titleEl.textContent = meta.name; document.title = meta.name; }
-
   const piEl = document.getElementById('nav-pi');
-  if (meta.pi) piEl.textContent = meta.pi;
-  else piEl.style.display = 'none';
+  if (meta.pi) piEl.textContent = meta.pi; else piEl.style.display = 'none';
 
-  /* ── Sidebar collapse state ── */
-  let collapsed = false;
-  try { collapsed = localStorage.getItem('solon-nav-v2-collapsed') === 'true'; } catch {}
-
-  function setSidebar(state) {
-    collapsed = state;
-    sidebar.classList.toggle('collapsed', collapsed);
-    document.body.classList.toggle('nav-collapsed', collapsed);
-    collapseBtn.textContent = collapsed ? '▶' : '◀';
-    collapseBtn.setAttribute('aria-label', collapsed ? 'Expand navigation' : 'Collapse navigation');
-    try { localStorage.setItem('solon-nav-v2-collapsed', collapsed); } catch {}
-  }
-  setSidebar(collapsed);
-
-  collapseBtn.addEventListener('click', () => setSidebar(!collapsed));
-  revealBtn.addEventListener('click',   () => setSidebar(false));
-
-  /* ── Navigation ── */
-  let activeId = null;
-
-  function navigate(id) {
-    activeId = id;
-    frame.src = 'slides/' + id + '.html';
-
-    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.nav-group').forEach(el => el.classList.remove('has-active'));
-
-    const activeEl = document.querySelector('.nav-item[data-id="' + id + '"]');
-    if (activeEl) {
-      activeEl.classList.add('active');
-      const childrenWrap = activeEl.closest('.nav-children');
-      if (childrenWrap) {
-        const groupEl = childrenWrap.previousElementSibling;
-        if (groupEl && groupEl.classList.contains('nav-group')) {
-          groupEl.classList.add('has-active');
-        }
+  /* ── Flatten slides and index nodes ── */
+  function flattenSlides(nodes, out) {
+    nodes.forEach(node => {
+      if (node.type === 'section') {
+        if (node.children && node.children.length) flattenSlides(node.children, out);
+        return;
       }
+      if (node.hasSlide) out.push(node);
+      if (node.children && node.children.length) flattenSlides(node.children, out);
+    });
+    return out;
+  }
+
+  const flatSlides = flattenSlides(data.tree, []);
+  const nodeById   = new Map();
+
+  function indexNodes(nodes, parent) {
+    nodes.forEach(node => {
+      if (node.type !== 'section') {
+        node.parent = parent;
+        nodeById.set(node.id, node);
+      }
+      if (node.children && node.children.length) indexNodes(node.children, node);
+    });
+  }
+  indexNodes(data.tree);
+
+  /* ── State ── */
+  let activeId  = null;
+  let activeIdx = -1;
+
+  /* ── Load a slide (bundler patches this line to use srcdoc) ── */
+  function loadSlide(id) {
+    slideFrame.src = 'slides/' + id + '.html';
+  }
+
+  let animating = false;
+
+  function transitionTo(id) {
+    if (animating) {
+      slideFrame.className = '';
+      loadSlide(id);
+      slideFrame.style.transition = 'opacity 0.16s ease-out';
+      return;
+    }
+    animating = true;
+    slideFrame.classList.add('exit');
+
+    slideFrame.addEventListener('transitionend', function onExit() {
+      slideFrame.className = 'enter';
+      loadSlide(id);
+      slideFrame.getBoundingClientRect();
+      slideFrame.className = '';
+      slideFrame.style.transition = 'opacity 0.16s ease-out';
+      animating = false;
+    }, { once: true });
+  }
+
+  /* ── Nav highlight ── */
+  function updateNavHighlight(id) {
+    document.querySelectorAll('.nav-item.active').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-group.has-active, .nav-group.open').forEach(el =>
+      el.classList.remove('has-active', 'open'));
+    document.querySelectorAll('.nav-children.open').forEach(el => el.classList.remove('open'));
+
+    const activeEl = document.querySelector(`.nav-item[data-id="${id}"], .nav-group[data-id="${id}"]`);
+    if (!activeEl) return;
+
+    if (activeEl.classList.contains('nav-group')) {
+      activeEl.classList.add('open');
+      const childrenWrap = activeEl.nextElementSibling;
+      if (childrenWrap?.classList.contains('nav-children')) childrenWrap.classList.add('open');
+    } else {
+      activeEl.classList.add('active');
+      let cursor = activeEl;
+      while (cursor) {
+        const childrenWrap = cursor.closest('.nav-children');
+        if (!childrenWrap) break;
+        const groupEl = childrenWrap.previousElementSibling;
+        if (!groupEl?.classList.contains('nav-group')) break;
+        groupEl.classList.add('has-active', 'open');
+        childrenWrap.classList.add('open');
+        cursor = groupEl;
+      }
+      activeEl.scrollIntoView({ block: 'nearest' });
     }
   }
 
+  function updateCounter(idx) {
+    counterEl.textContent = (idx + 1) + ' / ' + flatSlides.length;
+    btnPrev.disabled = idx <= 0;
+    btnNext.disabled = idx >= flatSlides.length - 1;
+  }
+
+  /* ── Navigate to a slide by id ── */
+  function navigate(id) {
+    const idx = flatSlides.findIndex(n => n.id === id);
+    if (idx === -1) return;
+    activeId  = id;
+    activeIdx = idx;
+    transitionTo(id);
+    updateNavHighlight(id);
+    updateCounter(idx);
+  }
+
+  /* ── Prev / Next buttons ── */
+  btnPrev.addEventListener('click', () => {
+    if (activeIdx > 0) navigate(flatSlides[activeIdx - 1].id);
+  });
+  btnNext.addEventListener('click', () => {
+    if (activeIdx < flatSlides.length - 1) navigate(flatSlides[activeIdx + 1].id);
+  });
+
+  /* ── Keyboard navigation ── */
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      if (activeIdx < flatSlides.length - 1) { e.preventDefault(); navigate(flatSlides[activeIdx + 1].id); }
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      if (activeIdx > 0) { e.preventDefault(); navigate(flatSlides[activeIdx - 1].id); }
+    }
+  });
+
+  /* ── Build nav tree ── */
+  let slideCount = 0;
+
   function firstSlide(nodes) {
     for (const n of nodes) {
-      if (n.hasSlide) return n;
+      if (n.hasSlide && n.type !== 'section') return n;
       const found = firstSlide(n.children || []);
       if (found) return found;
     }
     return null;
   }
 
-  /* ── Build nav tree ── */
-  let slideCount = 0;
-
   function buildItems(nodes, container, isTop, insideSection) {
     nodes.forEach(node => {
       const hasChildren = node.children && node.children.length > 0;
 
-      /* ── Section header: always-visible label, children rendered below ── */
       if (node.type === 'section') {
         const header = document.createElement('div');
         header.className = 'nav-section-header';
@@ -473,35 +540,24 @@
       }
 
       if (hasChildren) {
-        /* Group row */
         const group = document.createElement('div');
         group.className = 'nav-group';
-        group.innerHTML =
-          '<span class="chev">▶</span>' +
-          '<span class="g-name">' + node.label + '</span>';
-
+        group.dataset.id = node.id;
+        const chev = document.createElement('span');
+        chev.className = 'chev';
+        chev.textContent = '▶';
+        const name = document.createElement('span');
+        name.className = 'g-name';
+        name.textContent = node.label;
+        group.appendChild(chev);
+        group.appendChild(name);
         const childWrap = document.createElement('div');
         childWrap.className = 'nav-children';
-
-        group.addEventListener('click', () => {
-          const open = childWrap.classList.toggle('open');
-          group.classList.toggle('open', open);
-          /* If the group itself has a slide, navigate to it */
-          if (node.hasSlide) navigate(node.id);
-          else if (open) {
-            const first = firstSlide(node.children);
-            if (first) navigate(first.id);
-          }
-        });
-
         buildItems(node.children, childWrap, false);
         container.appendChild(group);
         container.appendChild(childWrap);
-
         if (node.hasSlide) slideCount++;
-
       } else {
-        /* Leaf item */
         if (node.hasSlide) slideCount++;
         const item = document.createElement('div');
         item.className = 'nav-item' +
@@ -509,13 +565,13 @@
           (isTop ? ' top-level' : '') +
           (insideSection && !isTop ? ' section-leaf' : '');
         item.dataset.id = node.id;
-        item.innerHTML =
-          '<span class="dot"></span>' +
-          '<span class="item-label">' + node.label + '</span>';
-
-        item.addEventListener('click', () => {
-          if (node.hasSlide) navigate(node.id);
-        });
+        const dot = document.createElement('span');
+        dot.className = 'dot';
+        const label = document.createElement('span');
+        label.className = 'item-label';
+        label.textContent = node.label;
+        item.appendChild(dot);
+        item.appendChild(label);
         container.appendChild(item);
       }
     });
@@ -523,11 +579,37 @@
 
   buildItems(data.tree, navRoot, true);
 
-  /* ── Footer slide count ── */
-  const footerEl = document.getElementById('nav-footer-text');
-  footerEl.textContent = slideCount + ' slide' + (slideCount !== 1 ? 's' : '');
+  /* ── Nav click delegation ── */
+  navRoot.addEventListener('click', (e) => {
+    const group = e.target.closest('.nav-group');
+    if (group) {
+      const id = group.dataset.id;
+      const childWrap = group.nextElementSibling;
+      if (childWrap && childWrap.classList.contains('nav-children')) {
+        const open = childWrap.classList.toggle('open');
+        group.classList.toggle('open', open);
+        const node = nodeById.get(id);
+        if (node && node.hasSlide) navigate(id);
+        else if (open) {
+          const first = firstSlide(node ? node.children : []);
+          if (first) navigate(first.id);
+        }
+      }
+      return;
+    }
+    const item = e.target.closest('.nav-item');
+    if (item) {
+      const id = item.dataset.id;
+      const node = nodeById.get(id);
+      if (node && node.hasSlide) navigate(id);
+    }
+  });
 
-  /* ── Boot: navigate to first slide, expand all ── */
+  /* ── Footer count ── */
+  document.getElementById('nav-footer-text').textContent =
+    slideCount + ' slide' + (slideCount !== 1 ? 's' : '');
+
+  /* ── Boot: show first slide ── */
   const first = firstSlide(data.tree);
   if (first) navigate(first.id);
 
