@@ -176,12 +176,26 @@ export function parseTemplate(html) {
   const sections   = root.querySelectorAll('section');
   const violations = [];
 
+  const metaInstructions = root.querySelectorAll('meta[name="ai-instructions"]')
+    .map(meta => meta.getAttribute('content')?.trim() || '')
+    .filter(Boolean);
+  const scopedInstructions = [];
+  root.querySelectorAll('[data-ai-instructions]').forEach(node => {
+    const instruction = node.getAttribute('data-ai-instructions')?.trim();
+    if (!instruction) return;
+    scopedInstructions.push({
+      target: node.getAttribute('data-block')?.trim() || node.getAttribute('id')?.trim() || node.tagName?.toLowerCase() || 'element',
+      instruction,
+    });
+  });
+  const templateInstructions = [...metaInstructions, ...scopedInstructions.map(entry => `[${entry.target}] ${entry.instruction}`)].join('\n\n');
+
   if (sections.length === 0) {
     violations.push({
       rule:    'NO_SECTIONS',
       message: 'No slides found. Wrap each slide in a <section> element.',
     });
-    return { slideCount: 0, trees: [], selections: [], violations };
+    return { slideCount: 0, trees: [], selections: [], violations, templateInstructions };
   }
 
   const trees      = [];
@@ -213,5 +227,5 @@ export function parseTemplate(html) {
     });
   }
 
-  return { slideCount: sections.length, trees, selections, violations };
+  return { slideCount: sections.length, trees, selections, violations, templateInstructions };
 }

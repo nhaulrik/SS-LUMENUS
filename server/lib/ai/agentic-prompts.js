@@ -362,6 +362,9 @@ export function buildCompletionPrompt(missingKeys, zones, agentContext, customPr
 
   const customBlock = customPrompt ? `\nUSER INSTRUCTIONS:\n${customPrompt}` : ''
 
+  const keyList = missingKeys.map(k => `"${k}"`).join(', ')
+  const exampleShape = `{\n${missingKeys.map(k => `  "${k}": "<value>"`).join(',\n')}\n}`
+
   return `You are completing missing fields in a slide JSON object.
 
 SOURCE DATA:
@@ -370,5 +373,13 @@ ${agentContext || 'No source data provided.'}${customBlock}
 FIELDS TO COMPLETE:
 ${zoneBlock}
 
-Return a single valid JSON object containing only the missing keys. Do not include any extra keys, explanation, markdown fences, or commentary.`
+⚠️ OUTPUT FORMAT — CRITICAL:
+- Return a single valid JSON object with EXACTLY these top-level keys: ${keyList}
+- Do NOT nest the keys inside any wrapper object (no "slides", "instances", "blocks", or any other container)
+- Do NOT include any extra keys, explanation, markdown fences, or commentary
+- Start your response with { and end with }
+- ALL HTML attribute values inside string values MUST use single quotes (never double quotes)
+
+Expected shape:
+${exampleShape}`
 }

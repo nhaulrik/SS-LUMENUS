@@ -22,6 +22,7 @@ export default function HtmlPreviewStep({
    setToast,
    debugContext,
    repeatableSlides = [],
+   onRequestRegenerate,
  }) {
    const { previewHtml, slideCount = 1, roundId } = applied
   const isMultiSlide = slideCount > 1
@@ -349,6 +350,16 @@ ${currentSlide_el.outerHTML}
             >
               <span aria-hidden="true">→</span>
             </button>
+            {onRequestRegenerate && (
+              <button
+                className="btn btn-secondary html-preview-step-nav-btn"
+                onClick={() => onRequestRegenerate(currentSlide - 1)}
+                title="Flag this slide for regeneration and go back to generation step"
+                style={{ marginLeft: '12px' }}
+              >
+                ↺ Regenerate
+              </button>
+            )}
           </div>
         )}
 

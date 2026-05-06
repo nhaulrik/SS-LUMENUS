@@ -57,7 +57,7 @@ export default function HtmlMetadataStep({
         setExportName(slideNames[0].name)
       }
     }
-  }, [slideNames, slideCount])
+  }, [exportName, slideCount, slideNames])
 
   const handleMetadataChange = useCallback((index, field, value) => {
     setMetadata(prev => {
@@ -84,6 +84,10 @@ export default function HtmlMetadataStep({
     )))
     setSelectedSlides([])
   }, [bulkGroupValue, selectedSlides])
+
+  const selectAllSlides = useCallback(() => {
+    setSelectedSlides(metadata.map((_, index) => index))
+  }, [metadata])
 
   const groupedSummary = useMemo(() => {
     const counts = new Map()
@@ -241,21 +245,28 @@ export default function HtmlMetadataStep({
                placeholder='e.g. Capability A'
                disabled={isExporting}
              />
-             <button
-               className="btn btn-secondary"
-               onClick={applyBulkGroup}
-               disabled={isExporting || selectedSlides.length === 0}
-             >
-               Apply to selected
-             </button>
-             <button
-               className="btn btn-link"
-               onClick={() => setSelectedSlides([])}
-               disabled={isExporting || selectedSlides.length === 0}
-             >
-               Clear selection
-             </button>
-           </div>
+              <button
+                className="btn btn-secondary"
+                onClick={applyBulkGroup}
+                disabled={isExporting || selectedSlides.length === 0}
+              >
+                Apply to selected
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={selectAllSlides}
+                disabled={isExporting || metadata.length === 0 || selectedSlides.length === metadata.length}
+              >
+                Select all
+              </button>
+              <button
+                className="btn btn-link"
+                onClick={() => setSelectedSlides([])}
+                disabled={isExporting || selectedSlides.length === 0}
+              >
+                Deselect all
+              </button>
+            </div>
            <small>Blank export groups will be exported to the <code>default</code> folder.</small>
          </div>
 

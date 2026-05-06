@@ -37,6 +37,8 @@ export default function HtmlRecipeStep({
   setAgenticElapsed,
   setAgenticContentPrompt,
   setAgenticPlan,
+  highlightedAgent,
+  onHighlightCleared,
 }) {
   const { selections = [], zones = [] } = project
 
@@ -325,6 +327,7 @@ export default function HtmlRecipeStep({
         if (type === 'plan') {
           const planData = JSON.parse(data)
           setAgenticPlanLocal(planData)
+          setAgenticPlan(planData)
           setAgenticStatus('confirming')
         }
         if (type === 'error') {
@@ -398,9 +401,10 @@ export default function HtmlRecipeStep({
     setAgenticElapsedLocal(0)
   }
 
-  const handleAgenticRetry = useCallback(async (agentId) => {
+  const handleAgenticRetry = useCallback(async (agentId, { onSuccess } = {}) => {
     setRetryingAgents(prev => new Set([...prev, agentId]))
     setAgenticAgentsLocal(prev => prev.map(a => a.id === agentId ? { ...a, state: 'running' } : a))
+    const resolvedInstances = agenticPlanLocal?.instances ?? agenticPlan?.instances ?? {}
     try {
       const res = await fetch('/api/opencode/agentic/retry-agent', {
         method: 'POST',
@@ -411,7 +415,7 @@ export default function HtmlRecipeStep({
           agentId,
           zones,
           repeatableSlides: project.repeatableSlides || [],
-          instances: agenticPlanLocal?.instances || {},
+          instances: resolvedInstances,
           contentPrompt: agenticContentPrompt,
           customInput: agenticCustomInput,
           currentJson: jsonInput,
@@ -431,7 +435,7 @@ export default function HtmlRecipeStep({
             flowId,
             zones,
             repeatableSlides: project.repeatableSlides || [],
-            instances: agenticPlanLocal?.instances || {},
+            instances: resolvedInstances,
             contentPrompt: agenticContentPrompt,
             customInput: agenticCustomInput,
             currentJson: data.json,
@@ -451,6 +455,7 @@ export default function HtmlRecipeStep({
           }
         }
       }
+      onSuccess?.()
       setToast({ message: 'Agent retried successfully', type: 'success' })
     } catch (err) {
       setAgenticAgentsLocal(prev => prev.map(a => a.id === agentId ? { ...a, state: 'error' } : a))
@@ -458,7 +463,7 @@ export default function HtmlRecipeStep({
     } finally {
       setRetryingAgents(prev => { const s = new Set(prev); s.delete(agentId); return s })
     }
-   }, [agenticContentPrompt, agenticCustomInput, agenticPlanLocal, flowId, handleJsonChange, jsonInput, project.repeatableSlides, projectName, saveAgenticJsonResponseToFlow, setToast, zones])
+   }, [agenticContentPrompt, agenticCustomInput, agenticPlan, agenticPlanLocal, flowId, handleJsonChange, jsonInput, project.repeatableSlides, projectName, saveAgenticJsonResponseToFlow, setToast, zones])
 
   const handleSkipSlide = useCallback(async () => {
     if (!agenticPlanLocal?.instances) return
@@ -824,6 +829,34 @@ export default function HtmlRecipeStep({
             </div>
           )}
 
+          {highlightedAgent && !retryingAgents.has(highlightedAgent.id) && (
+            <div className={agenticCss.regenRequestCard}>
+              <div className={agenticCss.regenRequestHeader}>
+                <span className={agenticCss.regenRequestIcon}>↺</span>
+                <span className={agenticCss.regenRequestTitle}>Slide flagged for regeneration</span>
+              </div>
+              <p className={agenticCss.regenRequestLabel}>{highlightedAgent.label}</p>
+              <div className={agenticCss.regenRequestActions}>
+                <button
+                  className={agenticCss.acceptBtn}
+                  onClick={() => handleAgenticRetry(highlightedAgent.id, { onSuccess: onHighlightCleared })}
+                >
+                  Regenerate
+                </button>
+                <button className={agenticCss.cancelBtn} onClick={onHighlightCleared}>Dismiss</button>
+              </div>
+            </div>
+          )}
+
+          {highlightedAgent && retryingAgents.has(highlightedAgent.id) && (
+            <div className={agenticCss.regenRequestCard}>
+              <div className={agenticCss.regenRequestHeader}>
+                <div className={agenticCss.chipSpinner} />
+                <span className={agenticCss.regenRequestTitle}>Regenerating {highlightedAgent.label}…</span>
+              </div>
+            </div>
+          )}
+
           {agenticAgentsLocal.length > 0 && (
             <div className={agenticCss.chipsSection}>
               <div className={agenticCss.chipsLabel}>Agents</div>
@@ -851,7 +884,9 @@ export default function HtmlRecipeStep({
             <div className={agenticCss.logSection}>
               <div className={agenticCss.logLabel}>Activity</div>
               <div className={agenticCss.log}>
-                {agenticLogsLocal.length === 0 ? <span className={agenticCss.logWaiting}>Connecting to AI…</span> : agenticLogsLocal.map((line, i) => <span key={i} className={`${agenticCss.logLine} ${i === agenticLogsLocal.length - 1 ? agenticCss.latest : ''}`}>{line}{'\n'}</span>)}
+                {agenticLogsLocal.length === 0
+                  ? (agenticStatus === 'planning' || agenticStatus === 'running') && <span className={agenticCss.logWaiting}>Connecting to AI…</span>
+                  : agenticLogsLocal.map((line, i) => <span key={i} className={`${agenticCss.logLine} ${i === agenticLogsLocal.length - 1 ? agenticCss.latest : ''}`}>{line}{'\n'}</span>)}
                 <span ref={agenticLogEndRef} />
               </div>
             </div>

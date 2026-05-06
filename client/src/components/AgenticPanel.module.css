@@ -1019,3 +1019,43 @@
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.2) transparent;
 }
+
+/* ── Preview-initiated regeneration card ─────────────────────────────────── */
+
+.regenRequestCard {
+  margin-top: 20px;
+  padding: 16px 20px;
+  background: rgba(251, 191, 36, 0.06);
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  border-radius: 10px;
+}
+
+.regenRequestHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.regenRequestIcon {
+  font-size: 15px;
+  color: #fbbf24;
+}
+
+.regenRequestTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fde68a;
+}
+
+.regenRequestLabel {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0 0 14px 0;
+}
+
+.regenRequestActions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}

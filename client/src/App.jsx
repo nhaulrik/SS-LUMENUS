@@ -81,8 +81,49 @@ export default function App() {
   const [agenticContentPrompt,  setAgenticContentPrompt]  = useState('')
   const [agenticPlan,           setAgenticPlan]           = useState(null)
 
+  // ── Preview → recipe regeneration request ─────────────────────────────────
+  const [highlightedAgent, setHighlightedAgent] = useState(null)
+  // { id: 'slideKey_N', label: 'Instance label' } | null
+
   // ── Global toast ───────────────────────────────────────────────
   const [toast, setToast] = useState(null)
+
+  const handleRequestRegenerate = useCallback((outputSlideIdx) => {
+    if (!agenticPlan?.instances || !htmlProject) {
+      setToast({ message: 'Generation plan not available — re-run generation first', type: 'error' })
+      return
+    }
+    const zones = htmlProject.zones ?? []
+    const repeatableSlides = htmlProject.repeatableSlides ?? []
+    const templateSlideCount = zones.length > 0
+      ? Math.max(...zones.map(z => z.slideIndex))
+      : repeatableSlides.reduce((m, rs) => Math.max(m, rs.slideIndex), 0)
+
+    const repByTemplateIdx = new Map(repeatableSlides.map(rs => [rs.slideIndex, rs]))
+    let outputIdx = 0
+    let agentId = null
+    outer: for (let t = 1; t <= templateSlideCount; t++) {
+      if (repByTemplateIdx.has(t)) {
+        const rs = repByTemplateIdx.get(t)
+        const count = agenticPlan.instances[rs.key] ?? 0
+        for (let i = 0; i < count; i++) {
+          if (outputIdx === outputSlideIdx) { agentId = `${rs.key}_${i}`; break outer }
+          outputIdx++
+        }
+      } else {
+        if (outputIdx === outputSlideIdx) break outer // block slide — no agent
+        outputIdx++
+      }
+    }
+
+    if (!agentId) {
+      setToast({ message: 'This is a fixed slide and cannot be individually regenerated', type: 'info' })
+      return
+    }
+    const agentEntry = agenticPlan.agentPlan?.find(a => a.id === agentId)
+    setHighlightedAgent({ id: agentId, label: agentEntry?.label ?? agentId })
+    navigateTo('html-recipe')
+  }, [agenticPlan, htmlProject, navigateTo, setToast])
 
   const handleHtmlProjectCreated = useCallback((project) => {
     setHtmlProject(project)
@@ -270,6 +311,9 @@ export default function App() {
            setAgenticElapsed={setAgenticElapsed}
            setAgenticContentPrompt={setAgenticContentPrompt}
            setAgenticPlan={setAgenticPlan}
+           // Preview-initiated regeneration
+           highlightedAgent={highlightedAgent}
+           onHighlightCleared={() => setHighlightedAgent(null)}
          />
       </>
     )
@@ -292,6 +336,7 @@ export default function App() {
            setToast={setToast}
            debugContext={debugContext}
            repeatableSlides={htmlProject?.repeatableSlides ?? []}
+           onRequestRegenerate={handleRequestRegenerate}
          />
        </>
      )

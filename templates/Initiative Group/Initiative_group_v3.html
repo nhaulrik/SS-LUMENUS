@@ -404,11 +404,16 @@
 <body>
 
 <section class="slide">
-  <!-- TOP BAR -->
   <div class="top-bar"></div>
 
-  <!-- HEADER -->
-  <div class="header">
+  <div class="header" data-block="auto_div_header" data-ai-instructions="
+    Edit only these text nodes:
+    .pi-badge -> value of ACTIVE PI field, for example PI 28
+    .header-title -> always the value of Roadmap Initiative Group field verbatim
+    .header-stat-value (1st) -> Total Effort formatted with comma
+    .header-stat-value (2nd) -> Initiative Count as integer
+    .header-stat-value (3rd) -> Feature Count as integer
+  ">
     <div class="header-left">
       <div class="pi-badge">PI 28</div>
       <div class="header-text-section">
@@ -435,11 +440,18 @@
     </div>
   </div>
 
-  <!-- BODY -->
   <div class="body">
 
-    <!-- LEFT: INITIATIVES TABLE (full height) -->
-    <div class="table-wrap-outer">
+    <div class="table-wrap-outer" data-block="auto_div_initiatives_table" data-ai-instructions="
+      Keep the table structure intact.
+      Update the initiative rows and cell text only.
+      Do not change the header labels, sorting attributes, or column order.
+      Priority badge colors must strictly follow the template palette — do not introduce any other colors:
+        P1 → background:#FF6359  (coral/red)
+        P2 → background:#F0A500  (amber)
+        P3 → background:#CCCCCC  (light gray, color:white)
+        N/A → background:transparent; border:1px solid #CCCCCC; color:#888  (use class prio-na)
+    ">
     <div class="table-wrap">
       <table>
         <thead>
@@ -607,11 +619,15 @@
     </div>
     </div>
 
-    <!-- RIGHT: STACKED VALUE CARDS -->
-    <div class="right-panel">
+    <div class="right-panel" data-ai-instructions="
+      Keep the two value cards and their structure intact.
+      Update only the text content inside the cards.
+    ">
 
-      <!-- Business Value -->
-      <div class="value-card">
+      <div class="value-card" data-block="auto_div_business_value" data-ai-instructions="
+        Keep the Business Value card structure intact.
+        Update only the bullet text.
+      ">
         <div class="card-stripe coral"></div>
         <div class="card-inner">
           <div class="card-header-row">
@@ -628,8 +644,10 @@
         </div>
       </div>
 
-      <!-- Market Relevance -->
-      <div class="value-card">
+      <div class="value-card" data-block="auto_div_market_relevance" data-ai-instructions="
+        Keep the Market Relevance card structure intact.
+        Update only the bullet text.
+      ">
         <div class="card-stripe teal"></div>
         <div class="card-inner">
           <div class="card-header-row">
@@ -649,7 +667,6 @@
     </div>
   </div>
 
-  <!-- FOOTER -->
   <div class="slide-footer">
     <span class="footer-text">Solon Tax Product Roadmap 2026</span>
     <span class="footer-text">Netcompany</span>

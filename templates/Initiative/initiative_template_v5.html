@@ -95,17 +95,15 @@
 <body>
 <section class="slide">
   <div class="top-bar"></div>
-  <!--
-  AI POPULATION — auto_div_header
-  Edit the following text nodes only:
-    .pi-badge          → value of "ACTIVE PI" field (e.g. "PI 28")
-    .header-title      → value of "Roadmap Initiative" field verbatim (e.g. "APPLICATION PROCESSES")
-    .header-subtitle   → value of "Initiative Group" field"
-    .header-stat-value (1st) → value of "Total Effort" field formatted with comma (e.g. "4,365")
-    .header-stat-value (2nd) → value of "Feature Count" field as integer
-    .header-stat-value (3rd) → value of "Main Requester" field (e.g. "GRC")
--->
-  <div class="header" data-block="auto_div_header">
+  <div class="header" data-block="auto_div_header" data-ai-instructions="
+    Edit only these text nodes:
+    .pi-badge -> value of ACTIVE PI field, for example PI 28
+    .header-title -> value of Roadmap Initiative field verbatim
+    .header-subtitle -> value of Roadmap Initiative Group field
+    .header-stat-value (1st) -> Total Effort formatted with comma
+    .header-stat-value (2nd) -> Feature Count as integer
+    .header-stat-value (3rd) -> Main Requester value, for example GRC
+  ">
     <div class="header-left">
       <div class="pi-badge">PI 28</div>
       <div class="header-text-section">
@@ -124,16 +122,13 @@
   </div>
 
   <div class="body">
-    <!--
-  AI POPULATION — auto_div_strategic
-  Populate at least 1 and at most 3 .reason blocks. Each reason has:
-    .reason-num   → "01", "02", ... (auto-incremented, but set explicitly)
-    .reason-title → short strategic reason title
-    .reason-text  → 1–2 sentence explanation
-  Separate each reason with a <div class="reason-rule"></div>.
-  Do NOT change the .sp-label text "Strategic Case".
--->
-    <div class="strategic-panel" data-block="auto_div_strategic">
+    <div class="strategic-panel" data-block="auto_div_strategic" data-ai-instructions="
+      Populate at least 1 and at most 3 reason blocks.
+      Each reason has .reason-num, .reason-title, and .reason-text.
+      Separate each reason with a .reason-rule divider.
+      Do not change the Strategic Case label.
+      It is stricly forbidden to add any other element types to the strategic panel.
+    ">
       <div class="sp-label">Strategic Case</div>
       <div class="reason"><div class="reason-inner"><div class="reason-num">01</div><div class="reason-body"><div class="reason-title">Tech Debt Reduction</div><div class="reason-text">Restructures revenue-management-be-custom to hexagonal architecture, improving maintainability and reducing long-term technical debt across all delivery teams.</div></div></div></div>
       <div class="reason-rule"></div>
@@ -142,8 +137,12 @@
       <div class="reason"><div class="reason-inner"><div class="reason-num">03</div><div class="reason-body"><div class="reason-title">Configuration Management</div><div class="reason-text">Introduces a dedicated Config Items Management tool for safely packaging and migrating configurations across environments without manual risk.</div></div></div></div>
     </div>
 
-    <div class="epics-panel">
-      <div class="ep-header-row">
+     <div class="epics-panel" data-ai-instructions="
+       Keep the Features section title and filter chips unchanged.
+     ">
+       <div class="ep-header-row" data-ai-instructions="
+         Keep the Features section title and filter chips unchanged.
+       ">
         <div><div class="ep-label">Features</div></div>
         <div class="filter-bar">
           <span class="filter-label">Filter</span>
@@ -153,7 +152,24 @@
           <button class="filter-chip-clear" id="filterClear">Clear</button>
         </div>
       </div>
-       <div class="epics-scroll-wrap"><div class="epics-scroll"><div class="epics-grid" id="featureGrid">
+        <div class="epics-scroll-wrap"><div class="epics-scroll"><div class="epics-grid" id="featureGrid" data-block="auto_json_features" data-ai-instructions="
+          Replace all entries in the featureDataSource JSON array.
+          Do not change field count or order.
+          Each entry has exactly 10 fields:
+          [0] IRM id
+          [1] effort string without h suffix and with comma for 1000+
+          [2] feature name
+          [3] one-sentence description
+          [4] status dot color hex
+          [5] status text color hex
+          [6] status label
+          [7] badge CSS class: req-grc, req-gtm, or req-other
+          [8] badge text: GRC, GTM, or Other
+          [9] bar percentage 0-100
+          Use only the fields already present in the template.
+          Dont break the structure of the template
+          Output at most 10 feature-cards. If there are more than 10, keep only the 10 with the highest effort value.
+        ">
         <div class="feature-card" style="--bar-pct:100%"><div class="feature-card-header"><span class="feature-irm">IRM-41016</span><span class="effort-value">1,200<span class="effort-unit">h</span></span></div><div class="feature-name">Hexagonal Architecture Refactor</div><div class="feature-desc">Restructure revenue-management-be-custom to clean hexagonal architecture with improved separation of concerns, enhanced testability, and reduced coupling.</div><div class="feature-meta"><div class="feature-status"><span class="status-dot" style="background:#4A90D9;"></span><span class="status-text" style="color:#2a70b8;">In Design</span></div><span class="req-badge req-grc">GRC</span></div></div>
         <div class="feature-card" style="--bar-pct:53.3%"><div class="feature-card-header"><span class="feature-irm">IRM-41015</span><span class="effort-value">640<span class="effort-unit">h</span></span></div><div class="feature-name">Java 25 Upgrade</div><div class="feature-desc">Migrate codebase to Java 25 to leverage virtual threads, pattern matching, and significant performance improvements for high-volume tax operations.</div><div class="feature-meta"><div class="feature-status"><span class="status-dot" style="background:#F0A500;"></span><span class="status-text" style="color:#b07800;">In Progress</span></div><span class="req-badge req-gtm">GTM</span></div></div>
         <div class="feature-card" style="--bar-pct:40%"><div class="feature-card-header"><span class="feature-irm">IRM-40177</span><span class="effort-value">480<span class="effort-unit">h</span></span></div><div class="feature-name">Spring Boot 4.x Migration</div><div class="feature-desc">Upgrade to Spring Boot 4.x with enhanced observability, native compilation support, improved dependency management, and critical security patches.</div><div class="feature-meta"><div class="feature-status"><span class="status-dot" style="background:#BBBBBB;"></span><span class="status-text" style="color:#888;">To Do</span></div><span class="req-badge req-other">Other</span></div></div>
@@ -177,21 +193,6 @@
   <div class="slide-footer"><span class="footer-text">Solon Tax Product Roadmap 2026</span><span class="footer-text">Netcompany</span></div>
 </section>
 
-<!--
-  AI POPULATION INSTRUCTIONS — featureDataSource
-  Replace ALL entries in the JSON array below. Do NOT change the script tag or its id/data-block attributes.
-  Each entry is an array with exactly 10 fields in this order:
-    [0] IRM id string       e.g. "IRM-12345"
-    [1] effort string       e.g. "480" (hours, no "h" suffix, no commas for <1000, comma for >=1000)
-    [2] feature name        short title string
-    [3] description         one sentence, plain text
-    [4] status dot color    hex color: "#4A90D9"=In Design, "#F0A500"=In Progress, "#BBBBBB"=To Do, "#5CB85C"=Done
-    [5] status text color   hex color: "#2a70b8"=In Design, "#b07800"=In Progress, "#888"=To Do, "#3a8a3a"=Done
-    [6] status label        "In Design" | "In Progress" | "To Do" | "Done"
-    [7] badge CSS class     "req-grc" | "req-gtm" | "req-other"
-    [8] badge text          "GRC" | "GTM" | "Other"
-    [9] bar percentage      number 0–100 (relative effort bar width; highest effort card = 100)
--->
 <script type="application/json" id="featureDataSource" data-block="auto_json_features">
 [["IRM-41016","1,200","Hexagonal Architecture Refactor","Restructure revenue-management-be-custom to clean hexagonal architecture with improved separation of concerns, enhanced testability, and reduced coupling.","#4A90D9","#2a70b8","In Design","req-grc","GRC",100],["IRM-41015","640","Java 25 Upgrade","Migrate codebase to Java 25 to leverage virtual threads, pattern matching, and significant performance improvements for high-volume tax operations.","#F0A500","#b07800","In Progress","req-gtm","GTM",53.3],["IRM-40177","480","Spring Boot 4.x Migration","Upgrade to Spring Boot 4.x with enhanced observability, native compilation support, improved dependency management, and critical security patches.","#BBBBBB","#888","To Do","req-other","Other",40],["IRM-40176","420","Oracle 26ai Database Migration","Migrate to Oracle 26ai to harness AI-powered query optimisation, advanced analytics, and improved performance for high-volume tax transaction processing.","#BBBBBB","#888","To Do","req-other","Other",35],["IRM-40174","380","Config Items Management Tool","Dedicated tool for safely packaging, versioning, and migrating configurations across development, staging, and production without manual intervention.","#4A90D9","#2a70b8","In Design","req-grc","GRC",31.7],["IRM-40175","220","Cross-Team UI Tech Debt","Systematic UI improvements and technical debt reduction spanning ATH, EOS, SPA, HEL, and DAID teams for long-term platform sustainability.","#F0A500","#b07800","In Progress","req-gtm","GTM",18.3],["IRM-40178","180","Dependency Management Audit","Systematic review and upgrade of all third-party dependencies to eliminate CVEs, reduce supply chain risk, and enforce version policy across all modules.","#BBBBBB","#888","To Do","req-grc","GRC",15],["IRM-40179","140","Observability & Distributed Tracing","Instrument all services with OpenTelemetry, configure Jaeger trace collection, and add structured logging for correlated request tracking across microservices.","#4A90D9","#2a70b8","In Design","req-grc","GRC",12.5],["IRM-40180","120","ArchUnit Integration","Implement architectural governance rules to prevent regression and maintain hexagonal patterns across the codebase.","#F0A500","#b07800","In Progress","req-grc","GRC",10],["IRM-40181","100","Database Connection Pooling","Optimize connection pooling strategies to reduce resource contention and improve throughput under peak load.","#BBBBBB","#888","To Do","req-other","Other",8.3]]
 </script>

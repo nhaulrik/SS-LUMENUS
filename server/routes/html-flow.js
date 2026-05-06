@@ -70,7 +70,7 @@ router.post('/html-flow/upload-template', (req, res) => {
       });
     }
 
-    const { slideCount, trees, selections, violations } = parseTemplate(html);
+    const { slideCount, trees, selections, violations, templateInstructions } = parseTemplate(html);
 
     if (violations.some(v => v.rule === 'NO_SECTIONS')) {
       return res.status(422).json({ ok: false, error: 'VALIDATION_FAILED', violations });
@@ -83,6 +83,7 @@ router.post('/html-flow/upload-template', (req, res) => {
       slideCount,
       trees,
       selections,
+      templateInstructions,
       expiresAt: Date.now() + PENDING_TEMPLATE_TTL_MS,
     });
 
@@ -96,6 +97,7 @@ router.post('/html-flow/upload-template', (req, res) => {
       selections: [],
       violations: violations.length ? violations : undefined,
       previewHtml,
+      templateInstructions,
     });
   } catch (err) {
     console.error('[html-flow] upload-template error:', err);
@@ -165,6 +167,7 @@ router.get('/html-flow/load-flow', (req, res) => {
        fullSlideGeneration: metadata.fullSlideGeneration || [],
        summaryPrompt:        flow.summaryPrompt           || '',
        contentPrompt:        flow.contentPrompt           || '',
+       templateInstructions: flow.templateInstructions    || '',
        sliceOutputTemplate:  flow.sliceOutputTemplate     || null,
        agenticCustomInput:   flow.agenticCustomInput      || '',
        agenticJsonResponse:  flow.agenticJsonResponse     || null,
@@ -331,10 +334,11 @@ router.post('/html-flow/create-project', (req, res) => {
       createdAt:        new Date().toISOString(),
       updatedAt:        new Date().toISOString(),
       status:           'active',
-      globalPrompt:     '',
-      summaryPrompt:       '',
-      contentPrompt:       '',
-      sliceOutputTemplate: null,
+      globalPrompt:         '',
+      summaryPrompt:        '',
+      contentPrompt:        '',
+      templateInstructions: session.templateInstructions || '',
+      sliceOutputTemplate:  null,
       generations:         [],
       exports:          [],
       _metadata: {

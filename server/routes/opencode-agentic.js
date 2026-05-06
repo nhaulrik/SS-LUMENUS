@@ -162,6 +162,19 @@ function parseJson(text) {
   )
 }
 
+function normalizeCompletionResult(parsed, missingKeys) {
+  // Delegate to unwrapParsed with missingKeys as the expected keys,
+  // then extract only the missing keys from the best candidate.
+  // unwrapParsed is defined later in this file but hoisted as a function declaration — safe to call.
+  const best = unwrapParsed(parsed, missingKeys)
+  if (!best || typeof best !== 'object' || Array.isArray(best)) return {}
+  const out = {}
+  for (const key of missingKeys) {
+    if (Object.prototype.hasOwnProperty.call(best, key)) out[key] = best[key]
+  }
+  return out
+}
+
 /**
  * Call the AI and parse the response as JSON.
  * Uses enhanced multi-strategy parsing with smart repair attempts.
@@ -310,10 +323,79 @@ function buildRepSetInfo(zones, repeatableSlides) {
 }
 
 
-function assembleResults(agentResults) {
+/**
+ * Unwrap an AI-parsed instance result that may be wrapped in a container.
+ *
+ * The AI is asked to return a flat object: { auto_div_header: "...", ... }
+ * but frequently wraps it in:
+ *   - a top-level array:                    [{ auto_div_header: "..." }]
+ *   - a named slide wrapper:                { slide_1: { auto_div_header: "..." } }
+ *   - a slides+instances wrapper:           { slides: { slide_1: { instances: [{ auto_div_header: "..." }] } } }
+ *   - an instances array:                   { instances: [{ auto_div_header: "..." }] }
+ *
+ * expectedKeys: the zone keys this instance agent was supposed to fill.
+ * If provided, we score candidates by how many expected keys they contain.
+ * Falls back to the original value if nothing better is found.
+ */
+function unwrapParsed(parsed, expectedKeys = []) {
+  // Score a candidate: how many expectedKeys does it contain?
+  function score(obj) {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return -1
+    if (expectedKeys.length === 0) return Object.keys(obj).length
+    return expectedKeys.filter(k => Object.prototype.hasOwnProperty.call(obj, k)).length
+  }
+
+  // Collect all candidate objects by traversing known wrapper patterns
+  function candidates(val) {
+    if (!val || typeof val !== 'object') return []
+    if (Array.isArray(val)) {
+      // Flatten array elements
+      return val.flatMap(el => candidates(el))
+    }
+    const result = [val]
+    // Named containers: slides, blocks, shared, instance, instances
+    for (const k of ['slides', 'blocks', 'shared', 'instance']) {
+      if (val[k] && typeof val[k] === 'object') result.push(...candidates(val[k]))
+    }
+    if (Array.isArray(val['instances'])) {
+      result.push(...val['instances'].flatMap(el => candidates(el)))
+    }
+    // Arbitrary top-level keys (e.g. slide_1, slide_2 ...)
+    for (const k of Object.keys(val)) {
+      if (['slides','blocks','shared','instance','instances'].includes(k)) continue
+      const child = val[k]
+      if (child && typeof child === 'object') result.push(...candidates(child))
+    }
+    return result
+  }
+
+  const all = candidates(parsed)
+  if (all.length === 0) return parsed
+
+  // Pick the candidate with the highest score
+  let best = parsed, bestScore = score(parsed)
+  for (const c of all) {
+    const s = score(c)
+    if (s > bestScore) { best = c; bestScore = s }
+  }
+  return best
+}
+
+function assembleResults(agentResults, zones = []) {
   const assembled = {}
 
-  for (const { agent, parsed } of agentResults) {
+  // Pre-compute the expected zone keys for instance agents (unique keys across repeatable zones)
+  const instanceZoneKeys = zones
+    .filter(z => z.autoGenerate !== false && !z.ignored && z.unique !== false)
+    .map(z => z.key)
+    .filter(Boolean)
+
+  for (const { agent, parsed: rawParsed } of agentResults) {
+    const expectedKeys = agent.type === 'instance' ? instanceZoneKeys : []
+    const parsed = unwrapParsed(rawParsed, expectedKeys)
+    if (parsed !== rawParsed) {
+      console.log(`[assembleResults][${agent.label}] Unwrapped AI response — original top-level keys: [${Object.keys(rawParsed ?? {}).join(', ')}], unwrapped keys: [${Object.keys(parsed ?? {}).join(', ')}]`)
+    }
     if (agent.type === 'blocks') {
       if (parsed.blocks) assembled.blocks = parsed.blocks
       if (parsed.slides) {
@@ -462,6 +544,18 @@ router.post('/agentic/plan', async (req, res) => {
 
       if (!projectName) return error('projectName is required')
       if (!sliceOutputTemplate) return error('sliceOutputTemplate is required — select a slice output template before generating.')
+
+      // Load templateInstructions from flow.json and merge with contentPrompt so
+      // instructions baked into the template's <meta name="ai-instructions"> always reach the AI.
+      let templateInstructions = ''
+      if (flowId) {
+        try {
+          const flowPath = path.join(RESOLVED_PROJECTS_DIR, projectName, 'flows', flowId, 'flow.json')
+          const flowData = JSON.parse(await fsp.readFile(flowPath, 'utf8'))
+          templateInstructions = flowData.templateInstructions || ''
+        } catch {}
+      }
+      const effectiveInstructions = [templateInstructions, customInput || contentPrompt].filter(Boolean).join('\n\n')
 
       // ── Purge stale debug files from previous run ────────────────────────────
       if (flowId) {
@@ -612,9 +706,8 @@ router.post('/agentic/plan', async (req, res) => {
       phase('planning')
       log('Orchestrator: identifying grouping from schema...')
 
-      const promptToUse = customInput || contentPrompt
-      console.log('[agentic/plan] Building orchestrator prompt with:', { customInput: customInput?.substring(0, 50), contentPrompt: contentPrompt?.substring(0, 50), promptToUse: promptToUse?.substring(0, 50) })
-      orchestratorPrompt = buildOrchestratorPrompt(recipe, compactContext.text, promptToUse, repeatableSlides)
+      console.log('[agentic/plan] Building orchestrator prompt with:', { customInput: customInput?.substring(0, 50), contentPrompt: contentPrompt?.substring(0, 50), effectiveInstructions: effectiveInstructions?.substring(0, 80) })
+      orchestratorPrompt = buildOrchestratorPrompt(recipe, compactContext.text, effectiveInstructions, repeatableSlides)
       log(`Orchestrator prompt: ${orchestratorPrompt.length} chars`)
 
       let orchResult
@@ -791,6 +884,16 @@ router.post('/agentic/run', async (req, res) => {
 
       if (!projectName) return error('projectName is required')
 
+      let templateInstructions = ''
+      if (flowId) {
+        try {
+          const flowPath = path.join(RESOLVED_PROJECTS_DIR, projectName, 'flows', flowId, 'flow.json')
+          const flowData = JSON.parse(await fsp.readFile(flowPath, 'utf8'))
+          templateInstructions = flowData.templateInstructions || ''
+        } catch {}
+      }
+      const effectiveInstructions = [templateInstructions, customInput || contentPrompt].filter(Boolean).join('\n\n')
+
       const remappedInstances = {}
      const expectedKeys = repeatableSlides.map(rs => rs.key)
      const returnedKeys = Object.keys(instances)
@@ -804,7 +907,8 @@ router.post('/agentic/run', async (req, res) => {
 
      // ── Read slice files from disk ────────────────────────────────────────────
      // Slices are always read from disk — the browser never carries slice content.
-     const resolvedSlices = {}
+      const resolvedSlices = {}
+      const resolvedSliceFiles = {}
      if (flowId) {
        const debugDir = path.join(RESOLVED_PROJECTS_DIR, projectName, 'flows', flowId, 'debug')
        try {
@@ -824,9 +928,10 @@ router.post('/agentic/run', async (req, res) => {
          await Promise.all(instanceFiles.map(async (filename) => {
            const idxMatch = filename.match(/^ai-slice-instance-(\d+)-/)
            if (idxMatch) {
-             const idx = idxMatch[1]
-             resolvedSlices[idx] = await fsp.readFile(path.join(debugDir, filename), 'utf8')
-             log(`Read instance slice [${idx}]: ${resolvedSlices[idx].length} chars (${filename})`)
+              const idx = idxMatch[1]
+              resolvedSlices[idx] = await fsp.readFile(path.join(debugDir, filename), 'utf8')
+              resolvedSliceFiles[idx] = filename
+              log(`Read instance slice [${idx}]: ${resolvedSlices[idx].length} chars (${filename})`)
            }
          }))
 
@@ -870,9 +975,11 @@ router.post('/agentic/run', async (req, res) => {
           // lookup sheets, etc.) so the AI reads pre-computed totals directly rather
           // than summing raw rows.
           const instanceSlice = resolvedSlices[agent.globalIndex.toString()] || ''
+          const instanceSliceFile = resolvedSliceFiles[agent.globalIndex.toString()] || '(unknown slice file)'
           agentContext = sharedSlice
             ? `${instanceSlice}\n\n=== Shared Reference Data ===\n${sharedSlice}`
             : instanceSlice
+          log(`[${agent.label}] Using slice file: ${instanceSliceFile}`)
         }
 
          console.log(`[agentic/run][${agent.label}] Context slice length: ${agentContext.length} chars`)
@@ -882,8 +989,8 @@ router.post('/agentic/run', async (req, res) => {
          console.log(`[agentic/run][${agent.label}] Context preview: ${agentContext.slice(0, 200)}`)
 
           const prompt = agent.type === 'blocks'
-            ? buildBlocksPrompt(zones, repeatableSlides, agentContext, repSet, customInput || contentPrompt)
-            : buildInstancePrompt(zones, repeatableSlides, agent.slideKey, agent.instanceIndex, agent.instanceCount, agentContext, customInput || contentPrompt)
+            ? buildBlocksPrompt(zones, repeatableSlides, agentContext, repSet, effectiveInstructions)
+            : buildInstancePrompt(zones, repeatableSlides, agent.slideKey, agent.instanceIndex, agent.instanceCount, agentContext, effectiveInstructions)
 
          console.log(`[agentic/run][${agent.label}] Prompt length: ${prompt.length} chars`)
          if (prompt.length > 2_000_000) {
@@ -916,8 +1023,13 @@ router.post('/agentic/run', async (req, res) => {
          throw new Error(`Agent "${agent.label}" returned invalid JSON.\n${parseErr.message}`)
        }
 
-       log(`[${agent.label}] Parsed OK — ${Object.keys(parsed).length} top-level keys`)
-       console.log(`[agentic/run][${agent.label}] Parsed top-level keys: ${Object.keys(parsed).join(', ')}`)
+       if (Array.isArray(parsed)) {
+         log(`[${agent.label}] Parsed OK — top-level is array (${parsed.length} elements) — will unwrap first object`)
+         console.log(`[agentic/run][${agent.label}] Parsed top-level is array, length: ${parsed.length}`)
+       } else {
+         log(`[${agent.label}] Parsed OK — ${Object.keys(parsed).length} top-level keys`)
+         console.log(`[agentic/run][${agent.label}] Parsed top-level keys: ${Object.keys(parsed).join(', ')}`)
+       }
        emit(res, 'agent_update', { id: agent.id, state: 'done', output: JSON.stringify(parsed, null, 2) })
        log(`${agent.label} done (${((Date.now() - t0) / 1000).toFixed(1)}s)`)
 
@@ -942,7 +1054,7 @@ router.post('/agentic/run', async (req, res) => {
     phase('assembling')
     log('Assembling final JSON...')
 
-    let assembled  = assembleResults(agentResults)
+    let assembled  = assembleResults(agentResults, zones)
     let jsonString = JSON.stringify(assembled)
     log(`Assembled JSON: ${jsonString.length} chars`)
 
@@ -1019,7 +1131,7 @@ router.post('/agentic/run', async (req, res) => {
             missingKeys,
             zones,
             agentContext,
-            customInput || contentPrompt
+            effectiveInstructions
           )
 
           try {
@@ -1030,7 +1142,8 @@ router.post('/agentic/run', async (req, res) => {
               (msg) => log(`    [${slideKey}[${instanceIndex + 1}]] ${msg}`)
             )
             log(`  [${slideKey}[${instanceIndex + 1}]] Completion received (${completionAi.raw.length} chars)`)
-            return { slideKey, instanceIndex, parsed: completionAi.parsed }
+            const normalized = normalizeCompletionResult(completionAi.parsed, missingKeys)
+            return { slideKey, instanceIndex, parsed: normalized }
           } catch (err) {
             log(`  [${slideKey}[${instanceIndex + 1}]] Completion failed: ${err.message.split('\n')[0]}`)
             return null
@@ -1098,6 +1211,14 @@ router.post('/agentic/retry-agent', async (req, res) => {
       return res.status(400).json({ ok: false, error: 'projectName, flowId and agentId are required' })
     }
 
+    let templateInstructions = ''
+    try {
+      const flowPath = path.join(RESOLVED_PROJECTS_DIR, projectName, 'flows', flowId, 'flow.json')
+      const flowData = JSON.parse(await fsp.readFile(flowPath, 'utf8'))
+      templateInstructions = flowData.templateInstructions || ''
+    } catch {}
+    const effectiveInstructions = [templateInstructions, customInput || contentPrompt].filter(Boolean).join('\n\n')
+
     // Parse agentId → slideKey + instanceIndex.
     // Format: `${slideKey}_${instanceIndex}` — the instanceIndex is always a
     // non-negative integer after the last underscore.
@@ -1162,7 +1283,7 @@ router.post('/agentic/retry-agent', async (req, res) => {
     const instanceCount = remappedInstances[slideKey] ?? 1
     const prompt = buildInstancePrompt(
       zones, repeatableSlides, slideKey, instanceIndex, instanceCount,
-      agentContext, customInput || contentPrompt
+      agentContext, effectiveInstructions
     )
 
     let parsed
@@ -1173,9 +1294,21 @@ router.post('/agentic/retry-agent', async (req, res) => {
       return res.status(422).json({ ok: false, error: `Agent returned invalid JSON: ${parseErr.message.split('\n')[0]}` })
     }
 
-    // Merge the new result into the existing assembled JSON.
+    // Load from flow.json as source of truth — client-provided currentJson may be
+    // stale/empty when the user navigated away from the recipe step and back before
+    // triggering a retry (htmlProject in-memory state doesn't carry agenticJsonResponse).
     let current = {}
-    try { current = JSON.parse(currentJson) } catch {}
+    try {
+      const flowPath = path.join(RESOLVED_PROJECTS_DIR, projectName, 'flows', flowId, 'flow.json')
+      const flowData = JSON.parse(await fsp.readFile(flowPath, 'utf8'))
+      const savedJson = flowData.agenticJsonResponse
+      if (savedJson) {
+        current = typeof savedJson === 'string' ? JSON.parse(savedJson) : savedJson
+      }
+    } catch {
+      // flow.json unavailable — fall back to client-supplied currentJson
+      try { current = JSON.parse(currentJson) } catch {}
+    }
     current.slides          ??= {}
     current.slides[slideKey] ??= { instances: [] }
     current.slides[slideKey].instances                    ??= []
@@ -1203,6 +1336,14 @@ router.post('/agentic/resume', async (req, res) => {
     const { projectName, flowId, zones = [], repeatableSlides = [], instances = {}, contentPrompt = '', customInput = '', currentJson = '{}', startFrom = 0 } = req.body
     if (!projectName || !flowId) return error('projectName and flowId are required')
 
+    let templateInstructions = ''
+    try {
+      const flowPath = path.join(RESOLVED_PROJECTS_DIR, projectName, 'flows', flowId, 'flow.json')
+      const flowData = JSON.parse(await fsp.readFile(flowPath, 'utf8'))
+      templateInstructions = flowData.templateInstructions || ''
+    } catch {}
+    const effectiveInstructions = [templateInstructions, customInput || contentPrompt].filter(Boolean).join('\n\n')
+
     const remappedInstances = {}
     const expectedKeys = repeatableSlides.map(rs => rs.key)
     const returnedKeys = Object.keys(instances)
@@ -1222,12 +1363,12 @@ router.post('/agentic/resume', async (req, res) => {
       const debugDir = path.join(RESOLVED_PROJECTS_DIR, projectName, 'flows', flowId, 'debug')
       const debugFiles = await fsp.readdir(debugDir)
       const sharedFile = debugFiles.find(f => f === 'ai-slice-shared.txt')
-      if (sharedFile) resolvedSlices.shared = await fsp.readFile(path.join(debugDir, sharedFile), 'utf8')
-      const instanceFiles = debugFiles.filter(f => /^ai-slice-instance-\d+-.+\.txt$/.test(f))
-      await Promise.all(instanceFiles.map(async (filename) => {
-        const idxMatch = filename.match(/^ai-slice-instance-(\d+)-/)
-        if (idxMatch) resolvedSlices[idxMatch[1]] = await fsp.readFile(path.join(debugDir, filename), 'utf8')
-      }))
+          if (sharedFile) resolvedSlices.shared = await fsp.readFile(path.join(debugDir, sharedFile), 'utf8')
+          const instanceFiles = debugFiles.filter(f => /^ai-slice-instance-\d+-.+\.txt$/.test(f))
+          await Promise.all(instanceFiles.map(async (filename) => {
+            const idxMatch = filename.match(/^ai-slice-instance-(\d+)-/)
+            if (idxMatch) resolvedSlices[idxMatch[1]] = await fsp.readFile(path.join(debugDir, filename), 'utf8')
+          }))
     } catch (err) {
       log(`Warning: failed to read slice files from disk: ${err.message}`)
     }
@@ -1242,9 +1383,12 @@ router.post('/agentic/resume', async (req, res) => {
     const agentResults = await runAgentsWithConcurrency(agents, AGENT_BATCH_SIZE, async (agent) => {
         emit(res, 'agent_update', { id: agent.id, state: 'running' })
         const sharedSlice = resolvedSlices.shared || ''
-        const instanceSlice = resolvedSlices[agent.globalIndex.toString()] || ''
+        const instanceSliceKey = agent.globalIndex.toString()
+        const instanceSlice = resolvedSlices[instanceSliceKey] || ''
+        const instanceSliceFile = `ai-slice-instance-${instanceSliceKey}-*.txt`
+        log(`[${agent.label}] Using slice file: ${instanceSliceFile}`)
         const agentContext = sharedSlice ? `${instanceSlice}\n\n=== Shared Reference Data ===\n${sharedSlice}` : instanceSlice
-        const prompt = buildInstancePrompt(zones, repeatableSlides, agent.slideKey, agent.instanceIndex, agent.instanceCount, agentContext, customInput || contentPrompt)
+        const prompt = buildInstancePrompt(zones, repeatableSlides, agent.slideKey, agent.instanceIndex, agent.instanceCount, agentContext, effectiveInstructions)
         const agentAi = await callAiJson(prompt, { maxTokens: 64000, temperature: 0.4 })
         emit(res, 'agent_update', { id: agent.id, state: 'done', output: JSON.stringify(agentAi.parsed, null, 2) })
         return { agent, parsed: agentAi.parsed }
