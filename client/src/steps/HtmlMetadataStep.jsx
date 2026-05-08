@@ -57,7 +57,7 @@ export default function HtmlMetadataStep({
         setExportName(slideNames[0].name)
       }
     }
-  }, [exportName, slideCount, slideNames])
+  }, [slideCount, slideNames])
 
   const handleMetadataChange = useCallback((index, field, value) => {
     setMetadata(prev => {

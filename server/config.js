@@ -24,3 +24,12 @@ export const EXCEL_MAX_CELL_LENGTH = 500;
 
 // ── Export / filename limits ───────────────────────────────────────────────────
 export const MAX_EXPORT_FILENAME_LENGTH = 50;
+
+// ── HTML Flow & Template session limits ────────────────────────────────────────
+export const PENDING_TEMPLATE_TTL_MS = 2 * 60 * 60 * 1000;   // 2 hours
+export const MAX_JSON_UPLOAD_BYTES = 2 * 1024 * 1024;          // 2 MB
+
+// ── Agentic processing batch sizes ────────────────────────────────────────────
+export const SLICER_BATCH_SIZE = 3;
+export const AGENT_BATCH_SIZE = 5;
+export const RAW_CONTEXT_CAP_CHARS = 300_000;

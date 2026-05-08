@@ -204,21 +204,19 @@ export default function HtmlUploadStep({
           setLoadingFlow(true)
           try {
             const res = await fetch(`/api/html-flow/load-flow?projectName=${encodeURIComponent(currentProjectName)}&flowId=${encodeURIComponent(currentFlowId)}`)
-            if (res.ok) {
-              const data = await res.json()
-              console.log('[HtmlUploadStep] load-flow response:', data)
-              setFileName(data.fileName)
+             if (res.ok) {
+               const data = await res.json()
+               setFileName(data.fileName)
               setSlideCount(data.slideCount)
               setTrees(data.trees || [])
               setSelections(data.selections || [])
               setRepeatableSlides(data.repeatableSlides || [])
               setFullSlideGeneration(data.fullSlideGeneration || [])
-              setPreviewHtml(data.previewHtml)
-              setIsExistingFlow(true)
-              if (data.violations?.length) {
-                console.log('[HtmlUploadStep] Setting violations:', data.violations)
-                setViolations(data.violations)
-              }
+               setPreviewHtml(data.previewHtml)
+               setIsExistingFlow(true)
+               if (data.violations?.length) {
+                 setViolations(data.violations)
+               }
            } else {
              const errorData = await res.json()
              setToast({ message: 'Failed to load flow: ' + (errorData.error || 'Unknown error'), type: 'error' })

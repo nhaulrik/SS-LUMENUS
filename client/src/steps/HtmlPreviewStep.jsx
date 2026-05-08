@@ -77,36 +77,36 @@ export default function HtmlPreviewStep({
      return () => window.removeEventListener('message', handleMessage)
    }, [])
 
-   const savePatchedHtmlToBackend = async (selector, newText) => {
-     try {
-       const response = await fetch('/api/html-flow/update-preview-html', {
-         method: 'PATCH',
-         headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({
-           projectName,
-           flowId,
-           roundId,
-           selector,
-           newText,
-         }),
-       })
-       if (!response.ok) {
-         const errBody = await response.text().catch(() => '')
-         console.error('[HtmlPreviewStep] Failed to save edited HTML:', response.status, errBody)
-         return
-       }
-       const data = await response.json()
-       if (data.previewHtml) {
-         // Update App-level state so navigating away and back shows the edited HTML.
-         onPreviewHtmlChange?.(data.previewHtml)
-         // Also sync local srcDoc so slide navigation re-parses the edited HTML.
-         // Safe here because the user has already blurred (edit is committed).
-         setSrcDoc(data.previewHtml)
-       }
-     } catch (err) {
-       console.error('[HtmlPreviewStep] Error saving edited HTML:', err)
-     }
-   }
+    const savePatchedHtmlToBackend = useCallback(async (selector, newText) => {
+      try {
+        const response = await fetch('/api/html-flow/update-preview-html', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            projectName,
+            flowId,
+            roundId,
+            selector,
+            newText,
+          }),
+        })
+        if (!response.ok) {
+          const errBody = await response.text().catch(() => '')
+          console.error('[HtmlPreviewStep] Failed to save edited HTML:', response.status, errBody)
+          return
+        }
+        const data = await response.json()
+        if (data.previewHtml) {
+          // Update App-level state so navigating away and back shows the edited HTML.
+          onPreviewHtmlChange?.(data.previewHtml)
+          // Also sync local srcDoc so slide navigation re-parses the edited HTML.
+          // Safe here because the user has already blurred (edit is committed).
+          setSrcDoc(data.previewHtml)
+        }
+      } catch (err) {
+        console.error('[HtmlPreviewStep] Error saving edited HTML:', err)
+      }
+    }, [projectName, flowId, roundId, onPreviewHtmlChange, setSrcDoc])
 
    // Extract and show only the current slide
   const getSingleSlideHtml = useCallback(() => {

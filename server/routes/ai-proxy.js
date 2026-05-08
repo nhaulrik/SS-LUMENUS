@@ -18,12 +18,9 @@ router.post('/ai-proxy/generate', async (req, res) => {
 
   const { prompt, model, temperature, maxTokens } = req.body;
 
-  console.log(`[${timestamp}] Request: POST /api/ai-proxy/generate`);
-
-  // Validate required fields
-  if (!prompt || typeof prompt !== 'string') {
-    console.log(`[${new Date().toISOString()}] Response: 400 - Missing or invalid prompt`);
-    return res.status(400).json({
+   // Validate required fields
+   if (!prompt || typeof prompt !== 'string') {
+     return res.status(400).json({
       ok: false,
       error: 'Prompt is required and must be a string',
     });
@@ -36,10 +33,9 @@ router.post('/ai-proxy/generate', async (req, res) => {
       maxTokens,
     });
 
-    const elapsed = Date.now() - startTime;
-    console.log(`[${new Date().toISOString()}] Response: 200 OK (${elapsed}ms)`);
+     const elapsed = Date.now() - startTime;
 
-    return res.status(200).json({
+     return res.status(200).json({
       ok: true,
       response: result.response,
       usage: result.usage,

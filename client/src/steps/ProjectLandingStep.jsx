@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import styles from './ProjectLandingStep.module.css'
 
 /**
@@ -8,12 +8,11 @@ import styles from './ProjectLandingStep.module.css'
  * Projects are created here by name; flows are created from the project dashboard.
  */
 export default function ProjectLandingStep({ onProjectSelected, setToast }) {
-  const [projects,    setProjects]    = useState([])
-  const [loading,     setLoading]     = useState(true)
-  const [error,       setError]       = useState(null)
-  const [newName,     setNewName]     = useState('')
-  const [creating,    setCreating]    = useState(false)
-  const inputRef = useRef(null)
+   const [projects,    setProjects]    = useState([])
+   const [loading,     setLoading]     = useState(true)
+   const [error,       setError]       = useState(null)
+   const [newName,     setNewName]     = useState('')
+   const [creating,    setCreating]    = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -87,9 +86,8 @@ export default function ProjectLandingStep({ onProjectSelected, setToast }) {
             : 'Pick up where you left off, or create a new project'}
         </p>
         <form className={styles.newProjectForm} onSubmit={handleCreateProject}>
-          <input
-            ref={inputRef}
-            className={styles.newProjectInput}
+           <input
+             className={styles.newProjectInput}
             type="text"
             value={newName}
             onChange={e => setNewName(e.target.value)}

@@ -17,7 +17,7 @@ import fs             from 'fs';
 import path           from 'path';
 import { randomUUID } from 'crypto';
 import { parse }      from 'node-html-parser';
-import { PROJECTS_DIR } from '../config.js';
+import { PROJECTS_DIR, PENDING_TEMPLATE_TTL_MS, MAX_JSON_UPLOAD_BYTES } from '../config.js';
 import { validateHtmlJson } from '../lib/html/html-recipe-builder.js';
 import { applyHtmlContent }                  from '../lib/html/html-patcher.js';
 import { buildSectionTree, flattenTree, extractSlideNamesFromHtml } from '../lib/html/build-tree.js';
@@ -42,7 +42,6 @@ const router = express.Router();
 
 // In-memory store for pending template sessions (pre-project-creation).
 // Keyed by templateId (uuid). Entries auto-expire after 2 hours.
-const PENDING_TEMPLATE_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
 const pendingTemplates = new Map(); // { templateId -> { ...data, expiresAt: number } }
 
 setInterval(() => {
@@ -410,9 +409,9 @@ router.post('/html-flow/apply-content', (req, res) => {
     if (!jsonString) {
       return res.status(400).json({ ok: false, error: 'jsonString is required.' });
     }
-    if (typeof jsonString === 'string' && jsonString.length > 2 * 1024 * 1024) {
-      return res.status(400).json({ ok: false, error: 'JSON response too large (max 2MB).' });
-    }
+     if (typeof jsonString === 'string' && jsonString.length > MAX_JSON_UPLOAD_BYTES) {
+       return res.status(400).json({ ok: false, error: 'JSON response too large (max 2MB).' });
+     }
 
     if (!projectName || !/^[\w-]{1,100}$/.test(projectName) || !flowId || !/^[\w-]{1,100}$/.test(flowId)) {
       return res.status(400).json({ ok: false, error: 'projectName and flowId are required.' });

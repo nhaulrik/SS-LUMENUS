@@ -165,12 +165,9 @@ function AssignmentPanel({ nodes, existingSel, isRepeatableSlide, onAssign, onCl
   const isGroup  = nodes.length > 1
   const firstNode = nodes[0]
 
-  const [zoneType, setZoneType]   = useState('block')
-  const [key,      setKey]        = useState(existingSel?.key ?? suggestKey(firstNode))
-  const [hint,     setHint]       = useState(existingSel?.hint ?? '')
-  const [prompt,   setPrompt]     = useState(existingSel?.prompt ?? '')
-  const [type,     setType]       = useState(existingSel?.type ?? 'text')
-  const [autoGen,  setAutoGen]    = useState(existingSel?.autoGenerate ?? true)
+   const [key,      setKey]        = useState(existingSel?.key ?? suggestKey(firstNode))
+   const [hint,     setHint]       = useState(existingSel?.hint ?? '')
+   const [prompt,   setPrompt]     = useState(existingSel?.prompt ?? '')
   // unique: true = different per instance, false = same on every clone
   // Only meaningful for zones on repeatable slides
   const [unique,   setUnique]     = useState(existingSel?.unique !== false)
@@ -178,12 +175,12 @@ function AssignmentPanel({ nodes, existingSel, isRepeatableSlide, onAssign, onCl
   // Focus trapping: constrains Tab/Shift+Tab within modal, restores focus on close
   const panelRef = useFocusTrap()
 
-  const handleConfirm = () => {
-    if (!key.trim()) return
-    const payload = { zoneType, key: key.trim(), hint: hint.trim(), prompt: prompt.trim(), type, autoGenerate: autoGen }
-    if (isRepeatableSlide) payload.unique = unique
-    onAssign(payload)
-  }
+   const handleConfirm = () => {
+     if (!key.trim()) return
+     const payload = { key: key.trim(), hint: hint.trim(), prompt: prompt.trim() }
+     if (isRepeatableSlide) payload.unique = unique
+     onAssign(payload)
+   }
 
   return (
     <div
@@ -441,8 +438,6 @@ const TreeNode = memo(function TreeNode({
     </>
   )
 }) // end memo(TreeNode)
-
-// ── Conflict warning ──────────────────────────────────────────────────────────
 
 // ── Main component ────────────────────────────────────────────────────────
 

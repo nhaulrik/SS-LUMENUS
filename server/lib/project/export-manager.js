@@ -1,17 +1,12 @@
 /**
  * server/lib/export-manager.js
  *
- * Phase 3 & 4A: Versioned Exports & Simplified Slide Metadata
- * Phase 4E: Architecture Fix - Exports moved from chains to projects
- *
  * Manages versioned exports for HTML flows.
  * Each export captures a generation round's output as individual slide files
  * with metadata, providing a full history of exported versions.
  *
- * Phase 4E: Exports now stored in projects directory (not chains)
- * - Exports are part of the project workflow
- * - Chains are now only used for structures and packages (Phase 4B/4C)
- * - Exports remain non-destructive and reusable across multiple structures
+ * Exports are stored in the projects directory as part of the project workflow.
+ * Exports remain non-destructive and reusable across multiple structures.
  *
  * Directory structure per project:
  *   server/projects/<projectName>/flows/<flowId>/exports/

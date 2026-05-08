@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import styles from './PresentationsTab.module.css'
 
 export default function PresentationsTab({ projectName, setToast }) {
@@ -9,11 +9,7 @@ export default function PresentationsTab({ projectName, setToast }) {
   const [renameValue, setRenameValue] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
 
-  useEffect(() => {
-    loadPresentations()
-  }, [projectName])
-
-  const loadPresentations = async () => {
+  const loadPresentations = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -27,7 +23,11 @@ export default function PresentationsTab({ projectName, setToast }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [projectName, setToast])
+
+  useEffect(() => {
+    loadPresentations()
+  }, [loadPresentations])
 
   const handleRenameStart = (presentation) => {
     setRenamingId(presentation.name)

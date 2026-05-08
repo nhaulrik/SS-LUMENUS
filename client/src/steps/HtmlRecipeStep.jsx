@@ -7,7 +7,8 @@ import { useRef, useState, useCallback, useEffect, useMemo } from 'react'
 import AppHeader from '../components/AppHeader.jsx'
 import Breadcrumbs from '../components/Breadcrumbs.jsx'
 import agenticCss from '../components/AgenticPanel.module.css'
-import ContentReviewTable from '../components/ContentReviewTable'
+import ContentReviewTable from '../components/ContentReviewTable.jsx'
+import { readSSE } from '../utils/readSSE.js'
 
 export default function HtmlRecipeStep({
   project,
@@ -40,9 +41,10 @@ export default function HtmlRecipeStep({
   highlightedAgent,
   onHighlightCleared,
 }) {
-  const { selections = [], zones = [] } = project
+  const safeProject = project || {}
+  const { selections = [], zones = [] } = safeProject
 
-  const [jsonInput, setJsonInput] = useState(project?.agenticJsonResponse ? (typeof project.agenticJsonResponse === 'string' ? project.agenticJsonResponse : JSON.stringify(project.agenticJsonResponse, null, 2)) : '')
+  const [jsonInput, setJsonInput] = useState(safeProject.agenticJsonResponse ? (typeof safeProject.agenticJsonResponse === 'string' ? safeProject.agenticJsonResponse : JSON.stringify(safeProject.agenticJsonResponse, null, 2)) : '')
   const [validation, setValidation] = useState(null)
   const [applying, setApplying] = useState(false)
   const [applySuccess, setApplySuccess] = useState(false)
@@ -55,18 +57,18 @@ export default function HtmlRecipeStep({
   const [agenticElapsedLocal, setAgenticElapsedLocal] = useState(0)
   const [agenticPlanLocal, setAgenticPlanLocal] = useState(null)
   const [agenticErrorMsgLocal, setAgenticErrorMsgLocal] = useState('')
-  const [agenticCustomInput, setAgenticCustomInput] = useState(project?.agenticCustomInput || '')
+  const [agenticCustomInput, setAgenticCustomInput] = useState(safeProject.agenticCustomInput || '')
   const [sliceTemplates, setSliceTemplates] = useState([])
-  const [sliceOutputTemplate, setSliceOutputTemplate] = useState(project?.sliceOutputTemplate || null)
-  const [groupingColumn, setGroupingColumn] = useState(project?.groupingColumn || '')
+  const [sliceOutputTemplate, setSliceOutputTemplate] = useState(safeProject.sliceOutputTemplate || null)
+  const [groupingColumn, setGroupingColumn] = useState(safeProject.groupingColumn || '')
   const [availableColumns, setAvailableColumns] = useState([])
   const [columnsLoading, setColumnsLoading] = useState(false)
-   const [filters, setFilters] = useState(project?.filters || [])
+   const [filters, setFilters] = useState(safeProject.filters || [])
    const [expandedFilterId, setExpandedFilterId] = useState(null)
    const [filterValuesLoading, setFilterValuesLoading] = useState(false)
    const [filterColumnValues, setFilterColumnValues] = useState({})
    const [retryingAgents, setRetryingAgents] = useState(new Set())
-   const [skippedSlides, setSkippedSlides] = useState(project?._metadata?.skippedSlides || [])
+   const [skippedSlides, setSkippedSlides] = useState(safeProject._metadata?.skippedSlides || [])
 
   const customInputSaveTimerRef = useRef(null)
   const validateTimerRef = useRef(null)
@@ -212,6 +214,15 @@ export default function HtmlRecipeStep({
     }
   }, [flowId, projectName])
 
+  const handleJsonChange = useCallback((value) => {
+    setJsonInput(value)
+    saveAgenticJsonResponseToFlow(value)
+    if (!value.trim()) {
+      setValidation(null)
+      onAiResponseChange?.(null)
+    }
+  }, [onAiResponseChange, saveAgenticJsonResponseToFlow])
+
   useEffect(() => {
     if (project.contentPrompt && !agenticContentPrompt) {
       setAgenticContentPrompt(project.contentPrompt)
@@ -240,59 +251,9 @@ export default function HtmlRecipeStep({
       setValidation(errorData)
       onAiResponseChange?.({ raw: value, validated: true, validationResult: errorData })
     }
-  }, [flowId, onAiResponseChange, projectName])
+   }, [flowId, onAiResponseChange, projectName])
 
-  const handleJsonChange = useCallback((value) => {
-    setJsonInput(value)
-    clearTimeout(validateTimerRef.current)
-    validateTimerRef.current = setTimeout(() => validateJson(value), 400)
-  }, [validateJson])
-
-  const handleApply = useCallback(async () => {
-    if (!validation?.valid || applying) return
-    setApplying(true)
-    try {
-      const res = await fetch('/api/html-flow/apply-content', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectName, flowId, jsonString: jsonInput, instanceNames: agenticPlanLocal?.instanceNames }),
-      })
-      if (!res.ok) throw new Error(`Server error ${res.status}`)
-      const data = await res.json()
-      if (!data.ok) throw new Error(data.error || 'Apply failed')
-      setApplySuccess(true)
-      onApplied({ outputFile: data.outputFile, previewHtml: data.previewHtml, roundId: data.roundId, slideCount: data.slideCount ?? 1, slideNames: data.slideNames ?? [] })
-    } catch (err) {
-      setToast({ message: 'Apply failed: ' + err.message, type: 'error' })
-    } finally {
-      setApplying(false)
-    }
-  }, [agenticPlanLocal, applying, flowId, jsonInput, onApplied, projectName, setToast, validation?.valid])
-
-  const readSSE = async function* (response) {
-    const reader = response.body.getReader()
-    const decoder = new TextDecoder()
-    let buffer = ''
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      buffer += decoder.decode(value, { stream: true })
-      const blocks = buffer.split('\n\n')
-      buffer = blocks.pop()
-      for (const block of blocks) {
-        if (!block.trim()) continue
-        let eventType = 'message'
-        let eventData = ''
-        for (const line of block.split('\n')) {
-          if (line.startsWith('event: ')) eventType = line.slice(7).trim()
-          if (line.startsWith('data: ')) eventData += (eventData ? '\n' : '') + line.slice(6)
-        }
-        if (eventData !== '') yield { type: eventType, data: eventData }
-      }
-    }
-  }
-
-  const handleAgenticGenerate = useCallback(async () => {
+   const handleAgenticGenerate = useCallback(async () => {
     setAgenticStatus('planning')
     setAgenticPhaseLocal('analyzing')
     setAgenticPlanLocal(null)
@@ -375,7 +336,7 @@ export default function HtmlRecipeStep({
         if (type === 'done') {
           setAgenticStatus('done')
           setJsonInput(data)
-          setValidation(null)
+          validateJson(data)
           handleJsonChange(data)
           saveAgenticJsonResponseToFlow(data)
           setToast({ message: 'JSON generated - review and apply when ready', type: 'success' })
@@ -389,7 +350,7 @@ export default function HtmlRecipeStep({
       setAgenticStatus('error')
       setAgenticErrorMsgLocal(err.message)
     }
-  }, [agenticCustomInput, agenticPlanLocal, agenticContentPrompt, flowId, handleJsonChange, project.repeatableSlides, projectName, saveAgenticJsonResponseToFlow, selectedFiles, setAgenticStatus, setToast, zones])
+    }, [agenticCustomInput, agenticPlanLocal, agenticContentPrompt, flowId, handleJsonChange, project.repeatableSlides, projectName, saveAgenticJsonResponseToFlow, selectedFiles, setAgenticStatus, setToast, validateJson, zones])
 
   const handleAgenticCancel = () => {
     setAgenticStatus('idle')
@@ -400,6 +361,31 @@ export default function HtmlRecipeStep({
     setAgenticErrorMsgLocal('')
     setAgenticElapsedLocal(0)
   }
+
+  const handleApply = useCallback(async () => {
+    if (!validation?.valid) return
+    setApplying(true)
+    try {
+      const response = await fetch('/api/html-flow/apply-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectName,
+          flowId,
+          jsonString: jsonInput,
+        }),
+      })
+      if (!response.ok) throw new Error(`Server error ${response.status}`)
+      const data = await response.json()
+      setApplySuccess(true)
+      onApplied?.(data)
+      setToast({ message: 'Content applied successfully', type: 'success' })
+    } catch (err) {
+      setToast({ message: `Failed to apply content: ${err.message}`, type: 'error' })
+    } finally {
+      setApplying(false)
+    }
+  }, [flowId, jsonInput, onApplied, projectName, setToast, validation?.valid])
 
   const handleAgenticRetry = useCallback(async (agentId, { onSuccess } = {}) => {
     setRetryingAgents(prev => new Set([...prev, agentId]))

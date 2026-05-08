@@ -20,61 +20,9 @@ import {
   resolveProjectDir,
   resolveFlowDir,
 } from '../lib/project/project-manager.js';
-import { selectionsToZones, resolveConflicts } from '../lib/zones/selections-to-zones.js';
+import { selectionsToZones, resolveConflicts, autoDiscoverZonesForFullSlide } from '../lib/zones/selections-to-zones.js';
 
 const router = express.Router();
-
-// ── Auto-discovery helper for full slide generation ─────────────────────────
-function autoDiscoverZonesForFullSlide(trees, fullSlideGeneration, existingSelections) {
-  if (!Array.isArray(fullSlideGeneration) || fullSlideGeneration.length === 0) {
-    return existingSelections;
-  }
-
-  const result = [...existingSelections];
-  const existingNodeIds = new Set(existingSelections.map(s => s.nodeId));
-
-  function flattenTree(nodes) {
-    const flat = [];
-    function visit(arr) {
-      for (const n of arr) {
-        flat.push(n);
-        if (n.children?.length) visit(n.children);
-      }
-    }
-    visit(nodes);
-    return flat;
-  }
-
-  for (const slideIdx of fullSlideGeneration) {
-    const treeIdx = slideIdx - 1;
-    if (treeIdx < 0 || treeIdx >= trees.length) continue;
-
-    const allNodes = flattenTree(trees[treeIdx]);
-
-    for (const node of allNodes) {
-      if (existingNodeIds.has(node.id)) continue;
-      if (node.leaf) continue;
-
-      if (node.interesting || node.children?.length > 0) {
-        const key = `auto_${node.id.replace(/[^a-z0-9]/gi, '_').toLowerCase()}`;
-        result.push({
-          nodeId:        node.id,
-          slideIndex:    slideIdx,
-          zoneType:      'block',
-          key,
-          prompt:        '',
-          autoGenerate:  true,
-          autoDiscovered: true,
-          type:          'block',
-          ...(node.innerHTML ? { exampleHtml: node.innerHTML } : {}),
-        });
-        existingNodeIds.add(node.id);
-      }
-    }
-  }
-
-  return result;
-}
 
 // ── GET /api/projects ─────────────────────────────────────────────────────────
 
