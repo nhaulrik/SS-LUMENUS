@@ -16,6 +16,8 @@
       --amber: #F0A500;
       --bg:    #e8e8e4;
       --nav-w: 224px;
+      --nav-collapsed-w: 18px;
+      --slide-max-w: 1400px;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -40,6 +42,71 @@
       height: calc(100vh - 7px);
     }
 
+    #shell.sidebar-collapsed #sidebar {
+      width: var(--nav-collapsed-w);
+      min-width: var(--nav-collapsed-w);
+      border-right-color: rgba(255,255,255,0.04);
+    }
+
+    #shell.sidebar-collapsed .nav-head,
+    #shell.sidebar-collapsed .nav-scroll,
+    #shell.sidebar-collapsed .nav-footer {
+      opacity: 0;
+      pointer-events: none;
+      visibility: hidden;
+      transition: opacity 0.12s ease, visibility 0s linear 0.12s;
+    }
+
+    #shell.sidebar-collapsed #content {
+      min-width: 0;
+    }
+
+    #shell.sidebar-collapsed #slide-area {
+      padding-left: 12px;
+      padding-right: 12px;
+    }
+
+    #sidebar-toggle {
+      position: absolute;
+      top: 15px;
+      right: -1px;
+      width: 30px;
+      height: 30px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-right: none;
+      border-radius: 999px 0 0 999px;
+      background: rgba(255,255,255,0.05);
+      color: rgba(255,255,255,0.72);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: none;
+      z-index: 20;
+      transition: background 0.16s ease, color 0.16s ease, opacity 0.16s ease;
+    }
+
+    #sidebar-toggle:hover {
+      background: rgba(255,255,255,0.09);
+      color: rgba(255,255,255,0.96);
+    }
+
+    #sidebar-toggle .toggle-icon {
+      display: block;
+      font-size: 11px;
+      line-height: 1;
+      transform: translateX(0);
+    }
+
+    #shell.sidebar-collapsed #sidebar-toggle .toggle-icon {
+      transform: translateX(0);
+    }
+
+    #shell.sidebar-collapsed #sidebar-toggle {
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.88);
+    }
+
     /* ── Sidebar ── */
     #sidebar {
       width: var(--nav-w);
@@ -50,6 +117,7 @@
       flex-shrink: 0;
       border-right: 1px solid rgba(255,255,255,0.07);
       overflow: hidden;
+      position: relative;
     }
 
     .nav-head {
@@ -244,13 +312,18 @@
       padding: 20px 20px 16px;
       background: #d0cfcb;
       overflow: hidden;
+      position: relative;
+    }
+
+    #slide-shell {
+      width: 100%;
+      flex-shrink: 0;
     }
 
     #slide-frame {
       width: 100%;
-      max-width: 1280px;
+      max-width: var(--slide-max-w);
       aspect-ratio: 16 / 9;
-      max-height: calc(100% - 52px);
       border: 0;
       display: block;
       background: transparent;
@@ -307,6 +380,11 @@
       border-radius: 5px;
       padding: 7px 10px;
     }
+
+    #slide-shell {
+      display: flex;
+      justify-content: center;
+    }
   </style>
 </head>
 <body>
@@ -314,6 +392,9 @@
   <div id="shell">
 
     <aside id="sidebar">
+      <button type="button" id="sidebar-toggle" aria-label="Collapse sidebar" aria-pressed="false" title="Hide sidebar">
+        <span class="toggle-icon">❮</span>
+      </button>
       <div class="nav-head">
         <div class="nav-pi" id="nav-pi">PI</div>
         <div class="nav-title" id="nav-title">{{PRESENTATION_NAME}}</div>
@@ -328,7 +409,9 @@
 
     <main id="content">
       <div id="slide-area">
-        <iframe id="slide-frame" title="Slide"></iframe>
+        <div id="slide-shell">
+          <iframe id="slide-frame" title="Slide"></iframe>
+        </div>
         <div id="slide-nav-bar">
           <button type="button" class="nav-btn" id="btn-prev">← Prev</button>
           <span id="slide-counter">– / –</span>
@@ -394,12 +477,54 @@
   const btnPrev    = document.getElementById('btn-prev');
   const btnNext    = document.getElementById('btn-next');
   const counterEl  = document.getElementById('slide-counter');
+  const shell      = document.getElementById('shell');
+  const sidebar    = document.getElementById('sidebar');
+  const sidebarToggle = document.getElementById('sidebar-toggle');
+  const slideArea = document.getElementById('slide-area');
+  const slideShell = document.getElementById('slide-shell');
 
   /* ── Header ── */
   const titleEl = document.getElementById('nav-title');
   if (meta.name) { titleEl.textContent = meta.name; document.title = meta.name; }
   const piEl = document.getElementById('nav-pi');
   if (meta.pi) piEl.textContent = meta.pi; else piEl.style.display = 'none';
+
+  const sidebarStorageKey = 'solon.presentation.sidebarCollapsed';
+
+  function fitSlidePreview() {
+    const areaRect = slideArea.getBoundingClientRect();
+    const navRect = document.getElementById('slide-nav-bar').getBoundingClientRect();
+    const availableWidth = Math.max(0, areaRect.width - 40);
+    const availableHeight = Math.max(0, areaRect.height - navRect.height - 28);
+    const heightBoundWidth = Math.floor(availableHeight * 16 / 9);
+    const targetWidth = Math.max(0, Math.min(availableWidth, heightBoundWidth, 1400));
+    slideShell.style.width = targetWidth ? targetWidth + 'px' : '100%';
+    slideFrame.style.maxWidth = targetWidth ? targetWidth + 'px' : 'var(--slide-max-w)';
+  }
+
+  function setSidebarCollapsed(collapsed) {
+    shell.classList.toggle('sidebar-collapsed', collapsed);
+    sidebarToggle.setAttribute('aria-pressed', String(collapsed));
+    sidebarToggle.setAttribute('aria-label', collapsed ? 'Show sidebar' : 'Collapse sidebar');
+    sidebarToggle.title = collapsed ? 'Show sidebar' : 'Hide sidebar';
+    sidebarToggle.querySelector('.toggle-icon').textContent = collapsed ? '❯' : '❮';
+    try { localStorage.setItem(sidebarStorageKey, collapsed ? '1' : '0'); } catch {}
+  }
+
+  try {
+    setSidebarCollapsed(localStorage.getItem(sidebarStorageKey) === '1');
+  } catch {
+    setSidebarCollapsed(false);
+  }
+
+  fitSlidePreview();
+
+  sidebarToggle.addEventListener('click', () => {
+    setSidebarCollapsed(!shell.classList.contains('sidebar-collapsed'));
+    fitSlidePreview();
+  });
+
+  window.addEventListener('resize', fitSlidePreview);
 
   /* ── Flatten slides and index nodes ── */
   function flattenSlides(nodes, out) {
@@ -504,6 +629,7 @@
     transitionTo(id);
     updateNavHighlight(id);
     updateCounter(idx);
+    requestAnimationFrame(fitSlidePreview);
   }
 
   /* ── Prev / Next buttons ── */
