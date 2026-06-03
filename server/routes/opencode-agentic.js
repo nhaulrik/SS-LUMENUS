@@ -1187,6 +1187,49 @@ router.post('/agentic/resume', async (req, res) => {
   }
 })
 
+// ── GET /agentic/context-slice — read a single instance slice file from debug/ ──
+router.get('/agentic/context-slice', async (req, res) => {
+  const { projectName, flowId, instanceIdx } = req.query
+  if (!projectName || !flowId) return res.status(400).json({ error: 'projectName and flowId required' })
+
+  const debugDir = path.join(RESOLVED_PROJECTS_DIR, projectName, 'flows', flowId, 'debug')
+  try {
+    const files = await fsp.readdir(debugDir).catch(() => [])
+
+    if (instanceIdx === 'shared') {
+      const sharedPath = path.join(debugDir, 'ai-slice-shared.txt')
+      const content = await fsp.readFile(sharedPath, 'utf8').catch(() => '')
+      return res.json({ content, filename: 'ai-slice-shared.txt' })
+    }
+
+    const idx = parseInt(instanceIdx, 10)
+    const prefix = `ai-slice-instance-${idx}-`
+    const match = files.find(f => f.startsWith(prefix) && f.endsWith('.txt'))
+    if (!match) return res.json({ content: '', filename: null })
+
+    const content = await fsp.readFile(path.join(debugDir, match), 'utf8')
+    res.json({ content, filename: match })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ── POST /agentic/open-debug-folder — reveal flow debug dir in OS file manager ─
+router.post('/agentic/open-debug-folder', (req, res) => {
+  const { projectName, flowId } = req.body || {}
+  if (!projectName || !flowId) return res.status(400).json({ error: 'projectName and flowId required' })
+  const dir = path.join(RESOLVED_PROJECTS_DIR, projectName, 'flows', flowId, 'debug')
+  const cmd = process.platform === 'win32'
+    ? `explorer "${dir}"`
+    : process.platform === 'darwin'
+      ? `open "${dir}"`
+      : `xdg-open "${dir}"`
+  exec(cmd, err => {
+    if (err) return res.status(500).json({ error: err.message })
+    res.json({ ok: true })
+  })
+})
+
 // ── POST /slice-templates/open-folder — reveal templates dir in OS file manager ─
 router.post('/slice-templates/open-folder', (_req, res) => {
   const dir = SLICE_TEMPLATES_DIR

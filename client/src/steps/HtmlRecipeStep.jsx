@@ -8,6 +8,7 @@ import AppHeader from '../components/AppHeader.jsx'
 import Breadcrumbs from '../components/Breadcrumbs.jsx'
 import agenticCss from '../components/AgenticPanel.module.css'
 import ContentReviewTable from '../components/ContentReviewTable.jsx'
+import ContextSliceModal from '../components/ContextSliceModal.jsx'
 import { readSSE } from '../utils/readSSE.js'
 
 export default function HtmlRecipeStep({
@@ -73,6 +74,7 @@ export default function HtmlRecipeStep({
    const [filterColumnValues, setFilterColumnValues] = useState({})
    const [retryingAgents, setRetryingAgents] = useState(new Set())
    const [skippedSlides, setSkippedSlides] = useState(safeProject._metadata?.skippedSlides || [])
+   const [sliceModal, setSliceModal] = useState(null) // { instanceIdx, instanceName }
 
   const customInputSaveTimerRef = useRef(null)
   const validateTimerRef = useRef(null)
@@ -565,6 +567,7 @@ export default function HtmlRecipeStep({
   }
 
   return (
+    <>
     <div className="app">
       <AppHeader title={safeProject.name || flowId} subtitle={safeProject.templateFilename || projectName} debugContext={debugContext} />
       <Breadcrumbs step={step} canNavigateTo={canNavigateTo} navigateTo={navigateTo} flow="html" />
@@ -890,10 +893,31 @@ export default function HtmlRecipeStep({
                   )}
                 </p>
               )}
-              {agenticPlanLocal.contextSlices && Object.keys(agenticPlanLocal.contextSlices).length > 0 ? (
+              {agenticPlanLocal.groupingColumn && agenticPlanLocal.instanceNames?.length > 0 && (
+                <div className={agenticCss.groupingValuesList}>
+                  {agenticPlanLocal.instanceNames.map((name, i) => (
+                    <div key={i} className={agenticCss.groupingValueChip}>
+                      <button
+                        type="button"
+                        className={agenticCss.groupingValueFileBtn}
+                        onClick={() => setSliceModal({ instanceIdx: i, instanceName: name })}
+                        title="View context slice for this instance"
+                        aria-label={`View context slice for ${name}`}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                          <polyline points="14 2 14 8 20 8"/>
+                          <line x1="16" y1="13" x2="8" y2="13"/>
+                          <line x1="16" y1="17" x2="8" y2="17"/>
+                        </svg>
+                      </button>
+                      <span className={agenticCss.groupingValueName} onClick={() => setSliceModal({ instanceIdx: i, instanceName: name })}>{name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {agenticPlanLocal.contextSlices && Object.keys(agenticPlanLocal.contextSlices).length > 0 && (
                 <div className={agenticCss.reviewTableWrapper}><ContentReviewTable contextSlices={agenticPlanLocal.contextSlices} instanceNames={agenticPlanLocal.instanceNames || []} /></div>
-              ) : (
-                <div className={agenticCss.confirmRationale} style={{ fontStyle: 'italic' }}><strong style={{ fontStyle: 'normal' }}>No data preview available.</strong> Generation will still proceed using the full context files.</div>
               )}
               <div className={agenticCss.confirmActions}>
                 <button className={agenticCss.acceptBtn} onClick={handleAgenticAccept}>Accept &amp; Generate</button>
@@ -982,23 +1006,27 @@ export default function HtmlRecipeStep({
           )}
 
           <div className="agentic-json-section">
-            <h4>JSON Response</h4>
-            <div className="html-recipe-json-wrapper">
-              <textarea className={`json-input${validation?.valid === false ? ' has-error' : ''}`} value={jsonInput} onChange={e => handleJsonChange(e.target.value)} placeholder="JSON will appear here after generation…" spellCheck={false} />
-            </div>
             {validation?.valid === false && (
               <div className="validation-status invalid"><strong>{validation.error || 'Invalid JSON'}</strong></div>
             )}
-            {validation?.valid === true && (
-              <div className="validation-status valid">✓ {validation.foundFields?.length ?? 0} fields</div>
-            )}
             <div className="html-recipe-actions">
-              <button className="btn btn-link" onClick={onBack}><span aria-hidden="true">←</span> Back to template</button>
-              <button className="btn btn-primary" onClick={handleApply} disabled={!validation?.valid || applying}>{applying ? 'Applying…' : <><span aria-hidden="true">→</span> Apply content</>}</button>
+              <button className="btn btn-secondary" onClick={onBack}><span aria-hidden="true">←</span> Back</button>
+              <button className="btn btn-primary" onClick={handleApply} disabled={!validation?.valid || applying}>{applying ? 'Applying…' : 'Apply content →'}</button>
             </div>
           </div>
         </div>
       </div>
     </div>
+
+    {sliceModal && (
+      <ContextSliceModal
+        instanceName={sliceModal.instanceName}
+        instanceIdx={sliceModal.instanceIdx}
+        projectName={projectName}
+        flowId={flowId}
+        onClose={() => setSliceModal(null)}
+      />
+    )}
+    </>
   )
 }
