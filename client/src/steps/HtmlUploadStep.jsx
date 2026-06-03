@@ -294,14 +294,18 @@ export default function HtmlUploadStep({
          const data = await res.json()
          const meta = data.flow?._metadata || {}
           onProjectCreated({
-            projectName:         currentProjectName,
-            flowId:              currentFlowId,
-            selections:          meta.selections          || selections,
-            zones:               meta.zones               || [],
+            projectName:          currentProjectName,
+            flowId:               currentFlowId,
+            selections:           meta.selections          || selections,
+            zones:                meta.zones               || [],
             repeatableSlides,
-            fullSlideGeneration: meta.fullSlideGeneration || fullSlideGeneration,
-            agenticCustomInput:  data.flow?.agenticCustomInput  || '',
-            agenticJsonResponse: data.flow?.agenticJsonResponse || null,
+            fullSlideGeneration:  meta.fullSlideGeneration || fullSlideGeneration,
+            agenticCustomInput:   data.flow?.agenticCustomInput   || '',
+            agenticJsonResponse:  data.flow?.agenticJsonResponse  || null,
+            sliceOutputTemplate:  data.flow?.sliceOutputTemplate  || null,
+            selectedContextFiles: data.flow?.selectedContextFiles || [],
+            filters:              data.flow?.filters              || [],
+            groupingColumn:       data.flow?.groupingColumn       || null,
           })
        } else {
          // New flow — create it inside the current project

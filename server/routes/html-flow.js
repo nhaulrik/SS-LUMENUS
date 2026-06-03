@@ -168,9 +168,11 @@ router.get('/html-flow/load-flow', (req, res) => {
        contentPrompt:        flow.contentPrompt           || '',
        templateInstructions: flow.templateInstructions    || '',
        sliceOutputTemplate:  flow.sliceOutputTemplate     || null,
+       selectedContextFiles: flow.selectedContextFiles    || [],
        agenticCustomInput:   flow.agenticCustomInput      || '',
        agenticJsonResponse:  flow.agenticJsonResponse     || null,
        groupingColumn:       flow.groupingColumn          || null,
+       filters:              flow.filters                 || [],
        previewHtml,
         slideNames:          (latestGeneration?.slideNames || []).map(slide => ({
           ...slide,

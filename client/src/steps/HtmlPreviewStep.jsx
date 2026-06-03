@@ -354,10 +354,10 @@ ${currentSlide_el.outerHTML}
             </button>
             {onRequestRegenerate && (
               <button
-                className="btn btn-secondary html-preview-step-nav-btn"
+                className="btn btn-secondary"
                 onClick={() => onRequestRegenerate(currentSlide - 1)}
                 title="Flag this slide for regeneration and go back to generation step"
-                style={{ marginLeft: '12px' }}
+                style={{ marginLeft: '12px', height: '44px', padding: '0 12px' }}
               >
                 ↺ Regenerate
               </button>

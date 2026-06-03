@@ -97,7 +97,7 @@ router.get('/:projectName/flows/:flowId', (req, res) => {
 
 router.patch('/:projectName/flows/:flowId', (req, res) => {
   try {
-    const { globalPrompt, status, repeatableSlides, summaryPrompt, contentPrompt, sliceOutputTemplate, selections, fullSlideGeneration } = req.body;
+    const { globalPrompt, status, repeatableSlides, summaryPrompt, contentPrompt, sliceOutputTemplate, selections, fullSlideGeneration, selectedContextFiles, filters } = req.body;
     const flow = loadFlow(req.params.projectName, req.params.flowId);
     if (!flow) return res.status(404).json({ error: 'Flow not found' });
 
@@ -105,6 +105,8 @@ router.patch('/:projectName/flows/:flowId', (req, res) => {
     if (summaryPrompt !== undefined) flow.summaryPrompt = summaryPrompt;
     if (contentPrompt !== undefined) flow.contentPrompt = contentPrompt;
     if (sliceOutputTemplate !== undefined) flow.sliceOutputTemplate = sliceOutputTemplate;
+    if (Array.isArray(selectedContextFiles)) flow.selectedContextFiles = selectedContextFiles;
+    if (Array.isArray(filters)) flow.filters = filters;
     if (status !== undefined) {
       if (!['active', 'paused', 'archived'].includes(status)) {
         return res.status(400).json({ error: 'Invalid status' });

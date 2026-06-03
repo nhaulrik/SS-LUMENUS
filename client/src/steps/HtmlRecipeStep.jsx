@@ -89,13 +89,12 @@ export default function HtmlRecipeStep({
       if (!res.ok) throw new Error(`Server error ${res.status}`)
       const data = await res.json()
       setContextFiles((data.files || []).map(f => ({ filename: f.name, ext: f.ext })))
-      if (project.selectedContextFiles) setSelectedFiles(project.selectedContextFiles)
     } catch (err) {
       setToast({ message: 'Failed to load context files: ' + err.message, type: 'error' })
     } finally {
       setLoadingContextFiles(false)
     }
-  }, [project.selectedContextFiles, projectName, setToast])
+  }, [projectName, setToast])
 
   useEffect(() => {
     if (contextFiles.length === 0) fetchContextFiles()
@@ -149,6 +148,29 @@ export default function HtmlRecipeStep({
      return () => { cancelled = true }
    }, [expandedFilterId, filters, projectName, selectedFiles])
 
+  // Re-hydrate recipe selections from server on mount so that navigating back
+  // from the preview step picks up the persisted values rather than the stale
+  // in-memory project prop.
+  useEffect(() => {
+    if (!projectName || !flowId) return
+    fetch(`/api/projects/${encodeURIComponent(projectName)}/flows/${encodeURIComponent(flowId)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data?.flow) return
+        const flow = data.flow
+        if (Array.isArray(flow.selectedContextFiles)) setSelectedFiles(flow.selectedContextFiles)
+        if (flow.sliceOutputTemplate !== undefined) setSliceOutputTemplate(flow.sliceOutputTemplate || null)
+        if (Array.isArray(flow.filters)) setFilters(flow.filters)
+        if (flow.groupingColumn !== undefined) setGroupingColumn(flow.groupingColumn || '')
+        if (flow.agenticCustomInput !== undefined) {
+          setAgenticCustomInput(flow.agenticCustomInput || '')
+          if (flow.agenticCustomInput) setShowCustomInput(true)
+        }
+      })
+      .catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectName, flowId])
+
   const saveSelectedFilesToFlow = useCallback(async (files) => {
     try {
       await fetch(`/api/projects/${projectName}/flows/${flowId}`, {
@@ -171,6 +193,17 @@ export default function HtmlRecipeStep({
     }
   }, [flowId, projectName])
 
+  const saveFiltersToFlow = useCallback(async (updatedFilters) => {
+    try {
+      await fetch(`/api/projects/${projectName}/flows/${flowId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filters: updatedFilters }),
+      })
+    } catch {
+    }
+  }, [flowId, projectName])
+
    const addFilter = useCallback(() => {
      const newId = `filter-${Date.now()}`
      const newFilter = { id: newId, column: '', values: [] }
@@ -179,22 +212,30 @@ export default function HtmlRecipeStep({
    }, [])
 
    const removeFilter = useCallback((id) => {
-     setFilters(prev => prev.filter(f => f.id !== id))
+     setFilters(prev => {
+       const updated = prev.filter(f => f.id !== id)
+       saveFiltersToFlow(updated)
+       return updated
+     })
      if (expandedFilterId === id) setExpandedFilterId(null)
-   }, [expandedFilterId])
+   }, [expandedFilterId, saveFiltersToFlow])
 
    const updateFilterColumn = useCallback((id, column) => {
-     setFilters(prev => prev.map(f => 
-       f.id === id ? { ...f, column, values: [] } : f
-     ))
+     setFilters(prev => {
+       const updated = prev.map(f => f.id === id ? { ...f, column, values: [] } : f)
+       saveFiltersToFlow(updated)
+       return updated
+     })
      setFilterColumnValues(prev => ({ ...prev, [column]: [] }))
-   }, [])
+   }, [saveFiltersToFlow])
 
    const updateFilterValues = useCallback((id, values) => {
-     setFilters(prev => prev.map(f => 
-       f.id === id ? { ...f, values } : f
-     ))
-   }, [])
+     setFilters(prev => {
+       const updated = prev.map(f => f.id === id ? { ...f, values } : f)
+       saveFiltersToFlow(updated)
+       return updated
+     })
+   }, [saveFiltersToFlow])
 
    const saveGroupingColumnToFlow = useCallback(async (value) => {
      try {
@@ -746,18 +787,27 @@ export default function HtmlRecipeStep({
                       {filters.length > 0 && (
                         <div className={agenticCss.filterChipsList}>
                           {filters.map(filter => (
-                            <div key={filter.id} className={agenticCss.filterChip}>
+                            <div
+                              key={filter.id}
+                              className={agenticCss.filterChip}
+                              onClick={() => setExpandedFilterId(id => id === filter.id ? null : filter.id)}
+                            >
                               <div className={agenticCss.filterChipContent}>
                                 <span className={agenticCss.filterChipLabel}>
                                   {filter.column || 'Select column'}
                                   {filter.column && filter.values.length > 0 && (
-                                    <span className={agenticCss.filterChipCount}>{filter.values.length}</span>
+                                    <>
+                                      <span className={agenticCss.filterChipCount}>{filter.values.length}</span>
+                                      <span className={agenticCss.filterChipValues}>
+                                        {filter.values.slice(0, 3).join(', ')}{filter.values.length > 3 ? ` +${filter.values.length - 3}` : ''}
+                                      </span>
+                                    </>
                                   )}
                                 </span>
                               </div>
                               <button
                                 className={agenticCss.filterChipRemoveBtn}
-                                onClick={() => removeFilter(filter.id)}
+                                onClick={e => { e.stopPropagation(); removeFilter(filter.id) }}
                                 disabled={isAgenticActive || agenticStatus === 'confirming'}
                                 title="Remove filter"
                               >×</button>

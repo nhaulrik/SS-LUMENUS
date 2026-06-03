@@ -309,6 +309,16 @@
   color: #60a5fa;
 }
 
+.filterChipValues {
+  font-size: 11px;
+  color: #71717a;
+  margin-left: 4px;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .filterChipRemoveBtn {
   flex-shrink: 0;
   width: 16px;
