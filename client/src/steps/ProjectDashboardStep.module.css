@@ -547,27 +547,55 @@
   white-space: nowrap;
 }
 
-.flowOpenButton {
+.groupMenuDeleteConfirm {
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.groupMenuDeleteLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.groupMenuDeleteActions {
+  display: flex;
+  gap: 6px;
+}
+
+.groupMenuDeleteConfirmBtn {
   flex: 1;
-  background: var(--accent-primary);
-  color: white;
-  border: none;
+  background: rgba(229, 62, 62, 0.12);
+  color: var(--color-danger, #e53e3e);
+  border: 1px solid rgba(229, 62, 62, 0.3);
   border-radius: var(--radius-xs);
-  padding: 5px 10px;
+  padding: 5px 8px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: filter 0.2s;
-  text-align: center;
+  transition: background-color 0.15s;
 }
 
-.flowOpenButton:hover {
-  filter: brightness(1.12);
+.groupMenuDeleteConfirmBtn:hover {
+  background: rgba(229, 62, 62, 0.22);
 }
 
-.flowOpenButton:focus-visible {
-  outline: 2px solid var(--accent-primary);
-  outline-offset: 2px;
+.groupMenuDeleteCancelBtn {
+  flex: 1;
+  background: none;
+  color: var(--text-muted);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: var(--radius-xs);
+  padding: 5px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.groupMenuDeleteCancelBtn:hover {
+  color: var(--text-primary);
+  border-color: rgba(148, 163, 184, 0.4);
 }
 
 /* Loading State */
@@ -740,15 +768,6 @@
   .templatePreviewCard {
     width: 100%;
     position: static;
-  }
-
-  .templatePreviewFrame {
-    width: 100%;
-    height: 156px;
-  }
-
-  .templatePreviewIframe {
-    transform: scale(0.219);
   }
 }
 
@@ -1074,24 +1093,8 @@
   flex-direction: column;
   position: sticky;
   top: 0;
-  transform-origin: top left;
-  transform: scale(1);
   z-index: 1;
   cursor: zoom-in;
-  transition:
-    transform 0.26s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.26s ease,
-    z-index 0s 0.26s;
-}
-
-.templatePreviewCard:hover {
-  transform: scale(4.5);
-  z-index: 200;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
-  transition:
-    transform 0.26s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.26s ease,
-    z-index 0s 0s;
 }
 
 .templatePreviewFrame {
@@ -1145,7 +1148,7 @@
 }
 
 .flowCard {
-  background: rgba(20, 30, 48, 0.55);
+  background: rgba(30, 44, 68, 0.75);
   border: 1px solid rgba(148, 163, 184, 0.1);
   border-radius: var(--radius-md);
   padding: 14px 16px 12px;
@@ -1154,12 +1157,20 @@
   justify-content: center;
   gap: 6px;
   position: relative;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.18s, box-shadow 0.18s, background-color 0.18s;
+  cursor: pointer;
+  user-select: none;
 }
 
 .flowCard:hover {
-  border-color: rgba(76, 175, 128, 0.22);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
+  border-color: rgba(76, 175, 128, 0.35);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.28);
+  background: rgba(36, 52, 80, 0.88);
+}
+
+.flowCard:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
 }
 
 .flowCardHeader {
@@ -1185,6 +1196,23 @@
   color: var(--text-primary);
   word-break: break-word;
   line-height: 1.35;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.flowCardArrow {
+  font-size: 12px;
+  color: var(--accent-primary);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 0.15s, transform 0.15s;
+  flex-shrink: 0;
+}
+
+.flowCard:hover .flowCardArrow {
+  opacity: 1;
+  transform: translateX(0);
 }
 
 .flowCardStats {
@@ -1204,7 +1232,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 6px;
+  margin-top: 4px;
 }
 
 /* ─── Group Menu ──────────────────────────────────────────────────────────── */
@@ -1223,7 +1251,7 @@
 .groupMenuButton {
   background: none;
   border: none;
-  color: var(--text-muted);
+  color: transparent;
   cursor: pointer;
   font-size: 13px;
   padding: 2px 6px;
@@ -1233,9 +1261,13 @@
   letter-spacing: 1.5px;
 }
 
+.flowCard:hover .groupMenuButton {
+  color: var(--text-muted);
+}
+
 .groupMenuButton:hover {
-  background: rgba(148, 163, 184, 0.1);
-  color: var(--text-secondary);
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--text-secondary) !important;
 }
 
 .groupMenuButton:focus-visible {

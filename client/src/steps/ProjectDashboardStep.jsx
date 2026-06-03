@@ -1,11 +1,21 @@
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import styles from './ProjectDashboardStep.module.css'
 import SlideEditor from '../components/SlideEditor'
 import PresentationStructureManager from '../components/publish/PresentationStructureManager'
 import PresentationsTab from '../components/PresentationsTab'
 
+const THUMB_W = 200
+const THUMB_H = 112
+const ZOOM_SCALE = 4.5
+const OVL_W = THUMB_W * ZOOM_SCALE
+const OVL_H = THUMB_H * ZOOM_SCALE
+const IFRAME_SCALE = OVL_W / 1280
+
 function TemplatePreview({ projectName, flowId }) {
   const [html, setHtml] = useState(null)
+  const [overlayPos, setOverlayPos] = useState(null)
+  const cardRef = useRef(null)
 
   useEffect(() => {
     let cancelled = false
@@ -16,8 +26,21 @@ function TemplatePreview({ projectName, flowId }) {
     return () => { cancelled = true }
   }, [projectName, flowId])
 
+  const handleMouseEnter = () => {
+    if (!html || !cardRef.current) return
+    const r = cardRef.current.getBoundingClientRect()
+    const top = Math.max(8, Math.min(r.top, window.innerHeight - OVL_H - 8))
+    const left = Math.max(8, Math.min(r.left, window.innerWidth - OVL_W - 8))
+    setOverlayPos({ top, left })
+  }
+
   return (
-    <div className={styles.templatePreviewCard}>
+    <div
+      ref={cardRef}
+      className={styles.templatePreviewCard}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={() => setOverlayPos(null)}
+    >
       <div className={styles.templatePreviewFrame}>
         {html ? (
           <iframe
@@ -30,6 +53,40 @@ function TemplatePreview({ projectName, flowId }) {
           <div className={styles.templatePreviewSkeleton} />
         )}
       </div>
+      {overlayPos && createPortal(
+        <div style={{
+          position: 'fixed',
+          top: overlayPos.top,
+          left: overlayPos.left,
+          width: OVL_W,
+          height: OVL_H,
+          overflow: 'hidden',
+          borderRadius: 6,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.65)',
+          zIndex: 9999,
+          pointerEvents: 'none',
+          background: '#080e1a',
+        }}>
+          <iframe
+            srcDoc={html}
+            sandbox="allow-same-origin"
+            title="Template preview zoom"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: 1280,
+              height: 720,
+              border: 'none',
+              transform: `scale(${IFRAME_SCALE})`,
+              transformOrigin: 'top left',
+              pointerEvents: 'none',
+              display: 'block',
+            }}
+          />
+        </div>,
+        document.body
+      )}
     </div>
   )
 }
@@ -209,7 +266,7 @@ export default function ProjectDashboardStep({
       {groupMenuFlowId && (
         <div
           className={styles.groupMenuOverlay}
-          onClick={() => { setGroupMenuFlowId(null); setNewGroupInput('') }}
+          onClick={() => { setGroupMenuFlowId(null); setNewGroupInput(''); setConfirmDeleteId(null) }}
         />
       )}
 
@@ -353,22 +410,32 @@ export default function ProjectDashboardStep({
                             />
                             <div className={styles.flowCardGrid}>
                             {group.flows.map(flow => (
-                              <div key={flow.flowId} className={styles.flowCard}>
+                              <div
+                                key={flow.flowId}
+                                className={styles.flowCard}
+                                onClick={() => onFlowSelected(flow.flowId)}
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onFlowSelected(flow.flowId) } }}
+                                aria-label={`Open flow ${flow.name || flow.flowId}`}
+                              >
                                 <div className={styles.flowCardHeader}>
                                   <div className={styles.groupMenuWrapper}>
                                     <button
                                       className={styles.groupMenuButton}
-                                      onClick={() => {
+                                      onClick={e => {
+                                        e.stopPropagation()
                                         setGroupMenuFlowId(groupMenuFlowId === flow.flowId ? null : flow.flowId)
                                         setNewGroupInput('')
+                                        setConfirmDeleteId(null)
                                       }}
-                                      aria-label="Group options"
-                                      title="Move to group"
+                                      aria-label="Flow options"
+                                      title="Flow options"
                                     >
                                       •••
                                     </button>
                                     {groupMenuFlowId === flow.flowId && (
-                                      <div className={styles.groupMenu}>
+                                      <div className={styles.groupMenu} onClick={e => e.stopPropagation()}>
                                         {customGroups.length > 0 && (
                                           <>
                                             <div className={styles.groupMenuLabel}>Move to group</div>
@@ -416,51 +483,45 @@ export default function ProjectDashboardStep({
                                             </button>
                                           </>
                                         )}
+                                        <div className={styles.groupMenuDivider} />
+                                        {confirmDeleteId === flow.flowId ? (
+                                          <div className={styles.groupMenuDeleteConfirm}>
+                                            <span className={styles.groupMenuDeleteLabel}>Delete this flow?</span>
+                                            <div className={styles.groupMenuDeleteActions}>
+                                              <button
+                                                className={styles.groupMenuDeleteConfirmBtn}
+                                                onClick={() => handleDeleteFlow(flow.flowId)}
+                                              >
+                                                Delete
+                                              </button>
+                                              <button
+                                                className={styles.groupMenuDeleteCancelBtn}
+                                                onClick={() => setConfirmDeleteId(null)}
+                                              >
+                                                Cancel
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <button
+                                            className={styles.groupMenuRemove}
+                                            onClick={() => setConfirmDeleteId(flow.flowId)}
+                                          >
+                                            Delete flow…
+                                          </button>
+                                        )}
                                       </div>
                                     )}
                                   </div>
                                 </div>
 
-                                <div className={styles.flowCardName}>{flow.name || flow.flowId}</div>
+                                <div className={styles.flowCardName}>
+                                  {flow.name || flow.flowId}
+                                  <span className={styles.flowCardArrow} aria-hidden="true">→</span>
+                                </div>
 
                                 <div className={styles.flowCardStats}>
                                   <span>{new Date(flow.createdAt).toLocaleDateString()}</span>
-                                </div>
-
-                                <div className={styles.flowCardActions}>
-                                  <button
-                                    className={styles.flowOpenButton}
-                                    onClick={() => onFlowSelected(flow.flowId)}
-                                    aria-label={`Open flow ${flow.name || flow.flowId}`}
-                                  >
-                                    Open Flow
-                                  </button>
-                                  {confirmDeleteId === flow.flowId ? (
-                                    <>
-                                      <button
-                                        className={styles.confirmDeleteButton}
-                                        onClick={() => handleDeleteFlow(flow.flowId)}
-                                        aria-label={`Confirm delete flow ${flow.name || flow.flowId}`}
-                                      >
-                                        Confirm
-                                      </button>
-                                      <button
-                                        className={styles.actionButton}
-                                        onClick={() => setConfirmDeleteId(null)}
-                                        aria-label="Cancel delete"
-                                      >
-                                        Cancel
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <button
-                                      className={styles.deleteButton}
-                                      onClick={() => setConfirmDeleteId(flow.flowId)}
-                                      aria-label={`Delete flow ${flow.name || flow.flowId}`}
-                                    >
-                                      Delete
-                                    </button>
-                                  )}
                                 </div>
                               </div>
                             ))}
