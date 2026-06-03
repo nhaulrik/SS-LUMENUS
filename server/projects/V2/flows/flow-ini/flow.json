@@ -5,7 +5,7 @@
   "templateId": "fe2b7f26-f441-4e17-9c69-3e05f1a4a8fd",
   "templateFilename": "Initiative_group_v3.html",
   "createdAt": "2026-04-28T17:50:28.336Z",
-  "updatedAt": "2026-06-03T08:40:17.210Z",
+  "updatedAt": "2026-06-03T08:55:28.338Z",
   "status": "active",
   "globalPrompt": "",
   "summaryPrompt": "",
@@ -499,6 +499,38 @@
       "appliedAt": "2026-05-01T12:13:50.450Z",
       "outputFile": "output-95ff423f-b365-4abd-a483-d35e85bcafd3.html",
       "jsonInput": "{\"slides\":{\"slide_1\":{\"instances\":[{\"auto_div_header\":\"<div class=\\\"header-left\\\"><div class=\\\"pi-badge\\\">PI 28</div><div class=\\\"header-text-section\\\"><div class=\\\"header-label\\\">Feature Catalog</div><div class=\\\"header-title\\\">Core Supporting Capabilities</div><div class=\\\"header-subtitle\\\">Roadmap Initiative Group</div></div></div><div class=\\\"header-right\\\"><div class=\\\"header-stat\\\"><div class=\\\"header-stat-value\\\">7,370.5</div><div class=\\\"header-stat-label\\\">Total Hours</div></div><div class=\\\"header-divider\\\"></div><div class=\\\"header-stat\\\"><div class=\\\"header-stat-value\\\">11</div><div class=\\\"header-stat-label\\\">Initiatives</div></div><div class=\\\"header-divider\\\"></div><div class=\\\"header-stat\\\"><div class=\\\"header-stat-value\\\">22</div><div class=\\\"header-stat-label\\\">Features</div></div></div>\",\"auto_div_body\":\"<div class=\\\"table-wrap-outer\\\"><div class=\\\"table-wrap\\\"><table><thead><tr><th style=\\\"width:32%\\\">Initiative</th><th style=\\\"width:13%\\\" class=\\\"sortable\\\" data-col=\\\"1\\\" data-type=\\\"effort\\\">Effort</th><th style=\\\"width:17%\\\" class=\\\"sortable\\\" data-col=\\\"2\\\" data-type=\\\"pi\\\">PI</th><th style=\\\"width:20%\\\" class=\\\"sortable\\\" data-col=\\\"3\\\" data-type=\\\"status\\\">Status</th><th style=\\\"width:10%\\\" class=\\\"sortable\\\" data-col=\\\"4\\\" data-type=\\\"priority\\\">Priority</th><th style=\\\"width:8%\\\" class=\\\"sortable\\\" data-col=\\\"5\\\" data-type=\\\"number\\\">Features</th></tr></thead><tbody><tr><td><div class=\\\"init-name\\\">CASE MANAGEMENT</div><div class=\\\"init-desc\\\">Assign and unassign case workers, case worker profiles with availability criteria</div></td><td><span class=\\\"effort-pill\\\">84h</span></td><td><span class=\\\"pi-text\\\">PI 28</span></td><td><span class=\\\"status-badge\\\"><span class=\\\"status-dot\\\" style=\\\"background:#4A90D9;\\\"></span>Waiting Analysis Approval</span></td><td><span class=\\\"prio-badge\\\" style=\\\"background:#F0A500;\\\">P3</span></td><td><span class=\\\"feat-count\\\">2</span></td></tr><tr><td><div class=\\\"init-name\\\">REFERENCE DATA</div><div clas",
+      "slideNames": [
+        {
+          "index": 1,
+          "name": "Slide 1"
+        },
+        {
+          "index": 2,
+          "name": "Slide 2"
+        },
+        {
+          "index": 3,
+          "name": "Slide 3"
+        },
+        {
+          "index": 4,
+          "name": "Slide 4"
+        },
+        {
+          "index": 5,
+          "name": "Slide 5"
+        },
+        {
+          "index": 6,
+          "name": "Slide 6"
+        }
+      ]
+    },
+    {
+      "id": "3389f970-f0dc-4034-bc0b-4349d773c5dc",
+      "appliedAt": "2026-06-03T08:55:05.948Z",
+      "outputFile": "output-3389f970-f0dc-4034-bc0b-4349d773c5dc.html",
+      "jsonInput": "{\"slides\":{\"slide_1\":{\"instances\":[{\"auto_div_header\":\"<div class='header-left'><div class='pi-badge'>PI 28</div><div class='header-text-section'><div class='header-label'>Feature Catalog</div><div class='header-title'>Core Supporting Capabilities</div><div class='header-subtitle'>Roadmap Initiative Group</div></div></div><div class='header-right'><div class='header-stat'><div class='header-stat-value'>5,342.8</div><div class='header-stat-label'>Total Hours</div></div><div class='header-divider'></div><div class='header-stat'><div class='header-stat-value'>9</div><div class='header-stat-label'>Initiatives</div></div><div class='header-divider'></div><div class='header-stat'><div class='header-stat-value'>22</div><div class='header-stat-label'>Features</div></div></div>\",\"auto_div_body\":\"<div class='table-wrap-outer'><div class='table-wrap'><table><thead><tr><th style='width:32%'>Initiative</th><th style='width:13%' class='sortable' data-col='1' data-type='effort'>Effort</th><th style='width:17%' class='sortable' data-col='2' data-type='pi'>PI</th><th style='width:20%' class='sortable' data-col='3' data-type='status'>Status</th><th style='width:10%' class='sortable' data-col='4' data-type='priority'>Priority</th><th style='width:8%' class='sortable' data-col='5' data-type='number'>Features</th></tr></thead><tbody><tr><td><div class='init-name'>Batch Processing Enhancements</div><div class='init-desc'>Amplio batch migration, job replacements, system resilience</div></td><td><span class='effort-pill'>738.5h</span></td><td><span class='pi-text'>PI 28</span></td><td><span class='status-badge'><span class='status-dot' style='background:#F0A500;'></span>In Progress</span></td><td><span class='prio-badge' style='background:#FF6359;'>P1</span></td><td><span class='feat-count'>2</span></td></tr><tr><td><div class='init-name'>Case Management</div><div class='init-desc'>Case worker assignment, profiles, availability matching</div></td><td><span class='effort-pill'>84h</span></t",
       "slideNames": [
         {
           "index": 1,

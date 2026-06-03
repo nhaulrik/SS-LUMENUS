@@ -1,19 +1,6 @@
 === Agent 1: slide_1 — #1 ===
 You populate one slide instance in a presentation template with real content.
 
-STRUCTURAL CONTRACT (read before anything else):
-Every innerHTML value you return MUST mirror the TEMPLATE shown for each key:
-- Keep the exact same HTML element types, class names, attributes, and nesting structure.
-- Do NOT add new sections, new structural blocks, new headings, or new layout elements that are not present in the template.
-- Do NOT remove or collapse existing structural elements — every element in the template must appear in your output.
-- For repeating elements (table rows, list items, cards): output exactly one item per data record from SOURCE DATA. Do not cap the count to what the template shows — if the data has 9 records, output 9 rows. If the data has 2 records, output 2 rows.
-- Text content must be concise — match the approximate text density of the template. Do not write paragraphs where the template shows short labels or values.
-- Only data-driven text content (values, names, descriptions, metrics) and src/href values may differ from the template.
-- Fixed UI labels already present in the template — such as card titles, section headings, column headers, category names, and any other structural text — MUST be copied verbatim. Never rename, rephrase, or replace them, even if a different label seems more appropriate for the data.
-- Populate every data element with real values from SOURCE DATA only — do not invent or estimate.
-- Never invent labels, categories, statuses, groupings, or concepts not present verbatim in the SOURCE DATA — if the data does not contain it, write [DATA MISSING] for that element.
-Violating this breaks the slide layout irreparably.
-
 SOURCE DATA FOR THIS SLIDE INSTANCE (verbatim rows from context files):
 [Sheet: RichFeatureQueries.xlsx / Full Features] (22 rows)
 Issue Type: Feature | IRM: IRM-12464 | Roadmap Initiative Group: CORE SUPPORTING CAPABILITIES | Roadmap Initiative: CASE MANAGEMENT | Roadmap Feature: Add and Maintain Case - Assign and Unassign Case Workers - Effort - User | Requester: GRC | PI: PI28 | Estimate: 42 | Feature Priority: p3 | Feature Status: Waiting Analysis Approval | Features Description: As a revenue official, I want to assign case workers (user) that have a required profile (e.g. skills, experience and part of a certain organizational unit) to a case while also considering the availability of the suitable candidates, so that a capable worker (user) with sufficient availability can work on and complete the case. Also, I want to see how much effort is involved for each assigned case worker and for the case in total.
@@ -630,14 +617,131 @@ Admin can enter literal values and/or reference values that will be known at run
 
 When executing the 'establish and/or record contact' task on an instance of this type of business process, the system will automatically generate all outbound messages, store these messages, finalize the messages, select a communication channel for each recipient and send the finalized outbound messages via the selected communication channels (e.g. print letter or send email).
 
+=== Shared Reference Data ===
+=== RichFeatureQueries.xlsx / Estimate Pivot ===
+Roadmap Initiative Groups and Roadmap Initiatives | Sum of Estimate
+CORE REVENUE MANAGEMENT CAPABILITIES | 8839.699999999999
+BILLING, ASSESSMENTS AND INSTALLMENTS | 1120
+PENALTY & INTEREST | 2986.9
+REGISTRATION | 2389.8
+TAX ACCOUNTS | 529.9
+TAXPAYER ACCOUNTING | 1813.1
+CORE SELF SERVICE CAPABILITIES | 4366.1
+SELF SERVICE SERVICES MANAGEMENT | 835.2
+USER & 3RD PARTY ACCESS MANAGEMENT | 3530.9
+CORE SUPPORTING CAPABILITIES | 5342.8
+BATCH PROCESSING ENHANCEMENTS | 738.5
+CASE MANAGEMENT | 84
+CONTACT MANAGEMENT | 882.7
+CONTENT MANAGEMENT INTEGRATION | 80
+DOCUMENT MANAGEMENT INTEGRATION | 2090.9
+FORM PROCESSING | 373.1
+OPERATIONAL REPORTING | 72
+REFERENCE DATA | 606.9
+UI CONFIGURATION | 414.70000000000005
+NON-FUNCTIONAL REQUIREMENT COVERAGE | 17562.100000000002
+ACCESSIBILITY | 268.79999999999995
+EXTENSIBILITY | 156.8
+MAINTAINABILITY | 4579.800000000001
+OPERABILITY | 59.5
+PERFORMANCE EFFICIENCY | 955.2
+RELIABILITY | 2688
+SECURITY | 2758.8
+TEST SUITE OPTIMIZATION | 860
+TRACEABILITY | 2259.2000000000003
+USABILITY | 2976
+OTHER ACTIVITIES | 18794.2
+ARK | 80
+CEREMONIES AND TRAININGS | 3000
+CORRECTIVE MAINTENANCE | 560
+MANAGEMENT | 9115.2
+PREVENTIVE MAINTENANCE | 2960
+PRODUCT SUPPORT | 551
+PROJECT SUPPORT | 560
+RELEASE ACTIVITIES | 1120
+SECURITY | 560
+SUPPORT TO PDM | 80
+TECHNOLOGY MANAGEMENT | 208
+REFERENCE IMPLEMENTATIONS | 857.7
+APPLICATION PROCESSES | 42
+PIT | 0.8
+SELF SERVICE ACCOUNT OVERVIEW | 8
+SELF SERVICE FILING & PAYMENTS | 376.4
+VAT | 430.5
+Grand Total | 55762.6
+
+=== RichFeatureQueries.xlsx / Progress Pivot ===
+Count of Feature Status | Column Labels | __EMPTY | __EMPTY_1 | __EMPTY_2 | __EMPTY_3 | __EMPTY_4 | __EMPTY_5 | __EMPTY_6 | __EMPTY_7 | __EMPTY_8
+Row Labels | HLD | In Design | In Progress | Ready for Dev | To Do | Under Analysis | Waiting Analysis Approval | Waiting Solution Approval | (blank) | Grand Total
+CORE REVENUE MANAGEMENT CAPABILITIES | 2 | 3 |  |  | 1 |  | 7 |  |  | 13
+CORE SELF SERVICE CAPABILITIES |  | 1 |  |  | 1 |  | 6 |  |  | 8
+CORE SUPPORTING CAPABILITIES | 1 | 7 | 1 |  | 2 | 1 | 10 |  |  | 22
+NON-FUNCTIONAL REQUIREMENT COVERAGE | 3 | 6 |  | 2 | 38 | 2 | 17 | 1 |  | 69
+OTHER ACTIVITIES |  |  |  | 1 | 1 |  | 1 |  |  | 3
+REFERENCE IMPLEMENTATIONS | 1 |  |  | 1 | 1 | 2 | 7 |  |  | 12
+Grand Total | 7 | 17 | 1 | 4 | 44 | 5 | 48 | 1 |  | 127
+
+=== RichFeatureQueries.xlsx / Priority Pivot ===
+Count of Feature Priority | Column Labels | __EMPTY | __EMPTY_1 | __EMPTY_2 | __EMPTY_3
+Row Labels | p1 | p2 | p3 | (blank) | Grand Total
+CORE REVENUE MANAGEMENT CAPABILITIES | 10 | 1 | 2 |  | 13
+BILLING, ASSESSMENTS AND INSTALLMENTS | 2 |  |  |  | 2
+PENALTY & INTEREST |  | 1 |  |  | 1
+REGISTRATION | 3 |  |  |  | 3
+TAX ACCOUNTS | 3 |  |  |  | 3
+TAXPAYER ACCOUNTING | 2 |  | 2 |  | 4
+CORE SELF SERVICE CAPABILITIES | 6 |  | 2 |  | 8
+SELF SERVICE SERVICES MANAGEMENT | 1 |  | 1 |  | 2
+USER & 3RD PARTY ACCESS MANAGEMENT | 5 |  | 1 |  | 6
+CORE SUPPORTING CAPABILITIES | 12 |  | 10 |  | 22
+BATCH PROCESSING ENHANCEMENTS | 2 |  |  |  | 2
+CASE MANAGEMENT |  |  | 2 |  | 2
+CONTACT MANAGEMENT | 2 |  | 3 |  | 5
+CONTENT MANAGEMENT INTEGRATION |  |  | 1 |  | 1
+DOCUMENT MANAGEMENT INTEGRATION | 2 |  |  |  | 2
+FORM PROCESSING | 1 |  |  |  | 1
+OPERATIONAL REPORTING |  |  | 1 |  | 1
+REFERENCE DATA | 1 |  | 2 |  | 3
+UI CONFIGURATION | 4 |  | 1 |  | 5
+NON-FUNCTIONAL REQUIREMENT COVERAGE | 41 | 16 | 12 |  | 69
+ACCESSIBILITY | 7 |  |  |  | 7
+EXTENSIBILITY | 1 |  | 1 |  | 2
+MAINTAINABILITY | 10 | 3 | 3 |  | 16
+OPERABILITY | 1 |  |  |  | 1
+PERFORMANCE EFFICIENCY | 3 | 1 | 1 |  | 5
+RELIABILITY | 2 |  |  |  | 2
+SECURITY | 1 | 5 | 1 |  | 7
+TEST SUITE OPTIMIZATION |  |  | 1 |  | 1
+TRACEABILITY | 1 | 3 | 1 |  | 5
+USABILITY | 15 | 4 | 4 |  | 23
+OTHER ACTIVITIES | 1 |  | 2 |  | 3
+ARK |  |  | 2 |  | 2
+CEREMONIES AND TRAININGS |  |  |  |  | 
+CORRECTIVE MAINTENANCE |  |  |  |  | 
+MANAGEMENT |  |  |  |  | 
+PREVENTIVE MAINTENANCE |  |  |  |  | 
+PRODUCT SUPPORT |  |  |  |  | 
+PROJECT SUPPORT |  |  |  |  | 
+RELEASE ACTIVITIES |  |  |  |  | 
+SECURITY | 1 |  |  |  | 1
+SUPPORT TO PDM |  |  |  |  | 
+TECHNOLOGY MANAGEMENT |  |  |  |  | 
+REFERENCE IMPLEMENTATIONS | 3 | 2 | 7 |  | 12
+APPLICATION PROCESSES |  |  | 1 |  | 1
+PIT | 1 |  |  |  | 1
+SELF SERVICE ACCOUNT OVERVIEW |  |  | 1 |  | 1
+SELF SERVICE FILING & PAYMENTS | 1 | 1 | 5 |  | 7
+VAT | 1 | 1 |  |  | 2
+Grand Total | 73 | 19 | 35 |  | 127
+
 YOUR ROLE:
-- You are a content generator. Transform the SOURCE DATA above into polished HTML presentation content for this specific slide instance.
+- You are a content generator. Transform the SOURCE DATA above into polished presentation content for this specific slide instance.
 - Every fact, number, name, metric, label, category, and status in your output MUST come from the SOURCE DATA above.
 - Do not invent, estimate, or add data not present in the SOURCE DATA — this includes inventing plausible-sounding labels or categories that are not in the data.
-- If data for a zone element is missing from the SOURCE DATA, write [DATA MISSING] for that element — never substitute with invented content.
+- If data for a zone element is missing from the SOURCE DATA, write n/a for that element — never substitute with invented content.
 - ZONE INSTRUCTIONS per key are authoritative directives — follow them precisely and completely. They may specify expectations, tone, formatting, style or anything the user specifies in addition to data queries. These always take priority over defaults.
 
-  Task: generate HTML content for slide instance 1 of 6 using the SOURCE DATA above.
+  Task: generate content for slide instance 1 of 6 using the SOURCE DATA above.
 
 ⚠️ OUTPUT FORMAT — CRITICAL:
 Your entire response MUST be a single valid JSON object.
@@ -652,211 +756,227 @@ The object MUST have EXACTLY these keys:
   "auto_div_slide_footer": "<innerHTML matching template structure>",
 }
 
-TEMPLATES PER KEY (structure is a contract — fill with data, do not alter structure):
+HTML INSIDE JSON — MANDATORY RULES (for HTML zones):
+- ALL HTML attribute values MUST use single quotes (e.g. class='foo', href='...', src='...')
+- NEVER use double quotes inside HTML — they break JSON string parsing
+- Escape any literal backslashes in HTML as \
+
+STRUCTURAL CONTRACT FOR HTML ZONES (read before anything else):
+Every innerHTML value you return MUST mirror the TEMPLATE shown for each key:
+- Keep the exact same HTML element types, class names, attributes, and nesting structure.
+- Do NOT add new sections, new structural blocks, new headings, or new layout elements that are not present in the template.
+- Do NOT remove or collapse existing structural elements — every element in the template must appear in your output.
+- For repeating elements (table rows, list items, cards): output exactly one item per data record from SOURCE DATA. Do not cap the count to what the template shows — if the data has 9 records, output 9 rows. If the data has 2 records, output 2 rows.
+- Text content must be concise — match the approximate text density of the template. Do not write paragraphs where the template shows short labels or values.
+- Only data-driven text content (values, names, descriptions, metrics) and src/href values may differ from the template.
+- Fixed UI labels already present in the template — such as card titles, section headings, column headers, category names, and any other structural text — MUST be copied verbatim. Never rename, rephrase, or replace them, even if a different label seems more appropriate for the data.
+Violating this breaks the slide layout irreparably.
+
+HTML ZONES (TEMPLATES PER KEY — structure is a contract, fill with data, do not alter structure):
 
 KEY "auto_div_header":
 TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):
-<div class="header-left">
-      <div class="pi-badge">PI 28</div>
-      <div class="header-text-section">
-        <div class="header-label">Feature Catalog</div>
-        <div class="header-title">Core Revenue Management Capabilities</div>
-        <div class="header-subtitle">Roadmap Initiative Group</div>
+<div class='header-left'>
+      <div class='pi-badge'>PI 28</div>
+      <div class='header-text-section'>
+        <div class='header-label'>Feature Catalog</div>
+        <div class='header-title'>Core Revenue Management Capabilities</div>
+        <div class='header-subtitle'>Roadmap Initiative Group</div>
       </div>
     </div>
-    <div class="header-right">
-      <div class="header-stat">
-        <div class="header-stat-value">23,200</div>
-        <div class="header-stat-label">Total Hours</div>
+    <div class='header-right'>
+      <div class='header-stat'>
+        <div class='header-stat-value'>23,200</div>
+        <div class='header-stat-label'>Total Hours</div>
       </div>
-      <div class="header-divider"></div>
-      <div class="header-stat">
-        <div class="header-stat-value">10</div>
-        <div class="header-stat-label">Initiatives</div>
+      <div class='header-divider'></div>
+      <div class='header-stat'>
+        <div class='header-stat-value'>10</div>
+        <div class='header-stat-label'>Initiatives</div>
       </div>
-      <div class="header-divider"></div>
-      <div class="header-stat">
-        <div class="header-stat-value">35</div>
-        <div class="header-stat-label">Features</div>
+      <div class='header-divider'></div>
+      <div class='header-stat'>
+        <div class='header-stat-value'>35</div>
+        <div class='header-stat-label'>Features</div>
       </div>
     </div>
 ↑ Use this structure as a pattern only. Output exactly one repeating item (card, row, list item) per data record — never match the template's item count.
 
 KEY "auto_div_body":
 TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):
-<div class="table-wrap-outer">
-    <div class="table-wrap">
+<div class='table-wrap-outer'>
+    <div class='table-wrap'>
       <table>
         <thead>
           <tr>
-            <th style="width:32%">Initiative</th>
-            <th style="width:13%" class="sortable" data-col="1" data-type="effort">Effort</th>
-            <th style="width:17%" class="sortable" data-col="2" data-type="pi">PI</th>
-            <th style="width:20%" class="sortable" data-col="3" data-type="status">Status</th>
-            <th style="width:10%" class="sortable" data-col="4" data-type="priority">Priority</th>
-            <th style="width:8%"  class="sortable" data-col="5" data-type="number">Features</th>
+            <th style='width:32%'>Initiative</th>
+            <th style='width:13%' class='sortable' data-col='1' data-type='effort'>Effort</th>
+            <th style='width:17%' class='sortable' data-col='2' data-type='pi'>PI</th>
+            <th style='width:20%' class='sortable' data-col='3' data-type='status'>Status</th>
+            <th style='width:10%' class='sortable' data-col='4' data-type='priority'>Priority</th>
+            <th style='width:8%'  class='sortable' data-col='5' data-type='number'>Features</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>
-              <div class="init-name">Registration</div>
-              <div class="init-desc">Party identifiers, org hierarchy, search enhancements</div>
+              <div class='init-name'>Registration</div>
+              <div class='init-desc'>Party identifiers, org hierarchy, search enhancements</div>
             </td>
-            <td><span class="effort-pill">11,866h</span></td>
-            <td><span class="pi-text">PI 28</span></td>
+            <td><span class='effort-pill'>11,866h</span></td>
+            <td><span class='pi-text'>PI 28</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#F0A500;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#F0A500;'></span>
                 In Progress
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">14</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>14</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Taxpayer Accounting</div>
-              <div class="init-desc">General ledger core, reconciliation &amp; balance management</div>
+              <div class='init-name'>Taxpayer Accounting</div>
+              <div class='init-desc'>General ledger core, reconciliation &amp; balance management</div>
             </td>
-            <td><span class="effort-pill">8,064h</span></td>
-            <td><span class="pi-text">PI28</span></td>
+            <td><span class='effort-pill'>8,064h</span></td>
+            <td><span class='pi-text'>PI28</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#4A90D9;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#4A90D9;'></span>
                 In Analysis
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">9</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>9</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Returns Processing</div>
-              <div class="init-desc">Filing workflows, validation rules, submission tracking &amp; acknowledgements</div>
+              <div class='init-name'>Returns Processing</div>
+              <div class='init-desc'>Filing workflows, validation rules, submission tracking &amp; acknowledgements</div>
             </td>
-            <td><span class="effort-pill">4,320h</span></td>
-            <td><span class="pi-text">PI28</span></td>
+            <td><span class='effort-pill'>4,320h</span></td>
+            <td><span class='pi-text'>PI28</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#4A90D9;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#4A90D9;'></span>
                 In Analysis
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">7</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>7</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Payment Processing</div>
-              <div class="init-desc">Multi-channel payments, allocation rules &amp; reconciliation engine</div>
+              <div class='init-name'>Payment Processing</div>
+              <div class='init-desc'>Multi-channel payments, allocation rules &amp; reconciliation engine</div>
             </td>
-            <td><span class="effort-pill">3,200h</span></td>
-            <td><span class="pi-text">PI29</span></td>
+            <td><span class='effort-pill'>3,200h</span></td>
+            <td><span class='pi-text'>PI29</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#4A90D9;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#4A90D9;'></span>
                 In Analysis
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">6</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>6</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Billing &amp; Assessments</div>
-              <div class="init-desc">Instalment plans, assessment automation, billing cycles</div>
+              <div class='init-name'>Billing &amp; Assessments</div>
+              <div class='init-desc'>Instalment plans, assessment automation, billing cycles</div>
             </td>
-            <td><span class="effort-pill">2,880h</span></td>
-            <td><span class="pi-text">PI27</span></td>
+            <td><span class='effort-pill'>2,880h</span></td>
+            <td><span class='pi-text'>PI27</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#F0A500;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#F0A500;'></span>
                 In Progress
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">6</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>6</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Reporting &amp; Analytics</div>
-              <div class="init-desc">Management dashboards, statutory reports, KPI tracking &amp; exports</div>
+              <div class='init-name'>Reporting &amp; Analytics</div>
+              <div class='init-desc'>Management dashboards, statutory reports, KPI tracking &amp; exports</div>
             </td>
-            <td><span class="effort-pill">1,760h</span></td>
-            <td><span class="pi-text">PI29</span></td>
+            <td><span class='effort-pill'>1,760h</span></td>
+            <td><span class='pi-text'>PI29</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#F0A500;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#F0A500;'></span>
                 In Progress
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">3</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>3</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Penalty &amp; Interest</div>
-              <div class="init-desc">Interest calculation, credit unallocated payment segments</div>
+              <div class='init-name'>Penalty &amp; Interest</div>
+              <div class='init-desc'>Interest calculation, credit unallocated payment segments</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI29</span></td>
+            <td><span class='effort-pill'>TBD</span></td>
+            <td><span class='pi-text'>PI29</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#CCCCCC;'></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">4</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>4</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Tax Accounts</div>
-              <div class="init-desc">Tax account setup, configurable thresholds, notifications</div>
+              <div class='init-name'>Tax Accounts</div>
+              <div class='init-desc'>Tax account setup, configurable thresholds, notifications</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI29</span></td>
+            <td><span class='effort-pill'>TBD</span></td>
+            <td><span class='pi-text'>PI29</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#CCCCCC;'></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">2</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>2</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Debt Management</div>
-              <div class="init-desc">Debt recovery workflows, write-off management, enforcement actions</div>
+              <div class='init-name'>Debt Management</div>
+              <div class='init-desc'>Debt recovery workflows, write-off management, enforcement actions</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI30</span></td>
+            <td><span class='effort-pill'>TBD</span></td>
+            <td><span class='pi-text'>PI30</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#CCCCCC;'></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">5</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>5</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Audit &amp; Compliance</div>
-              <div class="init-desc">Case management, audit trail logging, compliance monitoring &amp; alerts</div>
+              <div class='init-name'>Audit &amp; Compliance</div>
+              <div class='init-desc'>Case management, audit trail logging, compliance monitoring &amp; alerts</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI30</span></td>
+            <td><span class='effort-pill'>TBD</span></td>
+            <td><span class='pi-text'>PI30</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#CCCCCC;'></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">4</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>4</span></td>
           </tr>
         </tbody>
       </table>
@@ -864,19 +984,19 @@ TEMPLATE (study the HTML structure — replicate element types, class names, and
     </div>
 
     
-    <div class="right-panel">
+    <div class='right-panel'>
 
       
-      <div class="value-card">
-        <div class="card-stripe coral"></div>
-        <div class="card-inner">
-          <div class="card-header-row">
-            <div class="card-title-group">
-              <div class="card-title">Business Value</div>
-              <div class="card-subtitle">Operational impact &amp; delivery enablement</div>
+      <div class='value-card'>
+        <div class='card-stripe coral'></div>
+        <div class='card-inner'>
+          <div class='card-header-row'>
+            <div class='card-title-group'>
+              <div class='card-title'>Business Value</div>
+              <div class='card-subtitle'>Operational impact &amp; delivery enablement</div>
             </div>
           </div>
-          <ul class="value-bullets coral-dots">
+          <ul class='value-bullets coral-dots'>
             <li>End-to-end taxpayer lifecycle management from registration through accounting and penalty enforcement</li>
             <li>Automated billing, assessments &amp; penalty calculations reduce manual caseworker effort across all tax types</li>
             <li>Directly accelerates Greek project delivery and enables rapid reuse across future jurisdictions</li>
@@ -885,16 +1005,16 @@ TEMPLATE (study the HTML structure — replicate element types, class names, and
       </div>
 
       
-      <div class="value-card">
-        <div class="card-stripe teal"></div>
-        <div class="card-inner">
-          <div class="card-header-row">
-            <div class="card-title-group">
-              <div class="card-title">Market Relevance</div>
-              <div class="card-subtitle">Strategic positioning &amp; pipeline dependency</div>
+      <div class='value-card'>
+        <div class='card-stripe teal'></div>
+        <div class='card-inner'>
+          <div class='card-header-row'>
+            <div class='card-title-group'>
+              <div class='card-title'>Market Relevance</div>
+              <div class='card-subtitle'>Strategic positioning &amp; pipeline dependency</div>
             </div>
           </div>
-          <ul class="value-bullets teal-dots">
+          <ul class='value-bullets teal-dots'>
             <li>Core dependency for all current and pipeline Solon Tax implementations across multiple jurisdictions</li>
             <li>Strengthens competitive position as a full-featured tax revenue management platform in active tenders</li>
             <li>Platform completeness is a prerequisite condition cited in new-market RFP evaluation criteria</li>
@@ -907,26 +1027,13 @@ TEMPLATE (study the HTML structure — replicate element types, class names, and
 
 KEY "auto_div_slide_footer":
 TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):
-<span class="footer-text">Solon Tax Product Roadmap 2026</span>
-    <span class="footer-text">Netcompany</span>
+<span class='footer-text'>Solon Tax Product Roadmap 2026</span>
+    <span class='footer-text'>Netcompany</span>
 ↑ Use this structure as a pattern only. Output exactly one repeating item (card, row, list item) per data record — never match the template's item count.
 
 
 === Agent 2: slide_1 — #2 ===
 You populate one slide instance in a presentation template with real content.
-
-STRUCTURAL CONTRACT (read before anything else):
-Every innerHTML value you return MUST mirror the TEMPLATE shown for each key:
-- Keep the exact same HTML element types, class names, attributes, and nesting structure.
-- Do NOT add new sections, new structural blocks, new headings, or new layout elements that are not present in the template.
-- Do NOT remove or collapse existing structural elements — every element in the template must appear in your output.
-- For repeating elements (table rows, list items, cards): output exactly one item per data record from SOURCE DATA. Do not cap the count to what the template shows — if the data has 9 records, output 9 rows. If the data has 2 records, output 2 rows.
-- Text content must be concise — match the approximate text density of the template. Do not write paragraphs where the template shows short labels or values.
-- Only data-driven text content (values, names, descriptions, metrics) and src/href values may differ from the template.
-- Fixed UI labels already present in the template — such as card titles, section headings, column headers, category names, and any other structural text — MUST be copied verbatim. Never rename, rephrase, or replace them, even if a different label seems more appropriate for the data.
-- Populate every data element with real values from SOURCE DATA only — do not invent or estimate.
-- Never invent labels, categories, statuses, groupings, or concepts not present verbatim in the SOURCE DATA — if the data does not contain it, write [DATA MISSING] for that element.
-Violating this breaks the slide layout irreparably.
 
 SOURCE DATA FOR THIS SLIDE INSTANCE (verbatim rows from context files):
 [Sheet: RichFeatureQueries.xlsx / Full Features] (12 rows)
@@ -1368,14 +1475,131 @@ Some example wireframes have been attached to this feature. In case the content 
  ** {color:#172b4d}Actions:{color}
  *** {color:#172b4d}User can open a letter (see attached wireframe){color}
 
+=== Shared Reference Data ===
+=== RichFeatureQueries.xlsx / Estimate Pivot ===
+Roadmap Initiative Groups and Roadmap Initiatives | Sum of Estimate
+CORE REVENUE MANAGEMENT CAPABILITIES | 8839.699999999999
+BILLING, ASSESSMENTS AND INSTALLMENTS | 1120
+PENALTY & INTEREST | 2986.9
+REGISTRATION | 2389.8
+TAX ACCOUNTS | 529.9
+TAXPAYER ACCOUNTING | 1813.1
+CORE SELF SERVICE CAPABILITIES | 4366.1
+SELF SERVICE SERVICES MANAGEMENT | 835.2
+USER & 3RD PARTY ACCESS MANAGEMENT | 3530.9
+CORE SUPPORTING CAPABILITIES | 5342.8
+BATCH PROCESSING ENHANCEMENTS | 738.5
+CASE MANAGEMENT | 84
+CONTACT MANAGEMENT | 882.7
+CONTENT MANAGEMENT INTEGRATION | 80
+DOCUMENT MANAGEMENT INTEGRATION | 2090.9
+FORM PROCESSING | 373.1
+OPERATIONAL REPORTING | 72
+REFERENCE DATA | 606.9
+UI CONFIGURATION | 414.70000000000005
+NON-FUNCTIONAL REQUIREMENT COVERAGE | 17562.100000000002
+ACCESSIBILITY | 268.79999999999995
+EXTENSIBILITY | 156.8
+MAINTAINABILITY | 4579.800000000001
+OPERABILITY | 59.5
+PERFORMANCE EFFICIENCY | 955.2
+RELIABILITY | 2688
+SECURITY | 2758.8
+TEST SUITE OPTIMIZATION | 860
+TRACEABILITY | 2259.2000000000003
+USABILITY | 2976
+OTHER ACTIVITIES | 18794.2
+ARK | 80
+CEREMONIES AND TRAININGS | 3000
+CORRECTIVE MAINTENANCE | 560
+MANAGEMENT | 9115.2
+PREVENTIVE MAINTENANCE | 2960
+PRODUCT SUPPORT | 551
+PROJECT SUPPORT | 560
+RELEASE ACTIVITIES | 1120
+SECURITY | 560
+SUPPORT TO PDM | 80
+TECHNOLOGY MANAGEMENT | 208
+REFERENCE IMPLEMENTATIONS | 857.7
+APPLICATION PROCESSES | 42
+PIT | 0.8
+SELF SERVICE ACCOUNT OVERVIEW | 8
+SELF SERVICE FILING & PAYMENTS | 376.4
+VAT | 430.5
+Grand Total | 55762.6
+
+=== RichFeatureQueries.xlsx / Progress Pivot ===
+Count of Feature Status | Column Labels | __EMPTY | __EMPTY_1 | __EMPTY_2 | __EMPTY_3 | __EMPTY_4 | __EMPTY_5 | __EMPTY_6 | __EMPTY_7 | __EMPTY_8
+Row Labels | HLD | In Design | In Progress | Ready for Dev | To Do | Under Analysis | Waiting Analysis Approval | Waiting Solution Approval | (blank) | Grand Total
+CORE REVENUE MANAGEMENT CAPABILITIES | 2 | 3 |  |  | 1 |  | 7 |  |  | 13
+CORE SELF SERVICE CAPABILITIES |  | 1 |  |  | 1 |  | 6 |  |  | 8
+CORE SUPPORTING CAPABILITIES | 1 | 7 | 1 |  | 2 | 1 | 10 |  |  | 22
+NON-FUNCTIONAL REQUIREMENT COVERAGE | 3 | 6 |  | 2 | 38 | 2 | 17 | 1 |  | 69
+OTHER ACTIVITIES |  |  |  | 1 | 1 |  | 1 |  |  | 3
+REFERENCE IMPLEMENTATIONS | 1 |  |  | 1 | 1 | 2 | 7 |  |  | 12
+Grand Total | 7 | 17 | 1 | 4 | 44 | 5 | 48 | 1 |  | 127
+
+=== RichFeatureQueries.xlsx / Priority Pivot ===
+Count of Feature Priority | Column Labels | __EMPTY | __EMPTY_1 | __EMPTY_2 | __EMPTY_3
+Row Labels | p1 | p2 | p3 | (blank) | Grand Total
+CORE REVENUE MANAGEMENT CAPABILITIES | 10 | 1 | 2 |  | 13
+BILLING, ASSESSMENTS AND INSTALLMENTS | 2 |  |  |  | 2
+PENALTY & INTEREST |  | 1 |  |  | 1
+REGISTRATION | 3 |  |  |  | 3
+TAX ACCOUNTS | 3 |  |  |  | 3
+TAXPAYER ACCOUNTING | 2 |  | 2 |  | 4
+CORE SELF SERVICE CAPABILITIES | 6 |  | 2 |  | 8
+SELF SERVICE SERVICES MANAGEMENT | 1 |  | 1 |  | 2
+USER & 3RD PARTY ACCESS MANAGEMENT | 5 |  | 1 |  | 6
+CORE SUPPORTING CAPABILITIES | 12 |  | 10 |  | 22
+BATCH PROCESSING ENHANCEMENTS | 2 |  |  |  | 2
+CASE MANAGEMENT |  |  | 2 |  | 2
+CONTACT MANAGEMENT | 2 |  | 3 |  | 5
+CONTENT MANAGEMENT INTEGRATION |  |  | 1 |  | 1
+DOCUMENT MANAGEMENT INTEGRATION | 2 |  |  |  | 2
+FORM PROCESSING | 1 |  |  |  | 1
+OPERATIONAL REPORTING |  |  | 1 |  | 1
+REFERENCE DATA | 1 |  | 2 |  | 3
+UI CONFIGURATION | 4 |  | 1 |  | 5
+NON-FUNCTIONAL REQUIREMENT COVERAGE | 41 | 16 | 12 |  | 69
+ACCESSIBILITY | 7 |  |  |  | 7
+EXTENSIBILITY | 1 |  | 1 |  | 2
+MAINTAINABILITY | 10 | 3 | 3 |  | 16
+OPERABILITY | 1 |  |  |  | 1
+PERFORMANCE EFFICIENCY | 3 | 1 | 1 |  | 5
+RELIABILITY | 2 |  |  |  | 2
+SECURITY | 1 | 5 | 1 |  | 7
+TEST SUITE OPTIMIZATION |  |  | 1 |  | 1
+TRACEABILITY | 1 | 3 | 1 |  | 5
+USABILITY | 15 | 4 | 4 |  | 23
+OTHER ACTIVITIES | 1 |  | 2 |  | 3
+ARK |  |  | 2 |  | 2
+CEREMONIES AND TRAININGS |  |  |  |  | 
+CORRECTIVE MAINTENANCE |  |  |  |  | 
+MANAGEMENT |  |  |  |  | 
+PREVENTIVE MAINTENANCE |  |  |  |  | 
+PRODUCT SUPPORT |  |  |  |  | 
+PROJECT SUPPORT |  |  |  |  | 
+RELEASE ACTIVITIES |  |  |  |  | 
+SECURITY | 1 |  |  |  | 1
+SUPPORT TO PDM |  |  |  |  | 
+TECHNOLOGY MANAGEMENT |  |  |  |  | 
+REFERENCE IMPLEMENTATIONS | 3 | 2 | 7 |  | 12
+APPLICATION PROCESSES |  |  | 1 |  | 1
+PIT | 1 |  |  |  | 1
+SELF SERVICE ACCOUNT OVERVIEW |  |  | 1 |  | 1
+SELF SERVICE FILING & PAYMENTS | 1 | 1 | 5 |  | 7
+VAT | 1 | 1 |  |  | 2
+Grand Total | 73 | 19 | 35 |  | 127
+
 YOUR ROLE:
-- You are a content generator. Transform the SOURCE DATA above into polished HTML presentation content for this specific slide instance.
+- You are a content generator. Transform the SOURCE DATA above into polished presentation content for this specific slide instance.
 - Every fact, number, name, metric, label, category, and status in your output MUST come from the SOURCE DATA above.
 - Do not invent, estimate, or add data not present in the SOURCE DATA — this includes inventing plausible-sounding labels or categories that are not in the data.
-- If data for a zone element is missing from the SOURCE DATA, write [DATA MISSING] for that element — never substitute with invented content.
+- If data for a zone element is missing from the SOURCE DATA, write n/a for that element — never substitute with invented content.
 - ZONE INSTRUCTIONS per key are authoritative directives — follow them precisely and completely. They may specify expectations, tone, formatting, style or anything the user specifies in addition to data queries. These always take priority over defaults.
 
-  Task: generate HTML content for slide instance 2 of 6 using the SOURCE DATA above.
+  Task: generate content for slide instance 2 of 6 using the SOURCE DATA above.
 
 ⚠️ OUTPUT FORMAT — CRITICAL:
 Your entire response MUST be a single valid JSON object.
@@ -1390,211 +1614,227 @@ The object MUST have EXACTLY these keys:
   "auto_div_slide_footer": "<innerHTML matching template structure>",
 }
 
-TEMPLATES PER KEY (structure is a contract — fill with data, do not alter structure):
+HTML INSIDE JSON — MANDATORY RULES (for HTML zones):
+- ALL HTML attribute values MUST use single quotes (e.g. class='foo', href='...', src='...')
+- NEVER use double quotes inside HTML — they break JSON string parsing
+- Escape any literal backslashes in HTML as \
+
+STRUCTURAL CONTRACT FOR HTML ZONES (read before anything else):
+Every innerHTML value you return MUST mirror the TEMPLATE shown for each key:
+- Keep the exact same HTML element types, class names, attributes, and nesting structure.
+- Do NOT add new sections, new structural blocks, new headings, or new layout elements that are not present in the template.
+- Do NOT remove or collapse existing structural elements — every element in the template must appear in your output.
+- For repeating elements (table rows, list items, cards): output exactly one item per data record from SOURCE DATA. Do not cap the count to what the template shows — if the data has 9 records, output 9 rows. If the data has 2 records, output 2 rows.
+- Text content must be concise — match the approximate text density of the template. Do not write paragraphs where the template shows short labels or values.
+- Only data-driven text content (values, names, descriptions, metrics) and src/href values may differ from the template.
+- Fixed UI labels already present in the template — such as card titles, section headings, column headers, category names, and any other structural text — MUST be copied verbatim. Never rename, rephrase, or replace them, even if a different label seems more appropriate for the data.
+Violating this breaks the slide layout irreparably.
+
+HTML ZONES (TEMPLATES PER KEY — structure is a contract, fill with data, do not alter structure):
 
 KEY "auto_div_header":
 TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):
-<div class="header-left">
-      <div class="pi-badge">PI 28</div>
-      <div class="header-text-section">
-        <div class="header-label">Feature Catalog</div>
-        <div class="header-title">Core Revenue Management Capabilities</div>
-        <div class="header-subtitle">Roadmap Initiative Group</div>
+<div class='header-left'>
+      <div class='pi-badge'>PI 28</div>
+      <div class='header-text-section'>
+        <div class='header-label'>Feature Catalog</div>
+        <div class='header-title'>Core Revenue Management Capabilities</div>
+        <div class='header-subtitle'>Roadmap Initiative Group</div>
       </div>
     </div>
-    <div class="header-right">
-      <div class="header-stat">
-        <div class="header-stat-value">23,200</div>
-        <div class="header-stat-label">Total Hours</div>
+    <div class='header-right'>
+      <div class='header-stat'>
+        <div class='header-stat-value'>23,200</div>
+        <div class='header-stat-label'>Total Hours</div>
       </div>
-      <div class="header-divider"></div>
-      <div class="header-stat">
-        <div class="header-stat-value">10</div>
-        <div class="header-stat-label">Initiatives</div>
+      <div class='header-divider'></div>
+      <div class='header-stat'>
+        <div class='header-stat-value'>10</div>
+        <div class='header-stat-label'>Initiatives</div>
       </div>
-      <div class="header-divider"></div>
-      <div class="header-stat">
-        <div class="header-stat-value">35</div>
-        <div class="header-stat-label">Features</div>
+      <div class='header-divider'></div>
+      <div class='header-stat'>
+        <div class='header-stat-value'>35</div>
+        <div class='header-stat-label'>Features</div>
       </div>
     </div>
 ↑ Use this structure as a pattern only. Output exactly one repeating item (card, row, list item) per data record — never match the template's item count.
 
 KEY "auto_div_body":
 TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):
-<div class="table-wrap-outer">
-    <div class="table-wrap">
+<div class='table-wrap-outer'>
+    <div class='table-wrap'>
       <table>
         <thead>
           <tr>
-            <th style="width:32%">Initiative</th>
-            <th style="width:13%" class="sortable" data-col="1" data-type="effort">Effort</th>
-            <th style="width:17%" class="sortable" data-col="2" data-type="pi">PI</th>
-            <th style="width:20%" class="sortable" data-col="3" data-type="status">Status</th>
-            <th style="width:10%" class="sortable" data-col="4" data-type="priority">Priority</th>
-            <th style="width:8%"  class="sortable" data-col="5" data-type="number">Features</th>
+            <th style='width:32%'>Initiative</th>
+            <th style='width:13%' class='sortable' data-col='1' data-type='effort'>Effort</th>
+            <th style='width:17%' class='sortable' data-col='2' data-type='pi'>PI</th>
+            <th style='width:20%' class='sortable' data-col='3' data-type='status'>Status</th>
+            <th style='width:10%' class='sortable' data-col='4' data-type='priority'>Priority</th>
+            <th style='width:8%'  class='sortable' data-col='5' data-type='number'>Features</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>
-              <div class="init-name">Registration</div>
-              <div class="init-desc">Party identifiers, org hierarchy, search enhancements</div>
+              <div class='init-name'>Registration</div>
+              <div class='init-desc'>Party identifiers, org hierarchy, search enhancements</div>
             </td>
-            <td><span class="effort-pill">11,866h</span></td>
-            <td><span class="pi-text">PI 28</span></td>
+            <td><span class='effort-pill'>11,866h</span></td>
+            <td><span class='pi-text'>PI 28</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#F0A500;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#F0A500;'></span>
                 In Progress
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">14</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>14</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Taxpayer Accounting</div>
-              <div class="init-desc">General ledger core, reconciliation &amp; balance management</div>
+              <div class='init-name'>Taxpayer Accounting</div>
+              <div class='init-desc'>General ledger core, reconciliation &amp; balance management</div>
             </td>
-            <td><span class="effort-pill">8,064h</span></td>
-            <td><span class="pi-text">PI28</span></td>
+            <td><span class='effort-pill'>8,064h</span></td>
+            <td><span class='pi-text'>PI28</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#4A90D9;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#4A90D9;'></span>
                 In Analysis
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">9</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>9</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Returns Processing</div>
-              <div class="init-desc">Filing workflows, validation rules, submission tracking &amp; acknowledgements</div>
+              <div class='init-name'>Returns Processing</div>
+              <div class='init-desc'>Filing workflows, validation rules, submission tracking &amp; acknowledgements</div>
             </td>
-            <td><span class="effort-pill">4,320h</span></td>
-            <td><span class="pi-text">PI28</span></td>
+            <td><span class='effort-pill'>4,320h</span></td>
+            <td><span class='pi-text'>PI28</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#4A90D9;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#4A90D9;'></span>
                 In Analysis
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">7</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>7</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Payment Processing</div>
-              <div class="init-desc">Multi-channel payments, allocation rules &amp; reconciliation engine</div>
+              <div class='init-name'>Payment Processing</div>
+              <div class='init-desc'>Multi-channel payments, allocation rules &amp; reconciliation engine</div>
             </td>
-            <td><span class="effort-pill">3,200h</span></td>
-            <td><span class="pi-text">PI29</span></td>
+            <td><span class='effort-pill'>3,200h</span></td>
+            <td><span class='pi-text'>PI29</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#4A90D9;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#4A90D9;'></span>
                 In Analysis
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">6</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>6</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Billing &amp; Assessments</div>
-              <div class="init-desc">Instalment plans, assessment automation, billing cycles</div>
+              <div class='init-name'>Billing &amp; Assessments</div>
+              <div class='init-desc'>Instalment plans, assessment automation, billing cycles</div>
             </td>
-            <td><span class="effort-pill">2,880h</span></td>
-            <td><span class="pi-text">PI27</span></td>
+            <td><span class='effort-pill'>2,880h</span></td>
+            <td><span class='pi-text'>PI27</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#F0A500;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#F0A500;'></span>
                 In Progress
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">6</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>6</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Reporting &amp; Analytics</div>
-              <div class="init-desc">Management dashboards, statutory reports, KPI tracking &amp; exports</div>
+              <div class='init-name'>Reporting &amp; Analytics</div>
+              <div class='init-desc'>Management dashboards, statutory reports, KPI tracking &amp; exports</div>
             </td>
-            <td><span class="effort-pill">1,760h</span></td>
-            <td><span class="pi-text">PI29</span></td>
+            <td><span class='effort-pill'>1,760h</span></td>
+            <td><span class='pi-text'>PI29</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#F0A500;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#F0A500;'></span>
                 In Progress
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">3</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>3</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Penalty &amp; Interest</div>
-              <div class="init-desc">Interest calculation, credit unallocated payment segments</div>
+              <div class='init-name'>Penalty &amp; Interest</div>
+              <div class='init-desc'>Interest calculation, credit unallocated payment segments</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI29</span></td>
+            <td><span class='effort-pill'>TBD</span></td>
+            <td><span class='pi-text'>PI29</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#CCCCCC;'></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">4</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>4</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Tax Accounts</div>
-              <div class="init-desc">Tax account setup, configurable thresholds, notifications</div>
+              <div class='init-name'>Tax Accounts</div>
+              <div class='init-desc'>Tax account setup, configurable thresholds, notifications</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI29</span></td>
+            <td><span class='effort-pill'>TBD</span></td>
+            <td><span class='pi-text'>PI29</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#CCCCCC;'></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">2</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>2</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Debt Management</div>
-              <div class="init-desc">Debt recovery workflows, write-off management, enforcement actions</div>
+              <div class='init-name'>Debt Management</div>
+              <div class='init-desc'>Debt recovery workflows, write-off management, enforcement actions</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI30</span></td>
+            <td><span class='effort-pill'>TBD</span></td>
+            <td><span class='pi-text'>PI30</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#CCCCCC;'></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">5</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>5</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Audit &amp; Compliance</div>
-              <div class="init-desc">Case management, audit trail logging, compliance monitoring &amp; alerts</div>
+              <div class='init-name'>Audit &amp; Compliance</div>
+              <div class='init-desc'>Case management, audit trail logging, compliance monitoring &amp; alerts</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI30</span></td>
+            <td><span class='effort-pill'>TBD</span></td>
+            <td><span class='pi-text'>PI30</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#CCCCCC;'></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">4</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>4</span></td>
           </tr>
         </tbody>
       </table>
@@ -1602,19 +1842,19 @@ TEMPLATE (study the HTML structure — replicate element types, class names, and
     </div>
 
     
-    <div class="right-panel">
+    <div class='right-panel'>
 
       
-      <div class="value-card">
-        <div class="card-stripe coral"></div>
-        <div class="card-inner">
-          <div class="card-header-row">
-            <div class="card-title-group">
-              <div class="card-title">Business Value</div>
-              <div class="card-subtitle">Operational impact &amp; delivery enablement</div>
+      <div class='value-card'>
+        <div class='card-stripe coral'></div>
+        <div class='card-inner'>
+          <div class='card-header-row'>
+            <div class='card-title-group'>
+              <div class='card-title'>Business Value</div>
+              <div class='card-subtitle'>Operational impact &amp; delivery enablement</div>
             </div>
           </div>
-          <ul class="value-bullets coral-dots">
+          <ul class='value-bullets coral-dots'>
             <li>End-to-end taxpayer lifecycle management from registration through accounting and penalty enforcement</li>
             <li>Automated billing, assessments &amp; penalty calculations reduce manual caseworker effort across all tax types</li>
             <li>Directly accelerates Greek project delivery and enables rapid reuse across future jurisdictions</li>
@@ -1623,16 +1863,16 @@ TEMPLATE (study the HTML structure — replicate element types, class names, and
       </div>
 
       
-      <div class="value-card">
-        <div class="card-stripe teal"></div>
-        <div class="card-inner">
-          <div class="card-header-row">
-            <div class="card-title-group">
-              <div class="card-title">Market Relevance</div>
-              <div class="card-subtitle">Strategic positioning &amp; pipeline dependency</div>
+      <div class='value-card'>
+        <div class='card-stripe teal'></div>
+        <div class='card-inner'>
+          <div class='card-header-row'>
+            <div class='card-title-group'>
+              <div class='card-title'>Market Relevance</div>
+              <div class='card-subtitle'>Strategic positioning &amp; pipeline dependency</div>
             </div>
           </div>
-          <ul class="value-bullets teal-dots">
+          <ul class='value-bullets teal-dots'>
             <li>Core dependency for all current and pipeline Solon Tax implementations across multiple jurisdictions</li>
             <li>Strengthens competitive position as a full-featured tax revenue management platform in active tenders</li>
             <li>Platform completeness is a prerequisite condition cited in new-market RFP evaluation criteria</li>
@@ -1645,26 +1885,13 @@ TEMPLATE (study the HTML structure — replicate element types, class names, and
 
 KEY "auto_div_slide_footer":
 TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):
-<span class="footer-text">Solon Tax Product Roadmap 2026</span>
-    <span class="footer-text">Netcompany</span>
+<span class='footer-text'>Solon Tax Product Roadmap 2026</span>
+    <span class='footer-text'>Netcompany</span>
 ↑ Use this structure as a pattern only. Output exactly one repeating item (card, row, list item) per data record — never match the template's item count.
 
 
 === Agent 3: slide_1 — #3 ===
 You populate one slide instance in a presentation template with real content.
-
-STRUCTURAL CONTRACT (read before anything else):
-Every innerHTML value you return MUST mirror the TEMPLATE shown for each key:
-- Keep the exact same HTML element types, class names, attributes, and nesting structure.
-- Do NOT add new sections, new structural blocks, new headings, or new layout elements that are not present in the template.
-- Do NOT remove or collapse existing structural elements — every element in the template must appear in your output.
-- For repeating elements (table rows, list items, cards): output exactly one item per data record from SOURCE DATA. Do not cap the count to what the template shows — if the data has 9 records, output 9 rows. If the data has 2 records, output 2 rows.
-- Text content must be concise — match the approximate text density of the template. Do not write paragraphs where the template shows short labels or values.
-- Only data-driven text content (values, names, descriptions, metrics) and src/href values may differ from the template.
-- Fixed UI labels already present in the template — such as card titles, section headings, column headers, category names, and any other structural text — MUST be copied verbatim. Never rename, rephrase, or replace them, even if a different label seems more appropriate for the data.
-- Populate every data element with real values from SOURCE DATA only — do not invent or estimate.
-- Never invent labels, categories, statuses, groupings, or concepts not present verbatim in the SOURCE DATA — if the data does not contain it, write [DATA MISSING] for that element.
-Violating this breaks the slide layout irreparably.
 
 SOURCE DATA FOR THIS SLIDE INSTANCE (verbatim rows from context files):
 [Sheet: RichFeatureQueries.xlsx / Full Features] (82 rows)
@@ -3198,14 +3425,131 @@ Issue Type: Feature | IRM: IRM-41328 | Roadmap Initiative Group: NON-FUNCTIONAL 
 
 Plus, UI Improvements based on this presentation [https://netcompany-my.sharepoint.com/:p:/r/personal/kspontou_netcompany_com/_layouts/15/Doc.aspx?sourcedoc=%7B8B5942CC-A77D-4DCC-BE94-6E161D8A514C%7D&file=SOLON%20UI.pptx&action=edit&mobileredirect=true]
 
+=== Shared Reference Data ===
+=== RichFeatureQueries.xlsx / Estimate Pivot ===
+Roadmap Initiative Groups and Roadmap Initiatives | Sum of Estimate
+CORE REVENUE MANAGEMENT CAPABILITIES | 8839.699999999999
+BILLING, ASSESSMENTS AND INSTALLMENTS | 1120
+PENALTY & INTEREST | 2986.9
+REGISTRATION | 2389.8
+TAX ACCOUNTS | 529.9
+TAXPAYER ACCOUNTING | 1813.1
+CORE SELF SERVICE CAPABILITIES | 4366.1
+SELF SERVICE SERVICES MANAGEMENT | 835.2
+USER & 3RD PARTY ACCESS MANAGEMENT | 3530.9
+CORE SUPPORTING CAPABILITIES | 5342.8
+BATCH PROCESSING ENHANCEMENTS | 738.5
+CASE MANAGEMENT | 84
+CONTACT MANAGEMENT | 882.7
+CONTENT MANAGEMENT INTEGRATION | 80
+DOCUMENT MANAGEMENT INTEGRATION | 2090.9
+FORM PROCESSING | 373.1
+OPERATIONAL REPORTING | 72
+REFERENCE DATA | 606.9
+UI CONFIGURATION | 414.70000000000005
+NON-FUNCTIONAL REQUIREMENT COVERAGE | 17562.100000000002
+ACCESSIBILITY | 268.79999999999995
+EXTENSIBILITY | 156.8
+MAINTAINABILITY | 4579.800000000001
+OPERABILITY | 59.5
+PERFORMANCE EFFICIENCY | 955.2
+RELIABILITY | 2688
+SECURITY | 2758.8
+TEST SUITE OPTIMIZATION | 860
+TRACEABILITY | 2259.2000000000003
+USABILITY | 2976
+OTHER ACTIVITIES | 18794.2
+ARK | 80
+CEREMONIES AND TRAININGS | 3000
+CORRECTIVE MAINTENANCE | 560
+MANAGEMENT | 9115.2
+PREVENTIVE MAINTENANCE | 2960
+PRODUCT SUPPORT | 551
+PROJECT SUPPORT | 560
+RELEASE ACTIVITIES | 1120
+SECURITY | 560
+SUPPORT TO PDM | 80
+TECHNOLOGY MANAGEMENT | 208
+REFERENCE IMPLEMENTATIONS | 857.7
+APPLICATION PROCESSES | 42
+PIT | 0.8
+SELF SERVICE ACCOUNT OVERVIEW | 8
+SELF SERVICE FILING & PAYMENTS | 376.4
+VAT | 430.5
+Grand Total | 55762.6
+
+=== RichFeatureQueries.xlsx / Progress Pivot ===
+Count of Feature Status | Column Labels | __EMPTY | __EMPTY_1 | __EMPTY_2 | __EMPTY_3 | __EMPTY_4 | __EMPTY_5 | __EMPTY_6 | __EMPTY_7 | __EMPTY_8
+Row Labels | HLD | In Design | In Progress | Ready for Dev | To Do | Under Analysis | Waiting Analysis Approval | Waiting Solution Approval | (blank) | Grand Total
+CORE REVENUE MANAGEMENT CAPABILITIES | 2 | 3 |  |  | 1 |  | 7 |  |  | 13
+CORE SELF SERVICE CAPABILITIES |  | 1 |  |  | 1 |  | 6 |  |  | 8
+CORE SUPPORTING CAPABILITIES | 1 | 7 | 1 |  | 2 | 1 | 10 |  |  | 22
+NON-FUNCTIONAL REQUIREMENT COVERAGE | 3 | 6 |  | 2 | 38 | 2 | 17 | 1 |  | 69
+OTHER ACTIVITIES |  |  |  | 1 | 1 |  | 1 |  |  | 3
+REFERENCE IMPLEMENTATIONS | 1 |  |  | 1 | 1 | 2 | 7 |  |  | 12
+Grand Total | 7 | 17 | 1 | 4 | 44 | 5 | 48 | 1 |  | 127
+
+=== RichFeatureQueries.xlsx / Priority Pivot ===
+Count of Feature Priority | Column Labels | __EMPTY | __EMPTY_1 | __EMPTY_2 | __EMPTY_3
+Row Labels | p1 | p2 | p3 | (blank) | Grand Total
+CORE REVENUE MANAGEMENT CAPABILITIES | 10 | 1 | 2 |  | 13
+BILLING, ASSESSMENTS AND INSTALLMENTS | 2 |  |  |  | 2
+PENALTY & INTEREST |  | 1 |  |  | 1
+REGISTRATION | 3 |  |  |  | 3
+TAX ACCOUNTS | 3 |  |  |  | 3
+TAXPAYER ACCOUNTING | 2 |  | 2 |  | 4
+CORE SELF SERVICE CAPABILITIES | 6 |  | 2 |  | 8
+SELF SERVICE SERVICES MANAGEMENT | 1 |  | 1 |  | 2
+USER & 3RD PARTY ACCESS MANAGEMENT | 5 |  | 1 |  | 6
+CORE SUPPORTING CAPABILITIES | 12 |  | 10 |  | 22
+BATCH PROCESSING ENHANCEMENTS | 2 |  |  |  | 2
+CASE MANAGEMENT |  |  | 2 |  | 2
+CONTACT MANAGEMENT | 2 |  | 3 |  | 5
+CONTENT MANAGEMENT INTEGRATION |  |  | 1 |  | 1
+DOCUMENT MANAGEMENT INTEGRATION | 2 |  |  |  | 2
+FORM PROCESSING | 1 |  |  |  | 1
+OPERATIONAL REPORTING |  |  | 1 |  | 1
+REFERENCE DATA | 1 |  | 2 |  | 3
+UI CONFIGURATION | 4 |  | 1 |  | 5
+NON-FUNCTIONAL REQUIREMENT COVERAGE | 41 | 16 | 12 |  | 69
+ACCESSIBILITY | 7 |  |  |  | 7
+EXTENSIBILITY | 1 |  | 1 |  | 2
+MAINTAINABILITY | 10 | 3 | 3 |  | 16
+OPERABILITY | 1 |  |  |  | 1
+PERFORMANCE EFFICIENCY | 3 | 1 | 1 |  | 5
+RELIABILITY | 2 |  |  |  | 2
+SECURITY | 1 | 5 | 1 |  | 7
+TEST SUITE OPTIMIZATION |  |  | 1 |  | 1
+TRACEABILITY | 1 | 3 | 1 |  | 5
+USABILITY | 15 | 4 | 4 |  | 23
+OTHER ACTIVITIES | 1 |  | 2 |  | 3
+ARK |  |  | 2 |  | 2
+CEREMONIES AND TRAININGS |  |  |  |  | 
+CORRECTIVE MAINTENANCE |  |  |  |  | 
+MANAGEMENT |  |  |  |  | 
+PREVENTIVE MAINTENANCE |  |  |  |  | 
+PRODUCT SUPPORT |  |  |  |  | 
+PROJECT SUPPORT |  |  |  |  | 
+RELEASE ACTIVITIES |  |  |  |  | 
+SECURITY | 1 |  |  |  | 1
+SUPPORT TO PDM |  |  |  |  | 
+TECHNOLOGY MANAGEMENT |  |  |  |  | 
+REFERENCE IMPLEMENTATIONS | 3 | 2 | 7 |  | 12
+APPLICATION PROCESSES |  |  | 1 |  | 1
+PIT | 1 |  |  |  | 1
+SELF SERVICE ACCOUNT OVERVIEW |  |  | 1 |  | 1
+SELF SERVICE FILING & PAYMENTS | 1 | 1 | 5 |  | 7
+VAT | 1 | 1 |  |  | 2
+Grand Total | 73 | 19 | 35 |  | 127
+
 YOUR ROLE:
-- You are a content generator. Transform the SOURCE DATA above into polished HTML presentation content for this specific slide instance.
+- You are a content generator. Transform the SOURCE DATA above into polished presentation content for this specific slide instance.
 - Every fact, number, name, metric, label, category, and status in your output MUST come from the SOURCE DATA above.
 - Do not invent, estimate, or add data not present in the SOURCE DATA — this includes inventing plausible-sounding labels or categories that are not in the data.
-- If data for a zone element is missing from the SOURCE DATA, write [DATA MISSING] for that element — never substitute with invented content.
+- If data for a zone element is missing from the SOURCE DATA, write n/a for that element — never substitute with invented content.
 - ZONE INSTRUCTIONS per key are authoritative directives — follow them precisely and completely. They may specify expectations, tone, formatting, style or anything the user specifies in addition to data queries. These always take priority over defaults.
 
-  Task: generate HTML content for slide instance 3 of 6 using the SOURCE DATA above.
+  Task: generate content for slide instance 3 of 6 using the SOURCE DATA above.
 
 ⚠️ OUTPUT FORMAT — CRITICAL:
 Your entire response MUST be a single valid JSON object.
@@ -3220,211 +3564,227 @@ The object MUST have EXACTLY these keys:
   "auto_div_slide_footer": "<innerHTML matching template structure>",
 }
 
-TEMPLATES PER KEY (structure is a contract — fill with data, do not alter structure):
+HTML INSIDE JSON — MANDATORY RULES (for HTML zones):
+- ALL HTML attribute values MUST use single quotes (e.g. class='foo', href='...', src='...')
+- NEVER use double quotes inside HTML — they break JSON string parsing
+- Escape any literal backslashes in HTML as \
+
+STRUCTURAL CONTRACT FOR HTML ZONES (read before anything else):
+Every innerHTML value you return MUST mirror the TEMPLATE shown for each key:
+- Keep the exact same HTML element types, class names, attributes, and nesting structure.
+- Do NOT add new sections, new structural blocks, new headings, or new layout elements that are not present in the template.
+- Do NOT remove or collapse existing structural elements — every element in the template must appear in your output.
+- For repeating elements (table rows, list items, cards): output exactly one item per data record from SOURCE DATA. Do not cap the count to what the template shows — if the data has 9 records, output 9 rows. If the data has 2 records, output 2 rows.
+- Text content must be concise — match the approximate text density of the template. Do not write paragraphs where the template shows short labels or values.
+- Only data-driven text content (values, names, descriptions, metrics) and src/href values may differ from the template.
+- Fixed UI labels already present in the template — such as card titles, section headings, column headers, category names, and any other structural text — MUST be copied verbatim. Never rename, rephrase, or replace them, even if a different label seems more appropriate for the data.
+Violating this breaks the slide layout irreparably.
+
+HTML ZONES (TEMPLATES PER KEY — structure is a contract, fill with data, do not alter structure):
 
 KEY "auto_div_header":
 TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):
-<div class="header-left">
-      <div class="pi-badge">PI 28</div>
-      <div class="header-text-section">
-        <div class="header-label">Feature Catalog</div>
-        <div class="header-title">Core Revenue Management Capabilities</div>
-        <div class="header-subtitle">Roadmap Initiative Group</div>
+<div class='header-left'>
+      <div class='pi-badge'>PI 28</div>
+      <div class='header-text-section'>
+        <div class='header-label'>Feature Catalog</div>
+        <div class='header-title'>Core Revenue Management Capabilities</div>
+        <div class='header-subtitle'>Roadmap Initiative Group</div>
       </div>
     </div>
-    <div class="header-right">
-      <div class="header-stat">
-        <div class="header-stat-value">23,200</div>
-        <div class="header-stat-label">Total Hours</div>
+    <div class='header-right'>
+      <div class='header-stat'>
+        <div class='header-stat-value'>23,200</div>
+        <div class='header-stat-label'>Total Hours</div>
       </div>
-      <div class="header-divider"></div>
-      <div class="header-stat">
-        <div class="header-stat-value">10</div>
-        <div class="header-stat-label">Initiatives</div>
+      <div class='header-divider'></div>
+      <div class='header-stat'>
+        <div class='header-stat-value'>10</div>
+        <div class='header-stat-label'>Initiatives</div>
       </div>
-      <div class="header-divider"></div>
-      <div class="header-stat">
-        <div class="header-stat-value">35</div>
-        <div class="header-stat-label">Features</div>
+      <div class='header-divider'></div>
+      <div class='header-stat'>
+        <div class='header-stat-value'>35</div>
+        <div class='header-stat-label'>Features</div>
       </div>
     </div>
 ↑ Use this structure as a pattern only. Output exactly one repeating item (card, row, list item) per data record — never match the template's item count.
 
 KEY "auto_div_body":
 TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):
-<div class="table-wrap-outer">
-    <div class="table-wrap">
+<div class='table-wrap-outer'>
+    <div class='table-wrap'>
       <table>
         <thead>
           <tr>
-            <th style="width:32%">Initiative</th>
-            <th style="width:13%" class="sortable" data-col="1" data-type="effort">Effort</th>
-            <th style="width:17%" class="sortable" data-col="2" data-type="pi">PI</th>
-            <th style="width:20%" class="sortable" data-col="3" data-type="status">Status</th>
-            <th style="width:10%" class="sortable" data-col="4" data-type="priority">Priority</th>
-            <th style="width:8%"  class="sortable" data-col="5" data-type="number">Features</th>
+            <th style='width:32%'>Initiative</th>
+            <th style='width:13%' class='sortable' data-col='1' data-type='effort'>Effort</th>
+            <th style='width:17%' class='sortable' data-col='2' data-type='pi'>PI</th>
+            <th style='width:20%' class='sortable' data-col='3' data-type='status'>Status</th>
+            <th style='width:10%' class='sortable' data-col='4' data-type='priority'>Priority</th>
+            <th style='width:8%'  class='sortable' data-col='5' data-type='number'>Features</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>
-              <div class="init-name">Registration</div>
-              <div class="init-desc">Party identifiers, org hierarchy, search enhancements</div>
+              <div class='init-name'>Registration</div>
+              <div class='init-desc'>Party identifiers, org hierarchy, search enhancements</div>
             </td>
-            <td><span class="effort-pill">11,866h</span></td>
-            <td><span class="pi-text">PI 28</span></td>
+            <td><span class='effort-pill'>11,866h</span></td>
+            <td><span class='pi-text'>PI 28</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#F0A500;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#F0A500;'></span>
                 In Progress
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">14</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>14</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Taxpayer Accounting</div>
-              <div class="init-desc">General ledger core, reconciliation &amp; balance management</div>
+              <div class='init-name'>Taxpayer Accounting</div>
+              <div class='init-desc'>General ledger core, reconciliation &amp; balance management</div>
             </td>
-            <td><span class="effort-pill">8,064h</span></td>
-            <td><span class="pi-text">PI28</span></td>
+            <td><span class='effort-pill'>8,064h</span></td>
+            <td><span class='pi-text'>PI28</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#4A90D9;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#4A90D9;'></span>
                 In Analysis
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">9</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>9</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Returns Processing</div>
-              <div class="init-desc">Filing workflows, validation rules, submission tracking &amp; acknowledgements</div>
+              <div class='init-name'>Returns Processing</div>
+              <div class='init-desc'>Filing workflows, validation rules, submission tracking &amp; acknowledgements</div>
             </td>
-            <td><span class="effort-pill">4,320h</span></td>
-            <td><span class="pi-text">PI28</span></td>
+            <td><span class='effort-pill'>4,320h</span></td>
+            <td><span class='pi-text'>PI28</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#4A90D9;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#4A90D9;'></span>
                 In Analysis
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">7</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>7</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Payment Processing</div>
-              <div class="init-desc">Multi-channel payments, allocation rules &amp; reconciliation engine</div>
+              <div class='init-name'>Payment Processing</div>
+              <div class='init-desc'>Multi-channel payments, allocation rules &amp; reconciliation engine</div>
             </td>
-            <td><span class="effort-pill">3,200h</span></td>
-            <td><span class="pi-text">PI29</span></td>
+            <td><span class='effort-pill'>3,200h</span></td>
+            <td><span class='pi-text'>PI29</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#4A90D9;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#4A90D9;'></span>
                 In Analysis
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">6</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>6</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Billing &amp; Assessments</div>
-              <div class="init-desc">Instalment plans, assessment automation, billing cycles</div>
+              <div class='init-name'>Billing &amp; Assessments</div>
+              <div class='init-desc'>Instalment plans, assessment automation, billing cycles</div>
             </td>
-            <td><span class="effort-pill">2,880h</span></td>
-            <td><span class="pi-text">PI27</span></td>
+            <td><span class='effort-pill'>2,880h</span></td>
+            <td><span class='pi-text'>PI27</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#F0A500;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#F0A500;'></span>
                 In Progress
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">6</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>6</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Reporting &amp; Analytics</div>
-              <div class="init-desc">Management dashboards, statutory reports, KPI tracking &amp; exports</div>
+              <div class='init-name'>Reporting &amp; Analytics</div>
+              <div class='init-desc'>Management dashboards, statutory reports, KPI tracking &amp; exports</div>
             </td>
-            <td><span class="effort-pill">1,760h</span></td>
-            <td><span class="pi-text">PI29</span></td>
+            <td><span class='effort-pill'>1,760h</span></td>
+            <td><span class='pi-text'>PI29</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#F0A500;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#F0A500;'></span>
                 In Progress
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">3</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>3</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Penalty &amp; Interest</div>
-              <div class="init-desc">Interest calculation, credit unallocated payment segments</div>
+              <div class='init-name'>Penalty &amp; Interest</div>
+              <div class='init-desc'>Interest calculation, credit unallocated payment segments</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI29</span></td>
+            <td><span class='effort-pill'>TBD</span></td>
+            <td><span class='pi-text'>PI29</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#CCCCCC;'></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">4</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>4</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Tax Accounts</div>
-              <div class="init-desc">Tax account setup, configurable thresholds, notifications</div>
+              <div class='init-name'>Tax Accounts</div>
+              <div class='init-desc'>Tax account setup, configurable thresholds, notifications</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI29</span></td>
+            <td><span class='effort-pill'>TBD</span></td>
+            <td><span class='pi-text'>PI29</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#CCCCCC;'></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">2</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>2</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Debt Management</div>
-              <div class="init-desc">Debt recovery workflows, write-off management, enforcement actions</div>
+              <div class='init-name'>Debt Management</div>
+              <div class='init-desc'>Debt recovery workflows, write-off management, enforcement actions</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI30</span></td>
+            <td><span class='effort-pill'>TBD</span></td>
+            <td><span class='pi-text'>PI30</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#CCCCCC;'></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">5</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>5</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Audit &amp; Compliance</div>
-              <div class="init-desc">Case management, audit trail logging, compliance monitoring &amp; alerts</div>
+              <div class='init-name'>Audit &amp; Compliance</div>
+              <div class='init-desc'>Case management, audit trail logging, compliance monitoring &amp; alerts</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI30</span></td>
+            <td><span class='effort-pill'>TBD</span></td>
+            <td><span class='pi-text'>PI30</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#CCCCCC;'></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">4</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>4</span></td>
           </tr>
         </tbody>
       </table>
@@ -3432,19 +3792,19 @@ TEMPLATE (study the HTML structure — replicate element types, class names, and
     </div>
 
     
-    <div class="right-panel">
+    <div class='right-panel'>
 
       
-      <div class="value-card">
-        <div class="card-stripe coral"></div>
-        <div class="card-inner">
-          <div class="card-header-row">
-            <div class="card-title-group">
-              <div class="card-title">Business Value</div>
-              <div class="card-subtitle">Operational impact &amp; delivery enablement</div>
+      <div class='value-card'>
+        <div class='card-stripe coral'></div>
+        <div class='card-inner'>
+          <div class='card-header-row'>
+            <div class='card-title-group'>
+              <div class='card-title'>Business Value</div>
+              <div class='card-subtitle'>Operational impact &amp; delivery enablement</div>
             </div>
           </div>
-          <ul class="value-bullets coral-dots">
+          <ul class='value-bullets coral-dots'>
             <li>End-to-end taxpayer lifecycle management from registration through accounting and penalty enforcement</li>
             <li>Automated billing, assessments &amp; penalty calculations reduce manual caseworker effort across all tax types</li>
             <li>Directly accelerates Greek project delivery and enables rapid reuse across future jurisdictions</li>
@@ -3453,16 +3813,16 @@ TEMPLATE (study the HTML structure — replicate element types, class names, and
       </div>
 
       
-      <div class="value-card">
-        <div class="card-stripe teal"></div>
-        <div class="card-inner">
-          <div class="card-header-row">
-            <div class="card-title-group">
-              <div class="card-title">Market Relevance</div>
-              <div class="card-subtitle">Strategic positioning &amp; pipeline dependency</div>
+      <div class='value-card'>
+        <div class='card-stripe teal'></div>
+        <div class='card-inner'>
+          <div class='card-header-row'>
+            <div class='card-title-group'>
+              <div class='card-title'>Market Relevance</div>
+              <div class='card-subtitle'>Strategic positioning &amp; pipeline dependency</div>
             </div>
           </div>
-          <ul class="value-bullets teal-dots">
+          <ul class='value-bullets teal-dots'>
             <li>Core dependency for all current and pipeline Solon Tax implementations across multiple jurisdictions</li>
             <li>Strengthens competitive position as a full-featured tax revenue management platform in active tenders</li>
             <li>Platform completeness is a prerequisite condition cited in new-market RFP evaluation criteria</li>
@@ -3475,26 +3835,13 @@ TEMPLATE (study the HTML structure — replicate element types, class names, and
 
 KEY "auto_div_slide_footer":
 TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):
-<span class="footer-text">Solon Tax Product Roadmap 2026</span>
-    <span class="footer-text">Netcompany</span>
+<span class='footer-text'>Solon Tax Product Roadmap 2026</span>
+    <span class='footer-text'>Netcompany</span>
 ↑ Use this structure as a pattern only. Output exactly one repeating item (card, row, list item) per data record — never match the template's item count.
 
 
 === Agent 4: slide_1 — #4 ===
 You populate one slide instance in a presentation template with real content.
-
-STRUCTURAL CONTRACT (read before anything else):
-Every innerHTML value you return MUST mirror the TEMPLATE shown for each key:
-- Keep the exact same HTML element types, class names, attributes, and nesting structure.
-- Do NOT add new sections, new structural blocks, new headings, or new layout elements that are not present in the template.
-- Do NOT remove or collapse existing structural elements — every element in the template must appear in your output.
-- For repeating elements (table rows, list items, cards): output exactly one item per data record from SOURCE DATA. Do not cap the count to what the template shows — if the data has 9 records, output 9 rows. If the data has 2 records, output 2 rows.
-- Text content must be concise — match the approximate text density of the template. Do not write paragraphs where the template shows short labels or values.
-- Only data-driven text content (values, names, descriptions, metrics) and src/href values may differ from the template.
-- Fixed UI labels already present in the template — such as card titles, section headings, column headers, category names, and any other structural text — MUST be copied verbatim. Never rename, rephrase, or replace them, even if a different label seems more appropriate for the data.
-- Populate every data element with real values from SOURCE DATA only — do not invent or estimate.
-- Never invent labels, categories, statuses, groupings, or concepts not present verbatim in the SOURCE DATA — if the data does not contain it, write [DATA MISSING] for that element.
-Violating this breaks the slide layout irreparably.
 
 SOURCE DATA FOR THIS SLIDE INSTANCE (verbatim rows from context files):
 [Sheet: RichFeatureQueries.xlsx / Full Features] (13 rows)
@@ -4307,14 +4654,131 @@ The team must collaborate with domain specialists to validate the above.
 
 All Definition of Done ({*}DoD{*}) criteria must be met.
 
+=== Shared Reference Data ===
+=== RichFeatureQueries.xlsx / Estimate Pivot ===
+Roadmap Initiative Groups and Roadmap Initiatives | Sum of Estimate
+CORE REVENUE MANAGEMENT CAPABILITIES | 8839.699999999999
+BILLING, ASSESSMENTS AND INSTALLMENTS | 1120
+PENALTY & INTEREST | 2986.9
+REGISTRATION | 2389.8
+TAX ACCOUNTS | 529.9
+TAXPAYER ACCOUNTING | 1813.1
+CORE SELF SERVICE CAPABILITIES | 4366.1
+SELF SERVICE SERVICES MANAGEMENT | 835.2
+USER & 3RD PARTY ACCESS MANAGEMENT | 3530.9
+CORE SUPPORTING CAPABILITIES | 5342.8
+BATCH PROCESSING ENHANCEMENTS | 738.5
+CASE MANAGEMENT | 84
+CONTACT MANAGEMENT | 882.7
+CONTENT MANAGEMENT INTEGRATION | 80
+DOCUMENT MANAGEMENT INTEGRATION | 2090.9
+FORM PROCESSING | 373.1
+OPERATIONAL REPORTING | 72
+REFERENCE DATA | 606.9
+UI CONFIGURATION | 414.70000000000005
+NON-FUNCTIONAL REQUIREMENT COVERAGE | 17562.100000000002
+ACCESSIBILITY | 268.79999999999995
+EXTENSIBILITY | 156.8
+MAINTAINABILITY | 4579.800000000001
+OPERABILITY | 59.5
+PERFORMANCE EFFICIENCY | 955.2
+RELIABILITY | 2688
+SECURITY | 2758.8
+TEST SUITE OPTIMIZATION | 860
+TRACEABILITY | 2259.2000000000003
+USABILITY | 2976
+OTHER ACTIVITIES | 18794.2
+ARK | 80
+CEREMONIES AND TRAININGS | 3000
+CORRECTIVE MAINTENANCE | 560
+MANAGEMENT | 9115.2
+PREVENTIVE MAINTENANCE | 2960
+PRODUCT SUPPORT | 551
+PROJECT SUPPORT | 560
+RELEASE ACTIVITIES | 1120
+SECURITY | 560
+SUPPORT TO PDM | 80
+TECHNOLOGY MANAGEMENT | 208
+REFERENCE IMPLEMENTATIONS | 857.7
+APPLICATION PROCESSES | 42
+PIT | 0.8
+SELF SERVICE ACCOUNT OVERVIEW | 8
+SELF SERVICE FILING & PAYMENTS | 376.4
+VAT | 430.5
+Grand Total | 55762.6
+
+=== RichFeatureQueries.xlsx / Progress Pivot ===
+Count of Feature Status | Column Labels | __EMPTY | __EMPTY_1 | __EMPTY_2 | __EMPTY_3 | __EMPTY_4 | __EMPTY_5 | __EMPTY_6 | __EMPTY_7 | __EMPTY_8
+Row Labels | HLD | In Design | In Progress | Ready for Dev | To Do | Under Analysis | Waiting Analysis Approval | Waiting Solution Approval | (blank) | Grand Total
+CORE REVENUE MANAGEMENT CAPABILITIES | 2 | 3 |  |  | 1 |  | 7 |  |  | 13
+CORE SELF SERVICE CAPABILITIES |  | 1 |  |  | 1 |  | 6 |  |  | 8
+CORE SUPPORTING CAPABILITIES | 1 | 7 | 1 |  | 2 | 1 | 10 |  |  | 22
+NON-FUNCTIONAL REQUIREMENT COVERAGE | 3 | 6 |  | 2 | 38 | 2 | 17 | 1 |  | 69
+OTHER ACTIVITIES |  |  |  | 1 | 1 |  | 1 |  |  | 3
+REFERENCE IMPLEMENTATIONS | 1 |  |  | 1 | 1 | 2 | 7 |  |  | 12
+Grand Total | 7 | 17 | 1 | 4 | 44 | 5 | 48 | 1 |  | 127
+
+=== RichFeatureQueries.xlsx / Priority Pivot ===
+Count of Feature Priority | Column Labels | __EMPTY | __EMPTY_1 | __EMPTY_2 | __EMPTY_3
+Row Labels | p1 | p2 | p3 | (blank) | Grand Total
+CORE REVENUE MANAGEMENT CAPABILITIES | 10 | 1 | 2 |  | 13
+BILLING, ASSESSMENTS AND INSTALLMENTS | 2 |  |  |  | 2
+PENALTY & INTEREST |  | 1 |  |  | 1
+REGISTRATION | 3 |  |  |  | 3
+TAX ACCOUNTS | 3 |  |  |  | 3
+TAXPAYER ACCOUNTING | 2 |  | 2 |  | 4
+CORE SELF SERVICE CAPABILITIES | 6 |  | 2 |  | 8
+SELF SERVICE SERVICES MANAGEMENT | 1 |  | 1 |  | 2
+USER & 3RD PARTY ACCESS MANAGEMENT | 5 |  | 1 |  | 6
+CORE SUPPORTING CAPABILITIES | 12 |  | 10 |  | 22
+BATCH PROCESSING ENHANCEMENTS | 2 |  |  |  | 2
+CASE MANAGEMENT |  |  | 2 |  | 2
+CONTACT MANAGEMENT | 2 |  | 3 |  | 5
+CONTENT MANAGEMENT INTEGRATION |  |  | 1 |  | 1
+DOCUMENT MANAGEMENT INTEGRATION | 2 |  |  |  | 2
+FORM PROCESSING | 1 |  |  |  | 1
+OPERATIONAL REPORTING |  |  | 1 |  | 1
+REFERENCE DATA | 1 |  | 2 |  | 3
+UI CONFIGURATION | 4 |  | 1 |  | 5
+NON-FUNCTIONAL REQUIREMENT COVERAGE | 41 | 16 | 12 |  | 69
+ACCESSIBILITY | 7 |  |  |  | 7
+EXTENSIBILITY | 1 |  | 1 |  | 2
+MAINTAINABILITY | 10 | 3 | 3 |  | 16
+OPERABILITY | 1 |  |  |  | 1
+PERFORMANCE EFFICIENCY | 3 | 1 | 1 |  | 5
+RELIABILITY | 2 |  |  |  | 2
+SECURITY | 1 | 5 | 1 |  | 7
+TEST SUITE OPTIMIZATION |  |  | 1 |  | 1
+TRACEABILITY | 1 | 3 | 1 |  | 5
+USABILITY | 15 | 4 | 4 |  | 23
+OTHER ACTIVITIES | 1 |  | 2 |  | 3
+ARK |  |  | 2 |  | 2
+CEREMONIES AND TRAININGS |  |  |  |  | 
+CORRECTIVE MAINTENANCE |  |  |  |  | 
+MANAGEMENT |  |  |  |  | 
+PREVENTIVE MAINTENANCE |  |  |  |  | 
+PRODUCT SUPPORT |  |  |  |  | 
+PROJECT SUPPORT |  |  |  |  | 
+RELEASE ACTIVITIES |  |  |  |  | 
+SECURITY | 1 |  |  |  | 1
+SUPPORT TO PDM |  |  |  |  | 
+TECHNOLOGY MANAGEMENT |  |  |  |  | 
+REFERENCE IMPLEMENTATIONS | 3 | 2 | 7 |  | 12
+APPLICATION PROCESSES |  |  | 1 |  | 1
+PIT | 1 |  |  |  | 1
+SELF SERVICE ACCOUNT OVERVIEW |  |  | 1 |  | 1
+SELF SERVICE FILING & PAYMENTS | 1 | 1 | 5 |  | 7
+VAT | 1 | 1 |  |  | 2
+Grand Total | 73 | 19 | 35 |  | 127
+
 YOUR ROLE:
-- You are a content generator. Transform the SOURCE DATA above into polished HTML presentation content for this specific slide instance.
+- You are a content generator. Transform the SOURCE DATA above into polished presentation content for this specific slide instance.
 - Every fact, number, name, metric, label, category, and status in your output MUST come from the SOURCE DATA above.
 - Do not invent, estimate, or add data not present in the SOURCE DATA — this includes inventing plausible-sounding labels or categories that are not in the data.
-- If data for a zone element is missing from the SOURCE DATA, write [DATA MISSING] for that element — never substitute with invented content.
+- If data for a zone element is missing from the SOURCE DATA, write n/a for that element — never substitute with invented content.
 - ZONE INSTRUCTIONS per key are authoritative directives — follow them precisely and completely. They may specify expectations, tone, formatting, style or anything the user specifies in addition to data queries. These always take priority over defaults.
 
-  Task: generate HTML content for slide instance 4 of 6 using the SOURCE DATA above.
+  Task: generate content for slide instance 4 of 6 using the SOURCE DATA above.
 
 ⚠️ OUTPUT FORMAT — CRITICAL:
 Your entire response MUST be a single valid JSON object.
@@ -4329,211 +4793,227 @@ The object MUST have EXACTLY these keys:
   "auto_div_slide_footer": "<innerHTML matching template structure>",
 }
 
-TEMPLATES PER KEY (structure is a contract — fill with data, do not alter structure):
+HTML INSIDE JSON — MANDATORY RULES (for HTML zones):
+- ALL HTML attribute values MUST use single quotes (e.g. class='foo', href='...', src='...')
+- NEVER use double quotes inside HTML — they break JSON string parsing
+- Escape any literal backslashes in HTML as \
+
+STRUCTURAL CONTRACT FOR HTML ZONES (read before anything else):
+Every innerHTML value you return MUST mirror the TEMPLATE shown for each key:
+- Keep the exact same HTML element types, class names, attributes, and nesting structure.
+- Do NOT add new sections, new structural blocks, new headings, or new layout elements that are not present in the template.
+- Do NOT remove or collapse existing structural elements — every element in the template must appear in your output.
+- For repeating elements (table rows, list items, cards): output exactly one item per data record from SOURCE DATA. Do not cap the count to what the template shows — if the data has 9 records, output 9 rows. If the data has 2 records, output 2 rows.
+- Text content must be concise — match the approximate text density of the template. Do not write paragraphs where the template shows short labels or values.
+- Only data-driven text content (values, names, descriptions, metrics) and src/href values may differ from the template.
+- Fixed UI labels already present in the template — such as card titles, section headings, column headers, category names, and any other structural text — MUST be copied verbatim. Never rename, rephrase, or replace them, even if a different label seems more appropriate for the data.
+Violating this breaks the slide layout irreparably.
+
+HTML ZONES (TEMPLATES PER KEY — structure is a contract, fill with data, do not alter structure):
 
 KEY "auto_div_header":
 TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):
-<div class="header-left">
-      <div class="pi-badge">PI 28</div>
-      <div class="header-text-section">
-        <div class="header-label">Feature Catalog</div>
-        <div class="header-title">Core Revenue Management Capabilities</div>
-        <div class="header-subtitle">Roadmap Initiative Group</div>
+<div class='header-left'>
+      <div class='pi-badge'>PI 28</div>
+      <div class='header-text-section'>
+        <div class='header-label'>Feature Catalog</div>
+        <div class='header-title'>Core Revenue Management Capabilities</div>
+        <div class='header-subtitle'>Roadmap Initiative Group</div>
       </div>
     </div>
-    <div class="header-right">
-      <div class="header-stat">
-        <div class="header-stat-value">23,200</div>
-        <div class="header-stat-label">Total Hours</div>
+    <div class='header-right'>
+      <div class='header-stat'>
+        <div class='header-stat-value'>23,200</div>
+        <div class='header-stat-label'>Total Hours</div>
       </div>
-      <div class="header-divider"></div>
-      <div class="header-stat">
-        <div class="header-stat-value">10</div>
-        <div class="header-stat-label">Initiatives</div>
+      <div class='header-divider'></div>
+      <div class='header-stat'>
+        <div class='header-stat-value'>10</div>
+        <div class='header-stat-label'>Initiatives</div>
       </div>
-      <div class="header-divider"></div>
-      <div class="header-stat">
-        <div class="header-stat-value">35</div>
-        <div class="header-stat-label">Features</div>
+      <div class='header-divider'></div>
+      <div class='header-stat'>
+        <div class='header-stat-value'>35</div>
+        <div class='header-stat-label'>Features</div>
       </div>
     </div>
 ↑ Use this structure as a pattern only. Output exactly one repeating item (card, row, list item) per data record — never match the template's item count.
 
 KEY "auto_div_body":
 TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):
-<div class="table-wrap-outer">
-    <div class="table-wrap">
+<div class='table-wrap-outer'>
+    <div class='table-wrap'>
       <table>
         <thead>
           <tr>
-            <th style="width:32%">Initiative</th>
-            <th style="width:13%" class="sortable" data-col="1" data-type="effort">Effort</th>
-            <th style="width:17%" class="sortable" data-col="2" data-type="pi">PI</th>
-            <th style="width:20%" class="sortable" data-col="3" data-type="status">Status</th>
-            <th style="width:10%" class="sortable" data-col="4" data-type="priority">Priority</th>
-            <th style="width:8%"  class="sortable" data-col="5" data-type="number">Features</th>
+            <th style='width:32%'>Initiative</th>
+            <th style='width:13%' class='sortable' data-col='1' data-type='effort'>Effort</th>
+            <th style='width:17%' class='sortable' data-col='2' data-type='pi'>PI</th>
+            <th style='width:20%' class='sortable' data-col='3' data-type='status'>Status</th>
+            <th style='width:10%' class='sortable' data-col='4' data-type='priority'>Priority</th>
+            <th style='width:8%'  class='sortable' data-col='5' data-type='number'>Features</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>
-              <div class="init-name">Registration</div>
-              <div class="init-desc">Party identifiers, org hierarchy, search enhancements</div>
+              <div class='init-name'>Registration</div>
+              <div class='init-desc'>Party identifiers, org hierarchy, search enhancements</div>
             </td>
-            <td><span class="effort-pill">11,866h</span></td>
-            <td><span class="pi-text">PI 28</span></td>
+            <td><span class='effort-pill'>11,866h</span></td>
+            <td><span class='pi-text'>PI 28</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#F0A500;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#F0A500;'></span>
                 In Progress
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">14</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>14</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Taxpayer Accounting</div>
-              <div class="init-desc">General ledger core, reconciliation &amp; balance management</div>
+              <div class='init-name'>Taxpayer Accounting</div>
+              <div class='init-desc'>General ledger core, reconciliation &amp; balance management</div>
             </td>
-            <td><span class="effort-pill">8,064h</span></td>
-            <td><span class="pi-text">PI28</span></td>
+            <td><span class='effort-pill'>8,064h</span></td>
+            <td><span class='pi-text'>PI28</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#4A90D9;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#4A90D9;'></span>
                 In Analysis
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">9</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>9</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Returns Processing</div>
-              <div class="init-desc">Filing workflows, validation rules, submission tracking &amp; acknowledgements</div>
+              <div class='init-name'>Returns Processing</div>
+              <div class='init-desc'>Filing workflows, validation rules, submission tracking &amp; acknowledgements</div>
             </td>
-            <td><span class="effort-pill">4,320h</span></td>
-            <td><span class="pi-text">PI28</span></td>
+            <td><span class='effort-pill'>4,320h</span></td>
+            <td><span class='pi-text'>PI28</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#4A90D9;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#4A90D9;'></span>
                 In Analysis
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">7</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>7</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Payment Processing</div>
-              <div class="init-desc">Multi-channel payments, allocation rules &amp; reconciliation engine</div>
+              <div class='init-name'>Payment Processing</div>
+              <div class='init-desc'>Multi-channel payments, allocation rules &amp; reconciliation engine</div>
             </td>
-            <td><span class="effort-pill">3,200h</span></td>
-            <td><span class="pi-text">PI29</span></td>
+            <td><span class='effort-pill'>3,200h</span></td>
+            <td><span class='pi-text'>PI29</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#4A90D9;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#4A90D9;'></span>
                 In Analysis
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">6</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>6</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Billing &amp; Assessments</div>
-              <div class="init-desc">Instalment plans, assessment automation, billing cycles</div>
+              <div class='init-name'>Billing &amp; Assessments</div>
+              <div class='init-desc'>Instalment plans, assessment automation, billing cycles</div>
             </td>
-            <td><span class="effort-pill">2,880h</span></td>
-            <td><span class="pi-text">PI27</span></td>
+            <td><span class='effort-pill'>2,880h</span></td>
+            <td><span class='pi-text'>PI27</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#F0A500;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#F0A500;'></span>
                 In Progress
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">6</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>6</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Reporting &amp; Analytics</div>
-              <div class="init-desc">Management dashboards, statutory reports, KPI tracking &amp; exports</div>
+              <div class='init-name'>Reporting &amp; Analytics</div>
+              <div class='init-desc'>Management dashboards, statutory reports, KPI tracking &amp; exports</div>
             </td>
-            <td><span class="effort-pill">1,760h</span></td>
-            <td><span class="pi-text">PI29</span></td>
+            <td><span class='effort-pill'>1,760h</span></td>
+            <td><span class='pi-text'>PI29</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#F0A500;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#F0A500;'></span>
                 In Progress
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">3</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>3</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Penalty &amp; Interest</div>
-              <div class="init-desc">Interest calculation, credit unallocated payment segments</div>
+              <div class='init-name'>Penalty &amp; Interest</div>
+              <div class='init-desc'>Interest calculation, credit unallocated payment segments</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI29</span></td>
+            <td><span class='effort-pill'>TBD</span></td>
+            <td><span class='pi-text'>PI29</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#CCCCCC;'></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">4</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>4</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Tax Accounts</div>
-              <div class="init-desc">Tax account setup, configurable thresholds, notifications</div>
+              <div class='init-name'>Tax Accounts</div>
+              <div class='init-desc'>Tax account setup, configurable thresholds, notifications</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI29</span></td>
+            <td><span class='effort-pill'>TBD</span></td>
+            <td><span class='pi-text'>PI29</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#CCCCCC;'></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">2</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>2</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Debt Management</div>
-              <div class="init-desc">Debt recovery workflows, write-off management, enforcement actions</div>
+              <div class='init-name'>Debt Management</div>
+              <div class='init-desc'>Debt recovery workflows, write-off management, enforcement actions</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI30</span></td>
+            <td><span class='effort-pill'>TBD</span></td>
+            <td><span class='pi-text'>PI30</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#CCCCCC;'></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">5</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>5</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Audit &amp; Compliance</div>
-              <div class="init-desc">Case management, audit trail logging, compliance monitoring &amp; alerts</div>
+              <div class='init-name'>Audit &amp; Compliance</div>
+              <div class='init-desc'>Case management, audit trail logging, compliance monitoring &amp; alerts</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI30</span></td>
+            <td><span class='effort-pill'>TBD</span></td>
+            <td><span class='pi-text'>PI30</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#CCCCCC;'></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">4</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>4</span></td>
           </tr>
         </tbody>
       </table>
@@ -4541,19 +5021,19 @@ TEMPLATE (study the HTML structure — replicate element types, class names, and
     </div>
 
     
-    <div class="right-panel">
+    <div class='right-panel'>
 
       
-      <div class="value-card">
-        <div class="card-stripe coral"></div>
-        <div class="card-inner">
-          <div class="card-header-row">
-            <div class="card-title-group">
-              <div class="card-title">Business Value</div>
-              <div class="card-subtitle">Operational impact &amp; delivery enablement</div>
+      <div class='value-card'>
+        <div class='card-stripe coral'></div>
+        <div class='card-inner'>
+          <div class='card-header-row'>
+            <div class='card-title-group'>
+              <div class='card-title'>Business Value</div>
+              <div class='card-subtitle'>Operational impact &amp; delivery enablement</div>
             </div>
           </div>
-          <ul class="value-bullets coral-dots">
+          <ul class='value-bullets coral-dots'>
             <li>End-to-end taxpayer lifecycle management from registration through accounting and penalty enforcement</li>
             <li>Automated billing, assessments &amp; penalty calculations reduce manual caseworker effort across all tax types</li>
             <li>Directly accelerates Greek project delivery and enables rapid reuse across future jurisdictions</li>
@@ -4562,16 +5042,16 @@ TEMPLATE (study the HTML structure — replicate element types, class names, and
       </div>
 
       
-      <div class="value-card">
-        <div class="card-stripe teal"></div>
-        <div class="card-inner">
-          <div class="card-header-row">
-            <div class="card-title-group">
-              <div class="card-title">Market Relevance</div>
-              <div class="card-subtitle">Strategic positioning &amp; pipeline dependency</div>
+      <div class='value-card'>
+        <div class='card-stripe teal'></div>
+        <div class='card-inner'>
+          <div class='card-header-row'>
+            <div class='card-title-group'>
+              <div class='card-title'>Market Relevance</div>
+              <div class='card-subtitle'>Strategic positioning &amp; pipeline dependency</div>
             </div>
           </div>
-          <ul class="value-bullets teal-dots">
+          <ul class='value-bullets teal-dots'>
             <li>Core dependency for all current and pipeline Solon Tax implementations across multiple jurisdictions</li>
             <li>Strengthens competitive position as a full-featured tax revenue management platform in active tenders</li>
             <li>Platform completeness is a prerequisite condition cited in new-market RFP evaluation criteria</li>
@@ -4584,26 +5064,13 @@ TEMPLATE (study the HTML structure — replicate element types, class names, and
 
 KEY "auto_div_slide_footer":
 TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):
-<span class="footer-text">Solon Tax Product Roadmap 2026</span>
-    <span class="footer-text">Netcompany</span>
+<span class='footer-text'>Solon Tax Product Roadmap 2026</span>
+    <span class='footer-text'>Netcompany</span>
 ↑ Use this structure as a pattern only. Output exactly one repeating item (card, row, list item) per data record — never match the template's item count.
 
 
 === Agent 5: slide_1 — #5 ===
 You populate one slide instance in a presentation template with real content.
-
-STRUCTURAL CONTRACT (read before anything else):
-Every innerHTML value you return MUST mirror the TEMPLATE shown for each key:
-- Keep the exact same HTML element types, class names, attributes, and nesting structure.
-- Do NOT add new sections, new structural blocks, new headings, or new layout elements that are not present in the template.
-- Do NOT remove or collapse existing structural elements — every element in the template must appear in your output.
-- For repeating elements (table rows, list items, cards): output exactly one item per data record from SOURCE DATA. Do not cap the count to what the template shows — if the data has 9 records, output 9 rows. If the data has 2 records, output 2 rows.
-- Text content must be concise — match the approximate text density of the template. Do not write paragraphs where the template shows short labels or values.
-- Only data-driven text content (values, names, descriptions, metrics) and src/href values may differ from the template.
-- Fixed UI labels already present in the template — such as card titles, section headings, column headers, category names, and any other structural text — MUST be copied verbatim. Never rename, rephrase, or replace them, even if a different label seems more appropriate for the data.
-- Populate every data element with real values from SOURCE DATA only — do not invent or estimate.
-- Never invent labels, categories, statuses, groupings, or concepts not present verbatim in the SOURCE DATA — if the data does not contain it, write [DATA MISSING] for that element.
-Violating this breaks the slide layout irreparably.
 
 SOURCE DATA FOR THIS SLIDE INSTANCE (verbatim rows from context files):
 [Sheet: RichFeatureQueries.xlsx / Full Features] (47 rows)
@@ -4671,14 +5138,131 @@ Issue Type: Feature | IRM: IRM-39221 | Roadmap Initiative Group: OTHER ACTIVITIE
 Issue Type: Feature | IRM: IRM-39196 | Roadmap Initiative Group: OTHER ACTIVITIES | Roadmap Initiative: SUPPORT TO PDM | Roadmap Feature: Support to PdM - Before Feature Creation (Current PI28) | Requester: Other | PI: PI28 | Estimate: 80 | Feature Priority:  | Feature Status:  | Features Description: 
 Issue Type: Feature | IRM: IRM-39223 | Roadmap Initiative Group: OTHER ACTIVITIES | Roadmap Initiative: TECHNOLOGY MANAGEMENT | Roadmap Feature: Technology Management - Version Upgrades (Current PI28) | Requester: Other | PI: PI28 | Estimate: 208 | Feature Priority:  | Feature Status:  | Features Description: 
 
+=== Shared Reference Data ===
+=== RichFeatureQueries.xlsx / Estimate Pivot ===
+Roadmap Initiative Groups and Roadmap Initiatives | Sum of Estimate
+CORE REVENUE MANAGEMENT CAPABILITIES | 8839.699999999999
+BILLING, ASSESSMENTS AND INSTALLMENTS | 1120
+PENALTY & INTEREST | 2986.9
+REGISTRATION | 2389.8
+TAX ACCOUNTS | 529.9
+TAXPAYER ACCOUNTING | 1813.1
+CORE SELF SERVICE CAPABILITIES | 4366.1
+SELF SERVICE SERVICES MANAGEMENT | 835.2
+USER & 3RD PARTY ACCESS MANAGEMENT | 3530.9
+CORE SUPPORTING CAPABILITIES | 5342.8
+BATCH PROCESSING ENHANCEMENTS | 738.5
+CASE MANAGEMENT | 84
+CONTACT MANAGEMENT | 882.7
+CONTENT MANAGEMENT INTEGRATION | 80
+DOCUMENT MANAGEMENT INTEGRATION | 2090.9
+FORM PROCESSING | 373.1
+OPERATIONAL REPORTING | 72
+REFERENCE DATA | 606.9
+UI CONFIGURATION | 414.70000000000005
+NON-FUNCTIONAL REQUIREMENT COVERAGE | 17562.100000000002
+ACCESSIBILITY | 268.79999999999995
+EXTENSIBILITY | 156.8
+MAINTAINABILITY | 4579.800000000001
+OPERABILITY | 59.5
+PERFORMANCE EFFICIENCY | 955.2
+RELIABILITY | 2688
+SECURITY | 2758.8
+TEST SUITE OPTIMIZATION | 860
+TRACEABILITY | 2259.2000000000003
+USABILITY | 2976
+OTHER ACTIVITIES | 18794.2
+ARK | 80
+CEREMONIES AND TRAININGS | 3000
+CORRECTIVE MAINTENANCE | 560
+MANAGEMENT | 9115.2
+PREVENTIVE MAINTENANCE | 2960
+PRODUCT SUPPORT | 551
+PROJECT SUPPORT | 560
+RELEASE ACTIVITIES | 1120
+SECURITY | 560
+SUPPORT TO PDM | 80
+TECHNOLOGY MANAGEMENT | 208
+REFERENCE IMPLEMENTATIONS | 857.7
+APPLICATION PROCESSES | 42
+PIT | 0.8
+SELF SERVICE ACCOUNT OVERVIEW | 8
+SELF SERVICE FILING & PAYMENTS | 376.4
+VAT | 430.5
+Grand Total | 55762.6
+
+=== RichFeatureQueries.xlsx / Progress Pivot ===
+Count of Feature Status | Column Labels | __EMPTY | __EMPTY_1 | __EMPTY_2 | __EMPTY_3 | __EMPTY_4 | __EMPTY_5 | __EMPTY_6 | __EMPTY_7 | __EMPTY_8
+Row Labels | HLD | In Design | In Progress | Ready for Dev | To Do | Under Analysis | Waiting Analysis Approval | Waiting Solution Approval | (blank) | Grand Total
+CORE REVENUE MANAGEMENT CAPABILITIES | 2 | 3 |  |  | 1 |  | 7 |  |  | 13
+CORE SELF SERVICE CAPABILITIES |  | 1 |  |  | 1 |  | 6 |  |  | 8
+CORE SUPPORTING CAPABILITIES | 1 | 7 | 1 |  | 2 | 1 | 10 |  |  | 22
+NON-FUNCTIONAL REQUIREMENT COVERAGE | 3 | 6 |  | 2 | 38 | 2 | 17 | 1 |  | 69
+OTHER ACTIVITIES |  |  |  | 1 | 1 |  | 1 |  |  | 3
+REFERENCE IMPLEMENTATIONS | 1 |  |  | 1 | 1 | 2 | 7 |  |  | 12
+Grand Total | 7 | 17 | 1 | 4 | 44 | 5 | 48 | 1 |  | 127
+
+=== RichFeatureQueries.xlsx / Priority Pivot ===
+Count of Feature Priority | Column Labels | __EMPTY | __EMPTY_1 | __EMPTY_2 | __EMPTY_3
+Row Labels | p1 | p2 | p3 | (blank) | Grand Total
+CORE REVENUE MANAGEMENT CAPABILITIES | 10 | 1 | 2 |  | 13
+BILLING, ASSESSMENTS AND INSTALLMENTS | 2 |  |  |  | 2
+PENALTY & INTEREST |  | 1 |  |  | 1
+REGISTRATION | 3 |  |  |  | 3
+TAX ACCOUNTS | 3 |  |  |  | 3
+TAXPAYER ACCOUNTING | 2 |  | 2 |  | 4
+CORE SELF SERVICE CAPABILITIES | 6 |  | 2 |  | 8
+SELF SERVICE SERVICES MANAGEMENT | 1 |  | 1 |  | 2
+USER & 3RD PARTY ACCESS MANAGEMENT | 5 |  | 1 |  | 6
+CORE SUPPORTING CAPABILITIES | 12 |  | 10 |  | 22
+BATCH PROCESSING ENHANCEMENTS | 2 |  |  |  | 2
+CASE MANAGEMENT |  |  | 2 |  | 2
+CONTACT MANAGEMENT | 2 |  | 3 |  | 5
+CONTENT MANAGEMENT INTEGRATION |  |  | 1 |  | 1
+DOCUMENT MANAGEMENT INTEGRATION | 2 |  |  |  | 2
+FORM PROCESSING | 1 |  |  |  | 1
+OPERATIONAL REPORTING |  |  | 1 |  | 1
+REFERENCE DATA | 1 |  | 2 |  | 3
+UI CONFIGURATION | 4 |  | 1 |  | 5
+NON-FUNCTIONAL REQUIREMENT COVERAGE | 41 | 16 | 12 |  | 69
+ACCESSIBILITY | 7 |  |  |  | 7
+EXTENSIBILITY | 1 |  | 1 |  | 2
+MAINTAINABILITY | 10 | 3 | 3 |  | 16
+OPERABILITY | 1 |  |  |  | 1
+PERFORMANCE EFFICIENCY | 3 | 1 | 1 |  | 5
+RELIABILITY | 2 |  |  |  | 2
+SECURITY | 1 | 5 | 1 |  | 7
+TEST SUITE OPTIMIZATION |  |  | 1 |  | 1
+TRACEABILITY | 1 | 3 | 1 |  | 5
+USABILITY | 15 | 4 | 4 |  | 23
+OTHER ACTIVITIES | 1 |  | 2 |  | 3
+ARK |  |  | 2 |  | 2
+CEREMONIES AND TRAININGS |  |  |  |  | 
+CORRECTIVE MAINTENANCE |  |  |  |  | 
+MANAGEMENT |  |  |  |  | 
+PREVENTIVE MAINTENANCE |  |  |  |  | 
+PRODUCT SUPPORT |  |  |  |  | 
+PROJECT SUPPORT |  |  |  |  | 
+RELEASE ACTIVITIES |  |  |  |  | 
+SECURITY | 1 |  |  |  | 1
+SUPPORT TO PDM |  |  |  |  | 
+TECHNOLOGY MANAGEMENT |  |  |  |  | 
+REFERENCE IMPLEMENTATIONS | 3 | 2 | 7 |  | 12
+APPLICATION PROCESSES |  |  | 1 |  | 1
+PIT | 1 |  |  |  | 1
+SELF SERVICE ACCOUNT OVERVIEW |  |  | 1 |  | 1
+SELF SERVICE FILING & PAYMENTS | 1 | 1 | 5 |  | 7
+VAT | 1 | 1 |  |  | 2
+Grand Total | 73 | 19 | 35 |  | 127
+
 YOUR ROLE:
-- You are a content generator. Transform the SOURCE DATA above into polished HTML presentation content for this specific slide instance.
+- You are a content generator. Transform the SOURCE DATA above into polished presentation content for this specific slide instance.
 - Every fact, number, name, metric, label, category, and status in your output MUST come from the SOURCE DATA above.
 - Do not invent, estimate, or add data not present in the SOURCE DATA — this includes inventing plausible-sounding labels or categories that are not in the data.
-- If data for a zone element is missing from the SOURCE DATA, write [DATA MISSING] for that element — never substitute with invented content.
+- If data for a zone element is missing from the SOURCE DATA, write n/a for that element — never substitute with invented content.
 - ZONE INSTRUCTIONS per key are authoritative directives — follow them precisely and completely. They may specify expectations, tone, formatting, style or anything the user specifies in addition to data queries. These always take priority over defaults.
 
-  Task: generate HTML content for slide instance 5 of 6 using the SOURCE DATA above.
+  Task: generate content for slide instance 5 of 6 using the SOURCE DATA above.
 
 ⚠️ OUTPUT FORMAT — CRITICAL:
 Your entire response MUST be a single valid JSON object.
@@ -4693,211 +5277,227 @@ The object MUST have EXACTLY these keys:
   "auto_div_slide_footer": "<innerHTML matching template structure>",
 }
 
-TEMPLATES PER KEY (structure is a contract — fill with data, do not alter structure):
+HTML INSIDE JSON — MANDATORY RULES (for HTML zones):
+- ALL HTML attribute values MUST use single quotes (e.g. class='foo', href='...', src='...')
+- NEVER use double quotes inside HTML — they break JSON string parsing
+- Escape any literal backslashes in HTML as \
+
+STRUCTURAL CONTRACT FOR HTML ZONES (read before anything else):
+Every innerHTML value you return MUST mirror the TEMPLATE shown for each key:
+- Keep the exact same HTML element types, class names, attributes, and nesting structure.
+- Do NOT add new sections, new structural blocks, new headings, or new layout elements that are not present in the template.
+- Do NOT remove or collapse existing structural elements — every element in the template must appear in your output.
+- For repeating elements (table rows, list items, cards): output exactly one item per data record from SOURCE DATA. Do not cap the count to what the template shows — if the data has 9 records, output 9 rows. If the data has 2 records, output 2 rows.
+- Text content must be concise — match the approximate text density of the template. Do not write paragraphs where the template shows short labels or values.
+- Only data-driven text content (values, names, descriptions, metrics) and src/href values may differ from the template.
+- Fixed UI labels already present in the template — such as card titles, section headings, column headers, category names, and any other structural text — MUST be copied verbatim. Never rename, rephrase, or replace them, even if a different label seems more appropriate for the data.
+Violating this breaks the slide layout irreparably.
+
+HTML ZONES (TEMPLATES PER KEY — structure is a contract, fill with data, do not alter structure):
 
 KEY "auto_div_header":
 TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):
-<div class="header-left">
-      <div class="pi-badge">PI 28</div>
-      <div class="header-text-section">
-        <div class="header-label">Feature Catalog</div>
-        <div class="header-title">Core Revenue Management Capabilities</div>
-        <div class="header-subtitle">Roadmap Initiative Group</div>
+<div class='header-left'>
+      <div class='pi-badge'>PI 28</div>
+      <div class='header-text-section'>
+        <div class='header-label'>Feature Catalog</div>
+        <div class='header-title'>Core Revenue Management Capabilities</div>
+        <div class='header-subtitle'>Roadmap Initiative Group</div>
       </div>
     </div>
-    <div class="header-right">
-      <div class="header-stat">
-        <div class="header-stat-value">23,200</div>
-        <div class="header-stat-label">Total Hours</div>
+    <div class='header-right'>
+      <div class='header-stat'>
+        <div class='header-stat-value'>23,200</div>
+        <div class='header-stat-label'>Total Hours</div>
       </div>
-      <div class="header-divider"></div>
-      <div class="header-stat">
-        <div class="header-stat-value">10</div>
-        <div class="header-stat-label">Initiatives</div>
+      <div class='header-divider'></div>
+      <div class='header-stat'>
+        <div class='header-stat-value'>10</div>
+        <div class='header-stat-label'>Initiatives</div>
       </div>
-      <div class="header-divider"></div>
-      <div class="header-stat">
-        <div class="header-stat-value">35</div>
-        <div class="header-stat-label">Features</div>
+      <div class='header-divider'></div>
+      <div class='header-stat'>
+        <div class='header-stat-value'>35</div>
+        <div class='header-stat-label'>Features</div>
       </div>
     </div>
 ↑ Use this structure as a pattern only. Output exactly one repeating item (card, row, list item) per data record — never match the template's item count.
 
 KEY "auto_div_body":
 TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):
-<div class="table-wrap-outer">
-    <div class="table-wrap">
+<div class='table-wrap-outer'>
+    <div class='table-wrap'>
       <table>
         <thead>
           <tr>
-            <th style="width:32%">Initiative</th>
-            <th style="width:13%" class="sortable" data-col="1" data-type="effort">Effort</th>
-            <th style="width:17%" class="sortable" data-col="2" data-type="pi">PI</th>
-            <th style="width:20%" class="sortable" data-col="3" data-type="status">Status</th>
-            <th style="width:10%" class="sortable" data-col="4" data-type="priority">Priority</th>
-            <th style="width:8%"  class="sortable" data-col="5" data-type="number">Features</th>
+            <th style='width:32%'>Initiative</th>
+            <th style='width:13%' class='sortable' data-col='1' data-type='effort'>Effort</th>
+            <th style='width:17%' class='sortable' data-col='2' data-type='pi'>PI</th>
+            <th style='width:20%' class='sortable' data-col='3' data-type='status'>Status</th>
+            <th style='width:10%' class='sortable' data-col='4' data-type='priority'>Priority</th>
+            <th style='width:8%'  class='sortable' data-col='5' data-type='number'>Features</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>
-              <div class="init-name">Registration</div>
-              <div class="init-desc">Party identifiers, org hierarchy, search enhancements</div>
+              <div class='init-name'>Registration</div>
+              <div class='init-desc'>Party identifiers, org hierarchy, search enhancements</div>
             </td>
-            <td><span class="effort-pill">11,866h</span></td>
-            <td><span class="pi-text">PI 28</span></td>
+            <td><span class='effort-pill'>11,866h</span></td>
+            <td><span class='pi-text'>PI 28</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#F0A500;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#F0A500;'></span>
                 In Progress
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">14</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>14</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Taxpayer Accounting</div>
-              <div class="init-desc">General ledger core, reconciliation &amp; balance management</div>
+              <div class='init-name'>Taxpayer Accounting</div>
+              <div class='init-desc'>General ledger core, reconciliation &amp; balance management</div>
             </td>
-            <td><span class="effort-pill">8,064h</span></td>
-            <td><span class="pi-text">PI28</span></td>
+            <td><span class='effort-pill'>8,064h</span></td>
+            <td><span class='pi-text'>PI28</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#4A90D9;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#4A90D9;'></span>
                 In Analysis
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">9</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>9</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Returns Processing</div>
-              <div class="init-desc">Filing workflows, validation rules, submission tracking &amp; acknowledgements</div>
+              <div class='init-name'>Returns Processing</div>
+              <div class='init-desc'>Filing workflows, validation rules, submission tracking &amp; acknowledgements</div>
             </td>
-            <td><span class="effort-pill">4,320h</span></td>
-            <td><span class="pi-text">PI28</span></td>
+            <td><span class='effort-pill'>4,320h</span></td>
+            <td><span class='pi-text'>PI28</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#4A90D9;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#4A90D9;'></span>
                 In Analysis
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">7</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>7</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Payment Processing</div>
-              <div class="init-desc">Multi-channel payments, allocation rules &amp; reconciliation engine</div>
+              <div class='init-name'>Payment Processing</div>
+              <div class='init-desc'>Multi-channel payments, allocation rules &amp; reconciliation engine</div>
             </td>
-            <td><span class="effort-pill">3,200h</span></td>
-            <td><span class="pi-text">PI29</span></td>
+            <td><span class='effort-pill'>3,200h</span></td>
+            <td><span class='pi-text'>PI29</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#4A90D9;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#4A90D9;'></span>
                 In Analysis
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">6</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>6</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Billing &amp; Assessments</div>
-              <div class="init-desc">Instalment plans, assessment automation, billing cycles</div>
+              <div class='init-name'>Billing &amp; Assessments</div>
+              <div class='init-desc'>Instalment plans, assessment automation, billing cycles</div>
             </td>
-            <td><span class="effort-pill">2,880h</span></td>
-            <td><span class="pi-text">PI27</span></td>
+            <td><span class='effort-pill'>2,880h</span></td>
+            <td><span class='pi-text'>PI27</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#F0A500;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#F0A500;'></span>
                 In Progress
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">6</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>6</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Reporting &amp; Analytics</div>
-              <div class="init-desc">Management dashboards, statutory reports, KPI tracking &amp; exports</div>
+              <div class='init-name'>Reporting &amp; Analytics</div>
+              <div class='init-desc'>Management dashboards, statutory reports, KPI tracking &amp; exports</div>
             </td>
-            <td><span class="effort-pill">1,760h</span></td>
-            <td><span class="pi-text">PI29</span></td>
+            <td><span class='effort-pill'>1,760h</span></td>
+            <td><span class='pi-text'>PI29</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#F0A500;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#F0A500;'></span>
                 In Progress
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">3</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>3</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Penalty &amp; Interest</div>
-              <div class="init-desc">Interest calculation, credit unallocated payment segments</div>
+              <div class='init-name'>Penalty &amp; Interest</div>
+              <div class='init-desc'>Interest calculation, credit unallocated payment segments</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI29</span></td>
+            <td><span class='effort-pill'>TBD</span></td>
+            <td><span class='pi-text'>PI29</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#CCCCCC;'></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">4</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>4</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Tax Accounts</div>
-              <div class="init-desc">Tax account setup, configurable thresholds, notifications</div>
+              <div class='init-name'>Tax Accounts</div>
+              <div class='init-desc'>Tax account setup, configurable thresholds, notifications</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI29</span></td>
+            <td><span class='effort-pill'>TBD</span></td>
+            <td><span class='pi-text'>PI29</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#CCCCCC;'></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">2</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>2</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Debt Management</div>
-              <div class="init-desc">Debt recovery workflows, write-off management, enforcement actions</div>
+              <div class='init-name'>Debt Management</div>
+              <div class='init-desc'>Debt recovery workflows, write-off management, enforcement actions</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI30</span></td>
+            <td><span class='effort-pill'>TBD</span></td>
+            <td><span class='pi-text'>PI30</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#CCCCCC;'></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">5</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>5</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Audit &amp; Compliance</div>
-              <div class="init-desc">Case management, audit trail logging, compliance monitoring &amp; alerts</div>
+              <div class='init-name'>Audit &amp; Compliance</div>
+              <div class='init-desc'>Case management, audit trail logging, compliance monitoring &amp; alerts</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI30</span></td>
+            <td><span class='effort-pill'>TBD</span></td>
+            <td><span class='pi-text'>PI30</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#CCCCCC;'></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">4</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>4</span></td>
           </tr>
         </tbody>
       </table>
@@ -4905,19 +5505,19 @@ TEMPLATE (study the HTML structure — replicate element types, class names, and
     </div>
 
     
-    <div class="right-panel">
+    <div class='right-panel'>
 
       
-      <div class="value-card">
-        <div class="card-stripe coral"></div>
-        <div class="card-inner">
-          <div class="card-header-row">
-            <div class="card-title-group">
-              <div class="card-title">Business Value</div>
-              <div class="card-subtitle">Operational impact &amp; delivery enablement</div>
+      <div class='value-card'>
+        <div class='card-stripe coral'></div>
+        <div class='card-inner'>
+          <div class='card-header-row'>
+            <div class='card-title-group'>
+              <div class='card-title'>Business Value</div>
+              <div class='card-subtitle'>Operational impact &amp; delivery enablement</div>
             </div>
           </div>
-          <ul class="value-bullets coral-dots">
+          <ul class='value-bullets coral-dots'>
             <li>End-to-end taxpayer lifecycle management from registration through accounting and penalty enforcement</li>
             <li>Automated billing, assessments &amp; penalty calculations reduce manual caseworker effort across all tax types</li>
             <li>Directly accelerates Greek project delivery and enables rapid reuse across future jurisdictions</li>
@@ -4926,16 +5526,16 @@ TEMPLATE (study the HTML structure — replicate element types, class names, and
       </div>
 
       
-      <div class="value-card">
-        <div class="card-stripe teal"></div>
-        <div class="card-inner">
-          <div class="card-header-row">
-            <div class="card-title-group">
-              <div class="card-title">Market Relevance</div>
-              <div class="card-subtitle">Strategic positioning &amp; pipeline dependency</div>
+      <div class='value-card'>
+        <div class='card-stripe teal'></div>
+        <div class='card-inner'>
+          <div class='card-header-row'>
+            <div class='card-title-group'>
+              <div class='card-title'>Market Relevance</div>
+              <div class='card-subtitle'>Strategic positioning &amp; pipeline dependency</div>
             </div>
           </div>
-          <ul class="value-bullets teal-dots">
+          <ul class='value-bullets teal-dots'>
             <li>Core dependency for all current and pipeline Solon Tax implementations across multiple jurisdictions</li>
             <li>Strengthens competitive position as a full-featured tax revenue management platform in active tenders</li>
             <li>Platform completeness is a prerequisite condition cited in new-market RFP evaluation criteria</li>
@@ -4948,26 +5548,13 @@ TEMPLATE (study the HTML structure — replicate element types, class names, and
 
 KEY "auto_div_slide_footer":
 TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):
-<span class="footer-text">Solon Tax Product Roadmap 2026</span>
-    <span class="footer-text">Netcompany</span>
+<span class='footer-text'>Solon Tax Product Roadmap 2026</span>
+    <span class='footer-text'>Netcompany</span>
 ↑ Use this structure as a pattern only. Output exactly one repeating item (card, row, list item) per data record — never match the template's item count.
 
 
 === Agent 6: slide_1 — #6 ===
 You populate one slide instance in a presentation template with real content.
-
-STRUCTURAL CONTRACT (read before anything else):
-Every innerHTML value you return MUST mirror the TEMPLATE shown for each key:
-- Keep the exact same HTML element types, class names, attributes, and nesting structure.
-- Do NOT add new sections, new structural blocks, new headings, or new layout elements that are not present in the template.
-- Do NOT remove or collapse existing structural elements — every element in the template must appear in your output.
-- For repeating elements (table rows, list items, cards): output exactly one item per data record from SOURCE DATA. Do not cap the count to what the template shows — if the data has 9 records, output 9 rows. If the data has 2 records, output 2 rows.
-- Text content must be concise — match the approximate text density of the template. Do not write paragraphs where the template shows short labels or values.
-- Only data-driven text content (values, names, descriptions, metrics) and src/href values may differ from the template.
-- Fixed UI labels already present in the template — such as card titles, section headings, column headers, category names, and any other structural text — MUST be copied verbatim. Never rename, rephrase, or replace them, even if a different label seems more appropriate for the data.
-- Populate every data element with real values from SOURCE DATA only — do not invent or estimate.
-- Never invent labels, categories, statuses, groupings, or concepts not present verbatim in the SOURCE DATA — if the data does not contain it, write [DATA MISSING] for that element.
-Violating this breaks the slide layout irreparably.
 
 SOURCE DATA FOR THIS SLIDE INSTANCE (verbatim rows from context files):
 [Sheet: RichFeatureQueries.xlsx / Full Features] (8 rows)
@@ -5431,14 +6018,131 @@ DODs should be fulfilled.
 
  
 
+=== Shared Reference Data ===
+=== RichFeatureQueries.xlsx / Estimate Pivot ===
+Roadmap Initiative Groups and Roadmap Initiatives | Sum of Estimate
+CORE REVENUE MANAGEMENT CAPABILITIES | 8839.699999999999
+BILLING, ASSESSMENTS AND INSTALLMENTS | 1120
+PENALTY & INTEREST | 2986.9
+REGISTRATION | 2389.8
+TAX ACCOUNTS | 529.9
+TAXPAYER ACCOUNTING | 1813.1
+CORE SELF SERVICE CAPABILITIES | 4366.1
+SELF SERVICE SERVICES MANAGEMENT | 835.2
+USER & 3RD PARTY ACCESS MANAGEMENT | 3530.9
+CORE SUPPORTING CAPABILITIES | 5342.8
+BATCH PROCESSING ENHANCEMENTS | 738.5
+CASE MANAGEMENT | 84
+CONTACT MANAGEMENT | 882.7
+CONTENT MANAGEMENT INTEGRATION | 80
+DOCUMENT MANAGEMENT INTEGRATION | 2090.9
+FORM PROCESSING | 373.1
+OPERATIONAL REPORTING | 72
+REFERENCE DATA | 606.9
+UI CONFIGURATION | 414.70000000000005
+NON-FUNCTIONAL REQUIREMENT COVERAGE | 17562.100000000002
+ACCESSIBILITY | 268.79999999999995
+EXTENSIBILITY | 156.8
+MAINTAINABILITY | 4579.800000000001
+OPERABILITY | 59.5
+PERFORMANCE EFFICIENCY | 955.2
+RELIABILITY | 2688
+SECURITY | 2758.8
+TEST SUITE OPTIMIZATION | 860
+TRACEABILITY | 2259.2000000000003
+USABILITY | 2976
+OTHER ACTIVITIES | 18794.2
+ARK | 80
+CEREMONIES AND TRAININGS | 3000
+CORRECTIVE MAINTENANCE | 560
+MANAGEMENT | 9115.2
+PREVENTIVE MAINTENANCE | 2960
+PRODUCT SUPPORT | 551
+PROJECT SUPPORT | 560
+RELEASE ACTIVITIES | 1120
+SECURITY | 560
+SUPPORT TO PDM | 80
+TECHNOLOGY MANAGEMENT | 208
+REFERENCE IMPLEMENTATIONS | 857.7
+APPLICATION PROCESSES | 42
+PIT | 0.8
+SELF SERVICE ACCOUNT OVERVIEW | 8
+SELF SERVICE FILING & PAYMENTS | 376.4
+VAT | 430.5
+Grand Total | 55762.6
+
+=== RichFeatureQueries.xlsx / Progress Pivot ===
+Count of Feature Status | Column Labels | __EMPTY | __EMPTY_1 | __EMPTY_2 | __EMPTY_3 | __EMPTY_4 | __EMPTY_5 | __EMPTY_6 | __EMPTY_7 | __EMPTY_8
+Row Labels | HLD | In Design | In Progress | Ready for Dev | To Do | Under Analysis | Waiting Analysis Approval | Waiting Solution Approval | (blank) | Grand Total
+CORE REVENUE MANAGEMENT CAPABILITIES | 2 | 3 |  |  | 1 |  | 7 |  |  | 13
+CORE SELF SERVICE CAPABILITIES |  | 1 |  |  | 1 |  | 6 |  |  | 8
+CORE SUPPORTING CAPABILITIES | 1 | 7 | 1 |  | 2 | 1 | 10 |  |  | 22
+NON-FUNCTIONAL REQUIREMENT COVERAGE | 3 | 6 |  | 2 | 38 | 2 | 17 | 1 |  | 69
+OTHER ACTIVITIES |  |  |  | 1 | 1 |  | 1 |  |  | 3
+REFERENCE IMPLEMENTATIONS | 1 |  |  | 1 | 1 | 2 | 7 |  |  | 12
+Grand Total | 7 | 17 | 1 | 4 | 44 | 5 | 48 | 1 |  | 127
+
+=== RichFeatureQueries.xlsx / Priority Pivot ===
+Count of Feature Priority | Column Labels | __EMPTY | __EMPTY_1 | __EMPTY_2 | __EMPTY_3
+Row Labels | p1 | p2 | p3 | (blank) | Grand Total
+CORE REVENUE MANAGEMENT CAPABILITIES | 10 | 1 | 2 |  | 13
+BILLING, ASSESSMENTS AND INSTALLMENTS | 2 |  |  |  | 2
+PENALTY & INTEREST |  | 1 |  |  | 1
+REGISTRATION | 3 |  |  |  | 3
+TAX ACCOUNTS | 3 |  |  |  | 3
+TAXPAYER ACCOUNTING | 2 |  | 2 |  | 4
+CORE SELF SERVICE CAPABILITIES | 6 |  | 2 |  | 8
+SELF SERVICE SERVICES MANAGEMENT | 1 |  | 1 |  | 2
+USER & 3RD PARTY ACCESS MANAGEMENT | 5 |  | 1 |  | 6
+CORE SUPPORTING CAPABILITIES | 12 |  | 10 |  | 22
+BATCH PROCESSING ENHANCEMENTS | 2 |  |  |  | 2
+CASE MANAGEMENT |  |  | 2 |  | 2
+CONTACT MANAGEMENT | 2 |  | 3 |  | 5
+CONTENT MANAGEMENT INTEGRATION |  |  | 1 |  | 1
+DOCUMENT MANAGEMENT INTEGRATION | 2 |  |  |  | 2
+FORM PROCESSING | 1 |  |  |  | 1
+OPERATIONAL REPORTING |  |  | 1 |  | 1
+REFERENCE DATA | 1 |  | 2 |  | 3
+UI CONFIGURATION | 4 |  | 1 |  | 5
+NON-FUNCTIONAL REQUIREMENT COVERAGE | 41 | 16 | 12 |  | 69
+ACCESSIBILITY | 7 |  |  |  | 7
+EXTENSIBILITY | 1 |  | 1 |  | 2
+MAINTAINABILITY | 10 | 3 | 3 |  | 16
+OPERABILITY | 1 |  |  |  | 1
+PERFORMANCE EFFICIENCY | 3 | 1 | 1 |  | 5
+RELIABILITY | 2 |  |  |  | 2
+SECURITY | 1 | 5 | 1 |  | 7
+TEST SUITE OPTIMIZATION |  |  | 1 |  | 1
+TRACEABILITY | 1 | 3 | 1 |  | 5
+USABILITY | 15 | 4 | 4 |  | 23
+OTHER ACTIVITIES | 1 |  | 2 |  | 3
+ARK |  |  | 2 |  | 2
+CEREMONIES AND TRAININGS |  |  |  |  | 
+CORRECTIVE MAINTENANCE |  |  |  |  | 
+MANAGEMENT |  |  |  |  | 
+PREVENTIVE MAINTENANCE |  |  |  |  | 
+PRODUCT SUPPORT |  |  |  |  | 
+PROJECT SUPPORT |  |  |  |  | 
+RELEASE ACTIVITIES |  |  |  |  | 
+SECURITY | 1 |  |  |  | 1
+SUPPORT TO PDM |  |  |  |  | 
+TECHNOLOGY MANAGEMENT |  |  |  |  | 
+REFERENCE IMPLEMENTATIONS | 3 | 2 | 7 |  | 12
+APPLICATION PROCESSES |  |  | 1 |  | 1
+PIT | 1 |  |  |  | 1
+SELF SERVICE ACCOUNT OVERVIEW |  |  | 1 |  | 1
+SELF SERVICE FILING & PAYMENTS | 1 | 1 | 5 |  | 7
+VAT | 1 | 1 |  |  | 2
+Grand Total | 73 | 19 | 35 |  | 127
+
 YOUR ROLE:
-- You are a content generator. Transform the SOURCE DATA above into polished HTML presentation content for this specific slide instance.
+- You are a content generator. Transform the SOURCE DATA above into polished presentation content for this specific slide instance.
 - Every fact, number, name, metric, label, category, and status in your output MUST come from the SOURCE DATA above.
 - Do not invent, estimate, or add data not present in the SOURCE DATA — this includes inventing plausible-sounding labels or categories that are not in the data.
-- If data for a zone element is missing from the SOURCE DATA, write [DATA MISSING] for that element — never substitute with invented content.
+- If data for a zone element is missing from the SOURCE DATA, write n/a for that element — never substitute with invented content.
 - ZONE INSTRUCTIONS per key are authoritative directives — follow them precisely and completely. They may specify expectations, tone, formatting, style or anything the user specifies in addition to data queries. These always take priority over defaults.
 
-  Task: generate HTML content for slide instance 6 of 6 using the SOURCE DATA above.
+  Task: generate content for slide instance 6 of 6 using the SOURCE DATA above.
 
 ⚠️ OUTPUT FORMAT — CRITICAL:
 Your entire response MUST be a single valid JSON object.
@@ -5453,211 +6157,227 @@ The object MUST have EXACTLY these keys:
   "auto_div_slide_footer": "<innerHTML matching template structure>",
 }
 
-TEMPLATES PER KEY (structure is a contract — fill with data, do not alter structure):
+HTML INSIDE JSON — MANDATORY RULES (for HTML zones):
+- ALL HTML attribute values MUST use single quotes (e.g. class='foo', href='...', src='...')
+- NEVER use double quotes inside HTML — they break JSON string parsing
+- Escape any literal backslashes in HTML as \
+
+STRUCTURAL CONTRACT FOR HTML ZONES (read before anything else):
+Every innerHTML value you return MUST mirror the TEMPLATE shown for each key:
+- Keep the exact same HTML element types, class names, attributes, and nesting structure.
+- Do NOT add new sections, new structural blocks, new headings, or new layout elements that are not present in the template.
+- Do NOT remove or collapse existing structural elements — every element in the template must appear in your output.
+- For repeating elements (table rows, list items, cards): output exactly one item per data record from SOURCE DATA. Do not cap the count to what the template shows — if the data has 9 records, output 9 rows. If the data has 2 records, output 2 rows.
+- Text content must be concise — match the approximate text density of the template. Do not write paragraphs where the template shows short labels or values.
+- Only data-driven text content (values, names, descriptions, metrics) and src/href values may differ from the template.
+- Fixed UI labels already present in the template — such as card titles, section headings, column headers, category names, and any other structural text — MUST be copied verbatim. Never rename, rephrase, or replace them, even if a different label seems more appropriate for the data.
+Violating this breaks the slide layout irreparably.
+
+HTML ZONES (TEMPLATES PER KEY — structure is a contract, fill with data, do not alter structure):
 
 KEY "auto_div_header":
 TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):
-<div class="header-left">
-      <div class="pi-badge">PI 28</div>
-      <div class="header-text-section">
-        <div class="header-label">Feature Catalog</div>
-        <div class="header-title">Core Revenue Management Capabilities</div>
-        <div class="header-subtitle">Roadmap Initiative Group</div>
+<div class='header-left'>
+      <div class='pi-badge'>PI 28</div>
+      <div class='header-text-section'>
+        <div class='header-label'>Feature Catalog</div>
+        <div class='header-title'>Core Revenue Management Capabilities</div>
+        <div class='header-subtitle'>Roadmap Initiative Group</div>
       </div>
     </div>
-    <div class="header-right">
-      <div class="header-stat">
-        <div class="header-stat-value">23,200</div>
-        <div class="header-stat-label">Total Hours</div>
+    <div class='header-right'>
+      <div class='header-stat'>
+        <div class='header-stat-value'>23,200</div>
+        <div class='header-stat-label'>Total Hours</div>
       </div>
-      <div class="header-divider"></div>
-      <div class="header-stat">
-        <div class="header-stat-value">10</div>
-        <div class="header-stat-label">Initiatives</div>
+      <div class='header-divider'></div>
+      <div class='header-stat'>
+        <div class='header-stat-value'>10</div>
+        <div class='header-stat-label'>Initiatives</div>
       </div>
-      <div class="header-divider"></div>
-      <div class="header-stat">
-        <div class="header-stat-value">35</div>
-        <div class="header-stat-label">Features</div>
+      <div class='header-divider'></div>
+      <div class='header-stat'>
+        <div class='header-stat-value'>35</div>
+        <div class='header-stat-label'>Features</div>
       </div>
     </div>
 ↑ Use this structure as a pattern only. Output exactly one repeating item (card, row, list item) per data record — never match the template's item count.
 
 KEY "auto_div_body":
 TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):
-<div class="table-wrap-outer">
-    <div class="table-wrap">
+<div class='table-wrap-outer'>
+    <div class='table-wrap'>
       <table>
         <thead>
           <tr>
-            <th style="width:32%">Initiative</th>
-            <th style="width:13%" class="sortable" data-col="1" data-type="effort">Effort</th>
-            <th style="width:17%" class="sortable" data-col="2" data-type="pi">PI</th>
-            <th style="width:20%" class="sortable" data-col="3" data-type="status">Status</th>
-            <th style="width:10%" class="sortable" data-col="4" data-type="priority">Priority</th>
-            <th style="width:8%"  class="sortable" data-col="5" data-type="number">Features</th>
+            <th style='width:32%'>Initiative</th>
+            <th style='width:13%' class='sortable' data-col='1' data-type='effort'>Effort</th>
+            <th style='width:17%' class='sortable' data-col='2' data-type='pi'>PI</th>
+            <th style='width:20%' class='sortable' data-col='3' data-type='status'>Status</th>
+            <th style='width:10%' class='sortable' data-col='4' data-type='priority'>Priority</th>
+            <th style='width:8%'  class='sortable' data-col='5' data-type='number'>Features</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>
-              <div class="init-name">Registration</div>
-              <div class="init-desc">Party identifiers, org hierarchy, search enhancements</div>
+              <div class='init-name'>Registration</div>
+              <div class='init-desc'>Party identifiers, org hierarchy, search enhancements</div>
             </td>
-            <td><span class="effort-pill">11,866h</span></td>
-            <td><span class="pi-text">PI 28</span></td>
+            <td><span class='effort-pill'>11,866h</span></td>
+            <td><span class='pi-text'>PI 28</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#F0A500;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#F0A500;'></span>
                 In Progress
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">14</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>14</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Taxpayer Accounting</div>
-              <div class="init-desc">General ledger core, reconciliation &amp; balance management</div>
+              <div class='init-name'>Taxpayer Accounting</div>
+              <div class='init-desc'>General ledger core, reconciliation &amp; balance management</div>
             </td>
-            <td><span class="effort-pill">8,064h</span></td>
-            <td><span class="pi-text">PI28</span></td>
+            <td><span class='effort-pill'>8,064h</span></td>
+            <td><span class='pi-text'>PI28</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#4A90D9;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#4A90D9;'></span>
                 In Analysis
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">9</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>9</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Returns Processing</div>
-              <div class="init-desc">Filing workflows, validation rules, submission tracking &amp; acknowledgements</div>
+              <div class='init-name'>Returns Processing</div>
+              <div class='init-desc'>Filing workflows, validation rules, submission tracking &amp; acknowledgements</div>
             </td>
-            <td><span class="effort-pill">4,320h</span></td>
-            <td><span class="pi-text">PI28</span></td>
+            <td><span class='effort-pill'>4,320h</span></td>
+            <td><span class='pi-text'>PI28</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#4A90D9;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#4A90D9;'></span>
                 In Analysis
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">7</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>7</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Payment Processing</div>
-              <div class="init-desc">Multi-channel payments, allocation rules &amp; reconciliation engine</div>
+              <div class='init-name'>Payment Processing</div>
+              <div class='init-desc'>Multi-channel payments, allocation rules &amp; reconciliation engine</div>
             </td>
-            <td><span class="effort-pill">3,200h</span></td>
-            <td><span class="pi-text">PI29</span></td>
+            <td><span class='effort-pill'>3,200h</span></td>
+            <td><span class='pi-text'>PI29</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#4A90D9;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#4A90D9;'></span>
                 In Analysis
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">6</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>6</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Billing &amp; Assessments</div>
-              <div class="init-desc">Instalment plans, assessment automation, billing cycles</div>
+              <div class='init-name'>Billing &amp; Assessments</div>
+              <div class='init-desc'>Instalment plans, assessment automation, billing cycles</div>
             </td>
-            <td><span class="effort-pill">2,880h</span></td>
-            <td><span class="pi-text">PI27</span></td>
+            <td><span class='effort-pill'>2,880h</span></td>
+            <td><span class='pi-text'>PI27</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#F0A500;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#F0A500;'></span>
                 In Progress
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">6</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>6</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Reporting &amp; Analytics</div>
-              <div class="init-desc">Management dashboards, statutory reports, KPI tracking &amp; exports</div>
+              <div class='init-name'>Reporting &amp; Analytics</div>
+              <div class='init-desc'>Management dashboards, statutory reports, KPI tracking &amp; exports</div>
             </td>
-            <td><span class="effort-pill">1,760h</span></td>
-            <td><span class="pi-text">PI29</span></td>
+            <td><span class='effort-pill'>1,760h</span></td>
+            <td><span class='pi-text'>PI29</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#F0A500;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#F0A500;'></span>
                 In Progress
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">3</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>3</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Penalty &amp; Interest</div>
-              <div class="init-desc">Interest calculation, credit unallocated payment segments</div>
+              <div class='init-name'>Penalty &amp; Interest</div>
+              <div class='init-desc'>Interest calculation, credit unallocated payment segments</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI29</span></td>
+            <td><span class='effort-pill'>TBD</span></td>
+            <td><span class='pi-text'>PI29</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#CCCCCC;'></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">4</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>4</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Tax Accounts</div>
-              <div class="init-desc">Tax account setup, configurable thresholds, notifications</div>
+              <div class='init-name'>Tax Accounts</div>
+              <div class='init-desc'>Tax account setup, configurable thresholds, notifications</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI29</span></td>
+            <td><span class='effort-pill'>TBD</span></td>
+            <td><span class='pi-text'>PI29</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#CCCCCC;'></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#FF6359;">P1</span></td>
-            <td><span class="feat-count">2</span></td>
+            <td><span class='prio-badge' style='background:#FF6359;'>P1</span></td>
+            <td><span class='feat-count'>2</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Debt Management</div>
-              <div class="init-desc">Debt recovery workflows, write-off management, enforcement actions</div>
+              <div class='init-name'>Debt Management</div>
+              <div class='init-desc'>Debt recovery workflows, write-off management, enforcement actions</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI30</span></td>
+            <td><span class='effort-pill'>TBD</span></td>
+            <td><span class='pi-text'>PI30</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#CCCCCC;'></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">5</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>5</span></td>
           </tr>
           <tr>
             <td>
-              <div class="init-name">Audit &amp; Compliance</div>
-              <div class="init-desc">Case management, audit trail logging, compliance monitoring &amp; alerts</div>
+              <div class='init-name'>Audit &amp; Compliance</div>
+              <div class='init-desc'>Case management, audit trail logging, compliance monitoring &amp; alerts</div>
             </td>
-            <td><span class="effort-pill">TBD</span></td>
-            <td><span class="pi-text">PI30</span></td>
+            <td><span class='effort-pill'>TBD</span></td>
+            <td><span class='pi-text'>PI30</span></td>
             <td>
-              <span class="status-badge">
-                <span class="status-dot" style="background:#CCCCCC;"></span>
+              <span class='status-badge'>
+                <span class='status-dot' style='background:#CCCCCC;'></span>
                 To Do
               </span>
             </td>
-            <td><span class="prio-badge" style="background:#F0A500;">P2</span></td>
-            <td><span class="feat-count">4</span></td>
+            <td><span class='prio-badge' style='background:#F0A500;'>P2</span></td>
+            <td><span class='feat-count'>4</span></td>
           </tr>
         </tbody>
       </table>
@@ -5665,19 +6385,19 @@ TEMPLATE (study the HTML structure — replicate element types, class names, and
     </div>
 
     
-    <div class="right-panel">
+    <div class='right-panel'>
 
       
-      <div class="value-card">
-        <div class="card-stripe coral"></div>
-        <div class="card-inner">
-          <div class="card-header-row">
-            <div class="card-title-group">
-              <div class="card-title">Business Value</div>
-              <div class="card-subtitle">Operational impact &amp; delivery enablement</div>
+      <div class='value-card'>
+        <div class='card-stripe coral'></div>
+        <div class='card-inner'>
+          <div class='card-header-row'>
+            <div class='card-title-group'>
+              <div class='card-title'>Business Value</div>
+              <div class='card-subtitle'>Operational impact &amp; delivery enablement</div>
             </div>
           </div>
-          <ul class="value-bullets coral-dots">
+          <ul class='value-bullets coral-dots'>
             <li>End-to-end taxpayer lifecycle management from registration through accounting and penalty enforcement</li>
             <li>Automated billing, assessments &amp; penalty calculations reduce manual caseworker effort across all tax types</li>
             <li>Directly accelerates Greek project delivery and enables rapid reuse across future jurisdictions</li>
@@ -5686,16 +6406,16 @@ TEMPLATE (study the HTML structure — replicate element types, class names, and
       </div>
 
       
-      <div class="value-card">
-        <div class="card-stripe teal"></div>
-        <div class="card-inner">
-          <div class="card-header-row">
-            <div class="card-title-group">
-              <div class="card-title">Market Relevance</div>
-              <div class="card-subtitle">Strategic positioning &amp; pipeline dependency</div>
+      <div class='value-card'>
+        <div class='card-stripe teal'></div>
+        <div class='card-inner'>
+          <div class='card-header-row'>
+            <div class='card-title-group'>
+              <div class='card-title'>Market Relevance</div>
+              <div class='card-subtitle'>Strategic positioning &amp; pipeline dependency</div>
             </div>
           </div>
-          <ul class="value-bullets teal-dots">
+          <ul class='value-bullets teal-dots'>
             <li>Core dependency for all current and pipeline Solon Tax implementations across multiple jurisdictions</li>
             <li>Strengthens competitive position as a full-featured tax revenue management platform in active tenders</li>
             <li>Platform completeness is a prerequisite condition cited in new-market RFP evaluation criteria</li>
@@ -5708,6 +6428,6 @@ TEMPLATE (study the HTML structure — replicate element types, class names, and
 
 KEY "auto_div_slide_footer":
 TEMPLATE (study the HTML structure — replicate element types, class names, and nesting using SOURCE DATA only):
-<span class="footer-text">Solon Tax Product Roadmap 2026</span>
-    <span class="footer-text">Netcompany</span>
+<span class='footer-text'>Solon Tax Product Roadmap 2026</span>
+    <span class='footer-text'>Netcompany</span>
 ↑ Use this structure as a pattern only. Output exactly one repeating item (card, row, list item) per data record — never match the template's item count.
