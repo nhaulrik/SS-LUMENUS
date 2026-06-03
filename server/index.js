@@ -10,6 +10,7 @@ import aiProxyRoutes from './routes/ai-proxy.js';
 import agenticRoutes   from './routes/opencode-agentic.js';
 import presentationStructuresRoutes from './routes/presentation-structures.js';
 import presentationsRoutes from './routes/presentations.js';
+import catalogGroupsRoutes from './routes/catalog-groups.js';
 
 dotenv.config({ path: './server/.env' });
 
@@ -22,6 +23,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use('/api/projects', projectsRoutes);
 app.use('/api/projects', presentationStructuresRoutes);
 app.use('/api/projects', presentationsRoutes);
+app.use('/api/projects', catalogGroupsRoutes);
 app.use('/api', htmlFlowRoutes);
 app.use('/api', aiProxyRoutes);
 app.use('/api/opencode', agenticRoutes);
