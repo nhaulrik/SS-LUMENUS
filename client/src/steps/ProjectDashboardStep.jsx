@@ -15,6 +15,8 @@ const IFRAME_SCALE = OVL_W / 1280
 function TemplatePreview({ projectName, flowId }) {
   const [html, setHtml] = useState(null)
   const [overlayPos, setOverlayPos] = useState(null)
+  const [hiding, setHiding] = useState(false)
+  const hideTimer = useRef(null)
   const cardRef = useRef(null)
 
   useEffect(() => {
@@ -28,10 +30,17 @@ function TemplatePreview({ projectName, flowId }) {
 
   const handleMouseEnter = () => {
     if (!html || !cardRef.current) return
+    if (hideTimer.current) { clearTimeout(hideTimer.current); hideTimer.current = null }
+    setHiding(false)
     const r = cardRef.current.getBoundingClientRect()
-    const top = Math.max(8, Math.min(r.top, window.innerHeight - OVL_H - 8))
-    const left = Math.max(8, Math.min(r.left, window.innerWidth - OVL_W - 8))
+    const top = Math.max(8, (window.innerHeight - OVL_H) / 2)
+    const left = Math.max(8, (window.innerWidth - OVL_W) / 2)
     setOverlayPos({ top, left })
+  }
+
+  const handleMouseLeave = () => {
+    setHiding(true)
+    hideTimer.current = setTimeout(() => { setOverlayPos(null); setHiding(false); hideTimer.current = null }, 250)
   }
 
   return (
@@ -39,7 +48,7 @@ function TemplatePreview({ projectName, flowId }) {
       ref={cardRef}
       className={styles.templatePreviewCard}
       onMouseEnter={handleMouseEnter}
-      onMouseLeave={() => setOverlayPos(null)}
+      onMouseLeave={handleMouseLeave}
     >
       <div className={styles.templatePreviewFrame}>
         {html ? (
@@ -54,19 +63,23 @@ function TemplatePreview({ projectName, flowId }) {
         )}
       </div>
       {overlayPos && createPortal(
-        <div style={{
-          position: 'fixed',
-          top: overlayPos.top,
-          left: overlayPos.left,
-          width: OVL_W,
-          height: OVL_H,
-          overflow: 'hidden',
-          borderRadius: 6,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.65)',
-          zIndex: 9999,
-          pointerEvents: 'none',
-          background: '#080e1a',
-        }}>
+        <div
+          className={hiding ? styles.overlayHiding : styles.overlayVisible}
+          style={{
+            position: 'fixed',
+            top: overlayPos.top,
+            left: overlayPos.left,
+            width: OVL_W,
+            height: OVL_H,
+            overflow: 'hidden',
+            borderRadius: 6,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.65)',
+            zIndex: 9999,
+            pointerEvents: 'none',
+            background: '#080e1a',
+            transformOrigin: 'top left',
+          }}
+        >
           <iframe
             srcDoc={html}
             sandbox="allow-same-origin"
