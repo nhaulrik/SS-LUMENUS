@@ -233,7 +233,6 @@ export default function ProjectLandingStep({ onProjectSelected, setToast }) {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.title}>SOLON Slide Studio</h1>
         <p className={styles.subtitle}>
           {hasProjects ? 'Pick up where you left off, or create a new project' : 'Create a project to get started'}
         </p>
