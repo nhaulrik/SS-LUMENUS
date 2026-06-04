@@ -19,7 +19,6 @@ import {
   deleteProject,
   deleteFlow,
   convertProjectType,
-  findProject,
   resolveProjectDir,
   resolveFlowDir,
 } from '../lib/project/project-manager.js';
@@ -48,10 +47,11 @@ router.post('/', (req, res) => {
     if (!['private', 'shared'].includes(type)) {
       return res.status(400).json({ error: 'Invalid project type. Must be "private" or "shared".' });
     }
-    if (!resolveProjectDir(name, type)) {
+    const projectDir = resolveProjectDir(name);
+    if (!projectDir) {
       return res.status(400).json({ error: 'Invalid project name. Use letters, numbers, hyphens, and underscores only.' });
     }
-    if (findProject(name)) {
+    if (fs.existsSync(projectDir)) {
       return res.status(409).json({ error: `Project "${name}" already exists` });
     }
     if (!createProject(name, type)) {
@@ -122,7 +122,7 @@ router.get('/:projectName/flows/:flowId', (req, res) => {
 
 router.patch('/:projectName/flows/:flowId', (req, res) => {
   try {
-    const { globalPrompt, status, repeatableSlides, summaryPrompt, contentPrompt, sliceOutputTemplate, selections, fullSlideGeneration, selectedContextFiles, filters } = req.body;
+    const { globalPrompt, status, repeatableSlides, summaryPrompt, contentPrompt, sliceOutputTemplate, selections, fullSlideGeneration } = req.body;
     const flow = loadFlow(req.params.projectName, req.params.flowId);
     if (!flow) return res.status(404).json({ error: 'Flow not found' });
 
@@ -130,8 +130,6 @@ router.patch('/:projectName/flows/:flowId', (req, res) => {
     if (summaryPrompt !== undefined) flow.summaryPrompt = summaryPrompt;
     if (contentPrompt !== undefined) flow.contentPrompt = contentPrompt;
     if (sliceOutputTemplate !== undefined) flow.sliceOutputTemplate = sliceOutputTemplate;
-    if (Array.isArray(selectedContextFiles)) flow.selectedContextFiles = selectedContextFiles;
-    if (Array.isArray(filters)) flow.filters = filters;
     if (status !== undefined) {
       if (!['active', 'paused', 'archived'].includes(status)) {
         return res.status(400).json({ error: 'Invalid status' });

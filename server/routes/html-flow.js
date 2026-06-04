@@ -18,7 +18,6 @@ import path           from 'path';
 import { randomUUID } from 'crypto';
 import { parse }      from 'node-html-parser';
 import { PROJECTS_DIR, PENDING_TEMPLATE_TTL_MS, MAX_JSON_UPLOAD_BYTES } from '../config.js';
-import { resolveProjectDir, findProject } from '../lib/project/project-manager.js';
 import { validateHtmlJson } from '../lib/html/html-recipe-builder.js';
 import { applyHtmlContent }                  from '../lib/html/html-patcher.js';
 import { buildSectionTree, flattenTree, extractSlideNamesFromHtml } from '../lib/html/build-tree.js';
@@ -121,7 +120,7 @@ router.get('/html-flow/load-flow', (req, res) => {
       return res.status(400).json({ ok: false, error: 'Invalid projectName or flowId.' });
     }
 
-    const flowDir  = path.join(resolveProjectDir(projectName), 'flows', flowId);
+    const flowDir  = path.join(PROJECTS_DIR, projectName, 'flows', flowId);
     const flowPath = path.join(flowDir, 'flow.json');
 
     if (!fs.existsSync(flowPath)) {
@@ -169,11 +168,9 @@ router.get('/html-flow/load-flow', (req, res) => {
        contentPrompt:        flow.contentPrompt           || '',
        templateInstructions: flow.templateInstructions    || '',
        sliceOutputTemplate:  flow.sliceOutputTemplate     || null,
-       selectedContextFiles: flow.selectedContextFiles    || [],
        agenticCustomInput:   flow.agenticCustomInput      || '',
        agenticJsonResponse:  flow.agenticJsonResponse     || null,
        groupingColumn:       flow.groupingColumn          || null,
-       filters:              flow.filters                 || [],
        previewHtml,
         slideNames:          (latestGeneration?.slideNames || []).map(slide => ({
           ...slide,
@@ -201,7 +198,7 @@ router.get('/html-flow/context-files', async (req, res) => {
       return res.status(400).json({ ok: false, error: 'projectName is required and must be valid.' });
     }
 
-    const projectDir = resolveProjectDir(projectName);
+    const projectDir = path.join(PROJECTS_DIR, projectName);
     const contextDir = path.join(projectDir, 'AI Context');
 
     // If the AI Context folder doesn't exist, return empty list
@@ -299,14 +296,15 @@ router.post('/html-flow/create-project', (req, res) => {
         return res.status(400).json({ ok: false, error: 'Invalid existingProjectName format.' });
       }
       name = existingProjectName.trim();
-      if (!fs.existsSync(resolveProjectDir(name))) {
+      const projectDir = path.join(PROJECTS_DIR, name);
+      if (!fs.existsSync(projectDir)) {
         return res.status(404).json({ ok: false, error: `Project "${name}" not found.` });
       }
     } else {
       name = projectName?.trim() || session.fileName?.replace(/\.html?$/, '') || 'html-project';
     }
 
-    const projectDir  = resolveProjectDir(name) || path.join(PROJECTS_DIR, 'shared', name);
+    const projectDir  = path.join(PROJECTS_DIR, name);
     const baseSlug    = flowName?.trim()
       ? flowName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60)
       : name.toLowerCase().replace(/[^a-z0-9-]/g, '-');
@@ -324,7 +322,7 @@ router.post('/html-flow/create-project', (req, res) => {
 
     fs.mkdirSync(flowDir, { recursive: true });
 
-    // Ensure project.json exists for newly-created projects (shared by default).
+    // Write project.json for newly-created projects (shared by default).
     const projectMetaPath = path.join(projectDir, 'project.json');
     if (!fs.existsSync(projectMetaPath)) {
       fs.writeFileSync(projectMetaPath, JSON.stringify({ name, type: 'shared', createdAt: new Date().toISOString() }, null, 2), 'utf-8');
@@ -388,7 +386,7 @@ router.post('/html-flow/validate-json', (req, res) => {
       return res.status(400).json({ ok: false, error: 'projectName and flowId are required.' });
     }
 
-    const flowDir  = path.join(resolveProjectDir(projectName), 'flows', flowId);
+    const flowDir  = path.join(PROJECTS_DIR, projectName, 'flows', flowId);
     const flowPath = path.join(flowDir, 'flow.json');
     if (!fs.existsSync(flowPath)) {
       return res.status(404).json({ ok: false, error: 'Flow not found.' });
@@ -425,7 +423,7 @@ router.post('/html-flow/apply-content', (req, res) => {
       return res.status(400).json({ ok: false, error: 'projectName and flowId are required.' });
     }
 
-    const flowDir  = path.join(resolveProjectDir(projectName), 'flows', flowId);
+    const flowDir  = path.join(PROJECTS_DIR, projectName, 'flows', flowId);
     const flowPath = path.join(flowDir, 'flow.json');
     if (!fs.existsSync(flowPath)) {
       return res.status(404).json({ ok: false, error: 'Flow not found.' });
@@ -517,7 +515,7 @@ router.patch('/html-flow/update-preview-html', (req, res) => {
       return res.status(400).json({ ok: false, error: 'newText is required.' });
     }
 
-    const flowDir  = path.join(resolveProjectDir(projectName), 'flows', flowId);
+    const flowDir  = path.join(PROJECTS_DIR, projectName, 'flows', flowId);
     const flowPath = path.join(flowDir, 'flow.json');
 
     if (!fs.existsSync(flowPath)) {
