@@ -7,28 +7,20 @@ import styles from './ProjectLandingStep.module.css'
  * Entry screen. Lists existing projects or prompts the user to create one.
  * Projects are created here by name; flows are created from the project dashboard.
  */
-export default function ProjectLandingStep({ onProjectSelected, setToast }) {
+export default function ProjectLandingStep({ appName = 'Slide Studio', onProjectSelected, setToast }) {
    const [projects,    setProjects]    = useState([])
    const [loading,     setLoading]     = useState(true)
    const [error,       setError]       = useState(null)
    const [newName,     setNewName]     = useState('')
    const [creating,    setCreating]    = useState(false)
-   const [appName,     setAppName]     = useState('Slide Studio')
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [projectsRes, infoRes] = await Promise.all([
-          fetch('/api/projects'),
-          fetch('/api/app-info'),
-        ])
-        if (!projectsRes.ok) throw new Error('Failed to load projects')
-        const data = await projectsRes.json()
+        const res = await fetch('/api/projects')
+        if (!res.ok) throw new Error('Failed to load projects')
+        const data = await res.json()
         setProjects(data.projects || [])
-        if (infoRes.ok) {
-          const info = await infoRes.json()
-          if (info.name) setAppName(info.name)
-        }
       } catch (err) {
         setError(err.message)
         setProjects([])

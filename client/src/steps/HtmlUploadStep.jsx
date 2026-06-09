@@ -20,6 +20,7 @@ import HtmlTreePanel, { sanitizeKey } from '../components/HtmlTreePanel.jsx'
 export default function HtmlUploadStep({
   step, canNavigateTo, navigateTo,
   stepAnimClass, debugContext,
+  appName = 'Slide Studio',
   initialSession, onSessionChange,
   onProjectCreated, onBack, setToast,
   currentProjectName, currentFlowId, pendingFlowName,
@@ -386,7 +387,7 @@ ${highlightCss}
 
   return (
     <div className="app">
-      <AppHeader title="Solon Slide Studio" subtitle="Visual Flow — Upload HTML Template" debugContext={debugContext} />
+      <AppHeader title={appName} subtitle="Visual Flow — Upload HTML Template" debugContext={debugContext} />
 
       <div className="html-upload-back">
         <button className="btn btn-link" onClick={onBack}><span aria-hidden="true">←</span> Change flow</button>
