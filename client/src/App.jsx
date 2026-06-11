@@ -80,9 +80,8 @@ export default function App() {
   const handleBackToProjects = useCallback(() => {
     setCurrentProjectName(null)
     setCurrentFlowId(null)
-    applyTheme('default')
     navigateTo('project-landing')
-  }, [navigateTo, applyTheme])
+  }, [navigateTo])
 
   const handleBackToHtmlUpload = useCallback(() => {
     navigateTo('html-upload')
