@@ -6,6 +6,7 @@
   --bg-tertiary: #0F2B26;
   --bg-elevated: #142F29;
   --accent-primary: #4CAF80;
+  --accent-primary-rgb: 76, 175, 128;
   --accent-secondary: #73AA87;
   --accent-muted: #2D5A45;
   --text-primary: #E8F5EF;
@@ -25,6 +26,7 @@
   --bg-tertiary: #0F2040;
   --bg-elevated: #142850;
   --accent-primary: #4C9FE0;
+  --accent-primary-rgb: 76, 159, 224;
   --accent-secondary: #73B8F0;
   --accent-muted: #1A4A7A;
   --text-primary: #E8F2FF;
@@ -44,6 +46,7 @@
   --bg-tertiary: #2A1800;
   --bg-elevated: #3D2200;
   --accent-primary: #FFB300;
+  --accent-primary-rgb: 255, 179, 0;
   --accent-secondary: #FBBF24;
   --accent-muted: #7A5500;
   --text-primary: #FFF8E8;
