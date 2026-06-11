@@ -3,7 +3,10 @@
     "allow": [
       "Bash(Get-ChildItem -Path \"c:\\\\source\\\\SOLON\\\\client\\\\src\" -Recurse -Directory)",
       "Bash(Select-Object -ExpandProperty FullName)",
-      "Bash(python -c ' *)"
+      "Bash(python -c ' *)",
+      "Bash(Get-ChildItem -Recurse server/projects/shared)",
+      "Bash(Select-Object FullName)",
+      "Bash(Format-Table -AutoSize)"
     ]
   }
 }
