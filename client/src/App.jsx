@@ -35,15 +35,20 @@ export default function App() {
     setTheme(t)
   }, [])
 
-  const handleThemeChange = useCallback((newTheme, projectName) => {
+  useEffect(() => {
+    fetch('/api/app-config')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.config?.theme) applyTheme(data.config.theme) })
+      .catch(() => {})
+  }, [])
+
+  const handleThemeChange = useCallback((newTheme) => {
     applyTheme(newTheme)
-    if (projectName) {
-      fetch(`/api/projects/${encodeURIComponent(projectName)}/config`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ theme: newTheme }),
-      }).catch(() => {})
-    }
+    fetch('/api/app-config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ theme: newTheme }),
+    }).catch(() => {})
   }, [applyTheme])
 
   // ── Step navigation ────────────────────────────────────────────
@@ -65,12 +70,8 @@ export default function App() {
 
   const handleProjectSelected = useCallback((projectName) => {
     setCurrentProjectName(projectName)
-    fetch(`/api/projects/${encodeURIComponent(projectName)}/config`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => { applyTheme(data?.config?.theme || 'default') })
-      .catch(() => applyTheme('default'))
     navigateTo('project-dashboard')
-  }, [navigateTo, applyTheme])
+  }, [navigateTo])
 
   const handleFlowSelected = useCallback((flowId) => {
     setCurrentFlowId(flowId)
@@ -282,10 +283,7 @@ export default function App() {
         </div>
       </header>
       {children}
-      <ThemePicker
-        theme={theme}
-        onThemeChange={(t) => handleThemeChange(t, currentProjectName)}
-      />
+      <ThemePicker theme={theme} onThemeChange={handleThemeChange} />
     </div>
   )
 
